@@ -133,6 +133,16 @@ Gitee webhook 使用 `X-Gitee-Token` 与环境变量 `DEPLOY_SECRET` 做定时�
 
 无 `rsync` 时脚本也会先清理静态目录再复制，避免旧资源残留；这一步只有在 `DEPLOY_FRONTEND_DIR` 精确等于 `DEPLOY_FRONTEND_PARENT/frontend`、父目录为绝对路径且不在部署目录内部、目标真实路径未越界时才允许执行。`systemctl` 不可用会使部署失败并进入回滚流程，不会把旧进程误判为新版本成功。线上 webhook、systemd、Nginx 路径和日志只能在服务器上验证，本仓库检查不替代线上验证。
 
+## 微信署名与历史数据修正
+
+公众号推歌的署名步骤中，回复“跳过”按绑定账号的 `nickname → username → 用户{id}` 取值；未绑定时要求填写署名或先绑定。确认与成功消息展示实际署名，自填名字保持不变。旧会话中的空署名按同样规则处理，不再自动写入“匿名同学”。公众号普通投稿在插入时复核绑定账号，并明确写入 `posts.is_anonymous=0`。
+
+`POST /api/deploy-maintenance/wechat-author` 是限定用途的运维接口，使用与部署相同的私有 `X-Gitee-Token` 凭据，仅修正已确认的旧推歌署名。`mode=inspect` 配合准确的 `account_name` 核对唯一绑定账号最近两天的最新微信推歌；`mode=apply` 还必须提交核对所得的 `record_id` 和 `expected_name`。记录、账号或名字变化会拒绝修改；自填署名保留。修改前将旧署名写入服务器私有 `logs/wechat-author-repairs/`，随后在事务中更新一条记录。返回及备份均不包含 OpenID；接口不接受 SQL、表名、文件路径或命令。已创建的微信草稿不因数据库署名变化自动重新同步。
+
+专项验证：`npm run test:wechat-song-flow`、`npm run test:wechat-output`、`npm run test:wechat-author-repair`。历史修正的检查覆盖未授权拒绝、只读核对、账号歧义、记录变化、自填署名保护、备份失败、事务回滚和重复请求。
+
+准确账号名称未命中时，核对响应最多附带五条最近两天、歌曲/歌手/账号名称包含所提供名字的微信推歌，帮助辨认账号别名或歌曲信息。候选仅用于人工核对，不能直接授权修改；实际修改仍要求准确账号匹配。
+
 ## 审核前检查
 
 不启动本地服务时，可执行以下静态检查：

@@ -67,6 +67,9 @@ const help = persona.help();
 const start = persona.songStartPush();
 const confirm = persona.songConfirm('A & B', '歌手');
 const success = persona.songPushSuccess('A & B', '歌手');
+const namedConfirm = persona.songConfirm('A & B', '歌手', '账号昵称');
+const namedSuccess = persona.songPushSuccess('A & B', '歌手', '账号昵称');
+const nicknameRequired = persona.songNicknameRequired();
 assert.ok(help.includes('一首歌的时间'), '帮助菜单应说明公众号推歌入口');
 assert.ok(help.includes('点歌') && help.includes('广播') && help.includes('推歌') && help.includes('公众号'), '帮助菜单应区分广播点歌和公众号推歌');
 assert.ok(start.includes('一首歌的时间'), '推歌首屏应说明投稿去向');
@@ -78,6 +81,14 @@ const radioGuide = persona.radioSongGuide();
 assert.ok(radioGuide.includes('校园广播') && radioGuide.includes('公众号') && radioGuide.includes('/radio'), '点歌指引应先区分用途，再提供校园广播网页入口');
 assert.ok(confirm.includes('一首歌的时间') && confirm.includes('确认'), '确认步骤应保留确认命令');
 assert.ok(success.includes('候选') && success.includes('审核'), '成功反馈不能暗示未审核内容已发布');
+assert.ok(namedConfirm.includes('署名：账号昵称'), '点歌确认应展示实际署名');
+assert.ok(namedSuccess.includes('署名：账号昵称'), '点歌成功应展示实际署名');
+assert.ok(nicknameRequired.includes('填写') && nicknameRequired.includes('绑定'), '无可用账号署名时应提示填写或绑定');
+
+const flowSource = fs.readFileSync(path.join(__dirname, '..', 'services', 'wechat-flows.js'), 'utf8');
+assert.ok(flowSource.includes('is_anonymous, created_at') && flowSource.includes(', 0, NOW()'), '投稿 INSERT 必须显式写入非匿名');
+assert.ok(flowSource.includes('SELECT id, nickname, username FROM users WHERE openid = ?'), '投稿必须读取绑定账号署名');
+assert.ok(!flowSource.includes("'匿名同学'"), '点歌和投稿流程不得自动回退匿名同学');
 
 (async function() {
   const regReply = await reply.handleText('openid', 'account', 'reg');

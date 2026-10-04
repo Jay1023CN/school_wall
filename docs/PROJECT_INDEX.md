@@ -75,6 +75,8 @@
 ## 验证入口
 
 - 服务语法：`node --check server.js`
+- 微信署名：`npm run test:wechat-song-flow`、`npm run test:wechat-output`；推歌跳过使用绑定账号署名，公众号投稿显式写入非匿名。
+- 历史推歌署名修正：`routes/deploy.js` 的 `/api/deploy-maintenance/wechat-author` → `services/wechat-author-repair.js`；专项回归为 `npm run test:wechat-author-repair`。仅私有部署凭据可调用，先核对、再指定记录修改，旧值备份保存在服务器 `logs/`。
 - 运行生命周期：`npm run test:runtime`（离线任务测试及临时端口真实监听，不连接业务数据库）
 - HTTP 兼容：`npm run test:http`（模拟数据库、临时端口，验证页面与权限响应）
 - 点歌维护：`npm run test:song-maintenance`（注入时钟与数据访问，验证周期、生效日期、容量及归档条件）

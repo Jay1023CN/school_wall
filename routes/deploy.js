@@ -115,4 +115,20 @@ router.get('/deploy-status', (req, res) => {
   }
 });
 
+// A narrowly scoped repair for the WeChat workflow's old empty-name fallback.
+// Uses the same private operator credential as deployment, never public auth.
+router.post('/deploy-maintenance/wechat-author', async (req, res) => {
+  if (rejectUnauthorized(req, res)) return;
+  res.set('Cache-Control', 'no-store');
+  try {
+    const { repairWechatAuthor } = require('../services/wechat-author-repair');
+    const { pool } = require('../config/database');
+    const result = await repairWechatAuthor(pool, req.body || {});
+    return res.status(result.status).json(result.body);
+  } catch (error) {
+    console.error('[deploy] author repair failed:', error && error.code || 'repair_error');
+    return res.status(500).json({ code: 500, message: '署名修正失败，未确认修改成功' });
+  }
+});
+
 module.exports = router;

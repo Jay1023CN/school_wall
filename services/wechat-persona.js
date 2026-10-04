@@ -95,10 +95,11 @@ module.exports = {
     return '诶，投稿会话好像过期了😅 重新发「投稿」开始吧~';
   },
 
-  submitSuccess: function(needReview) {
+  submitSuccess: function(needReview, displayName) {
+    var byline = displayName ? '\n\n署名：' + displayName : '';
     return needReview
-      ? '🎉 投稿成功！已提交审核~\n\n审核通过后就能在墙上看到你的帖子啦！去 ' + SITE + ' 看看吧~'
-      : '🎉 投稿成功！帖子已直接发布~\n去 ' + SITE + ' 看看吧！';
+      ? '🎉 投稿成功！已提交审核~' + byline + '\n\n审核通过后就能在墙上看到你的帖子啦！去 ' + SITE + ' 看看吧~'
+      : '🎉 投稿成功！帖子已直接发布~' + byline + '\n去 ' + SITE + ' 看看吧！';
   },
 
   submitFail: function() {
@@ -127,12 +128,17 @@ module.exports = {
   },
 
   songAskNickname: function() {
-    return '😊 最后一步！你希望显示的名字是什么？\n\n（如「小明」、「高三学姐」等，回复「跳过」使用默认昵称）';
+    return '😊 最后一步！你希望显示的名字是什么？\n\n（如「小明」、「高三学姐」等；已绑定账号可以回复「跳过」使用账号署名）';
   },
 
-  songConfirm: function(name, artist) {
+  songNicknameRequired: function() {
+    return '还没有找到可用的账号署名哦~\n\n请直接填写想显示的名字，或先绑定账号后再回复「跳过」。';
+  },
+
+  songConfirm: function(name, artist, displayName) {
     var info = '🎵 ' + name + (artist ? ' - ' + artist : '');
-    return '━━━━━━━━━━━━━━\n' + info + '\n━━━━━━━━━━━━━━\n\n确认投递到「一首歌的时间」吗？\n✅ 回复「确认」提交\n❌ 回复「取消」重填';
+    var byline = displayName ? '\n署名：' + displayName + '\n' : '\n';
+    return '━━━━━━━━━━━━━━\n' + info + byline + '━━━━━━━━━━━━━━\n\n确认投递到「一首歌的时间」吗？\n✅ 回复「确认」提交\n❌ 回复「取消」重填';
   },
 
   songConfirmRetry: function(name, artist) {
@@ -144,9 +150,10 @@ module.exports = {
     return '😅 歌曲名太长了，请简化一下~';
   },
 
-  songPushSuccess: function(name, artist) {
+  songPushSuccess: function(name, artist, displayName) {
     var info = '🎵 ' + name + (artist ? ' - ' + artist : '');
-    return '🎉 已收到这首歌！\n\n' + info + '\n\n它已进入「一首歌的时间」候选，审核入选后会随公众号图文和大家见面。🎶\n\n🌐 ' + SITE;
+    var byline = displayName ? '\n署名：' + displayName : '';
+    return '🎉 已收到这首歌！\n\n' + info + byline + '\n\n它已进入「一首歌的时间」候选，审核入选后会随公众号图文和大家见面。🎶\n\n🌐 ' + SITE;
   },
 
   songPushFail: function() {

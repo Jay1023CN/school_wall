@@ -167,13 +167,19 @@ async function publishPost(openid) {
     var sess = rows[0];
     var [cfg] = await pool.execute("SELECT config_value FROM settings WHERE config_key = 'post_review'");
     var needReview = cfg.length === 0 || cfg[0].config_value === 'true';
-    var [users] = await pool.execute('SELECT id FROM users WHERE openid = ?', [openid]);
-    await pool.execute(
-      'INSERT INTO posts (user_id, title, content, images, status, category, ip_address, created_at) VALUES (?, ?, ?, ?, ?, "daily", ?, NOW())',
-      [users[0]?.id || null, sess.title, sess.content, sess.images || '[]', needReview ? 'pending' : 'approved', '微信用户']
+    var [users] = await pool.execute('SELECT id, nickname, username FROM users WHERE openid = ?', [openid]);
+    if (users.length === 0 || !users[0].id) return { text: T.submitNeedBind() };
+    var displayName = resolveUserDisplayName(users[0]);
+    var [inserted] = await pool.execute(
+      'INSERT INTO posts (user_id, title, content, images, status, category, ip_address, is_anonymous, created_at) ' +
+      'SELECT id, ?, ?, ?, ?, "daily", ?, 0, NOW() FROM users WHERE openid = ? LIMIT 1',
+      [sess.title, sess.content, sess.images || '[]', needReview ? 'pending' : 'approved', '微信用户', openid]
     );
+    // The binding can be removed between the display-name lookup and this
+    // statement.  A zero-row INSERT means no post was created.
+    if (!inserted || inserted.affectedRows !== 1) return { text: T.submitNeedBind() };
     await del('wechat_submit_sessions', openid);
-    return { text: T.submitSuccess(needReview) };
+    return { text: T.submitSuccess(needReview, displayName) };
   } catch (e) {
     console.error('[flow] publishPost 失败 openid=' + openid + ' err=' + e.message);
     return { text: T.submitFail() };
@@ -258,11 +264,15 @@ async function stepSongIntro(openid, text) {
 }
 
 async function stepSongNickname(openid, s, text) {
+  var displayName = String(text || '').trim();
+  if (text === '跳过') displayName = await getBoundDisplayName(openid);
+  if (!displayName) return { text: T.songNicknameRequired() };
+  displayName = displayName.substring(0, 30);
   await pool.execute(
     'UPDATE wechat_song_recs SET step = "song_confirm", display_name = ?, updated_at = NOW() WHERE openid = ?',
-    [text === '跳过' ? '' : text.substring(0, 30), openid]
+    [displayName, openid]
   );
-  return { text: T.songConfirm(s.song_name, s.artist) };
+  return { text: T.songConfirm(s.song_name, s.artist, displayName) };
 }
 
 async function stepSongConfirm(openid, s, text) {
@@ -276,14 +286,13 @@ async function confirmSong(openid, s) {
       'SELECT display_name FROM wechat_song_recs WHERE openid = ? AND step = "song_confirm" AND updated_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) ORDER BY updated_at DESC LIMIT 1',
       [openid]
     );
-    var displayName = '';
-    if (nickRows.length > 0 && nickRows[0].display_name) {
-      displayName = nickRows[0].display_name;
-    } else {
-      var [users] = await pool.execute('SELECT nickname FROM users WHERE openid = ?', [openid]);
-      displayName = users.length > 0 && users[0].nickname ? users[0].nickname : '';
+    var displayName = nickRows.length > 0 ? String(nickRows[0].display_name || '').trim() : '';
+    if (!displayName) displayName = await getBoundDisplayName(openid);
+    if (!displayName) {
+      await pool.execute('UPDATE wechat_song_recs SET step = "song_nickname", updated_at = NOW() WHERE openid = ?', [openid]);
+      return { text: T.songNicknameRequired() };
     }
-    var submitter = displayName || '匿名同学';
+    displayName = displayName.substring(0, 30);
 
     var [introRows] = await pool.execute(
       'SELECT intro FROM wechat_song_recs WHERE openid = ? AND step = "song_confirm" AND updated_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) ORDER BY updated_at DESC LIMIT 1',
@@ -293,17 +302,35 @@ async function confirmSong(openid, s) {
 
     await pool.execute(
       'INSERT INTO daily_song_recs (song_name, artist, to_whom, message, source, submitter, openid, status, intro, created_at) VALUES (?, ?, ?, ?, "wechat", ?, ?, "pending", ?, NOW())',
-      [s.song_name, s.artist || '', '', '', submitter, openid, userIntro]
+      [s.song_name, s.artist || '', '', '', displayName, openid, userIntro]
     );
     await del('wechat_song_recs', openid);
 
     // 后台异步：AI生成介绍词/歌词/歌曲信息
     triggerBgTasks(openid, s.song_name, s.artist, userIntro);
 
-    return { text: T.songPushSuccess(s.song_name, s.artist) };
+    return { text: T.songPushSuccess(s.song_name, s.artist, displayName) };
   } catch (e) {
     console.error('[flow] confirmSong 失败 openid=' + openid + ' err=' + e.message);
     return { text: T.songPushFail() };
+  }
+}
+
+function resolveUserDisplayName(user) {
+  var nickname = String(user && user.nickname || '').trim();
+  var username = String(user && user.username || '').trim();
+  if (nickname) return nickname;
+  if (username) return username;
+  return user && user.id ? '用户' + user.id : '';
+}
+
+async function getBoundDisplayName(openid) {
+  try {
+    var [users] = await pool.execute('SELECT id, nickname, username FROM users WHERE openid = ?', [openid]);
+    return users.length > 0 ? resolveUserDisplayName(users[0]) : '';
+  } catch (e) {
+    console.error('[flow] 获取绑定账号署名失败:', e.code || 'lookup_error');
+    return '';
   }
 }
 
