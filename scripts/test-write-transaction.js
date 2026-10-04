@@ -8,11 +8,13 @@ class FakeWriteDatabase {
     this.receipts = new Map();
     this.businessWrites = [];
     this.connections = [];
+    this.events = [];
     this.failOperation = false;
   }
 
   async getConnection() {
     const db = this;
+    this.events.push('getConnection');
     const connection = {
       began: 0,
       committed: 0,
@@ -67,7 +69,18 @@ class FakeWriteDatabase {
   }
 
   pool() {
-    return { getConnection: () => this.getConnection() };
+    return {
+      execute: async (sql, params = []) => {
+        this.events.push('pool.execute');
+        if (/SELECT payload_hash, response_status, response_body FROM api_write_requests/i.test(sql)) {
+          const [userId, scope, requestKey] = params;
+          const receipt = this.receipts.get(`${userId}|${scope}|${requestKey}`);
+          return [receipt ? [receipt] : []];
+        }
+        throw new Error(`unexpected pool SQL: ${sql}`);
+      },
+      getConnection: () => this.getConnection()
+    };
   }
 }
 
@@ -96,6 +109,22 @@ async function main() {
   assert.strictEqual(db.connections[0].rolledBack, 0);
   assert.strictEqual(db.connections[0].released, 1);
 
+  db.events = [];
+  const noKeyPrepareConnections = db.connections.length;
+  let noKeyPrepareCalls = 0;
+  result = await runWriteTransaction(pool, request({ title: 'prepared without key' }), 'test:prepare-no-key', async () => ({
+    status: 200, body: { code: 200, data: { prepared: true } }
+  }), {
+    prepare: async () => {
+      noKeyPrepareCalls += 1;
+      assert.strictEqual(db.connections.length, noKeyPrepareConnections, '无 key prepare 执行时不得先占用事务连接');
+      db.events.push('prepare');
+    }
+  });
+  assert.strictEqual(result.replayed, false);
+  assert.strictEqual(noKeyPrepareCalls, 1);
+  assert.deepStrictEqual(db.events, ['prepare', 'getConnection'], '无 key prepare 必须先于事务连接获取');
+
   const key = 'write-key-12345678';
   const firstKeyRequest = request({ title: 'same' }, 7, key);
   result = await runWriteTransaction(pool, firstKeyRequest, 'test:create', businessOperation);
@@ -120,9 +149,60 @@ async function main() {
   assert.strictEqual(result.status, 200, '同 key 在不同用户下应有独立收据');
   assert.strictEqual(db.businessWrites.length, 4);
 
+  const prepareKey = 'prepare-key-123456';
+  db.events = [];
+  const connectionsBeforePrepare = db.connections.length;
+  let prepareCalls = 0;
+  result = await runWriteTransaction(pool, request({ title: 'prepared' }, 7, prepareKey), 'test:prepare', businessOperation, {
+    prepare: async () => {
+      prepareCalls += 1;
+      assert.strictEqual(db.connections.length, connectionsBeforePrepare, 'prepare 执行时不得先占用事务连接');
+      db.events.push('prepare');
+    }
+  });
+  assert.strictEqual(result.replayed, false);
+  assert.strictEqual(prepareCalls, 1);
+  assert.deepStrictEqual(db.events.slice(0, 3), ['pool.execute', 'prepare', 'getConnection'], 'prepare 必须在事务连接获取前执行');
+  const writesAfterPrepare = db.businessWrites.length;
+  db.events = [];
+  result = await runWriteTransaction(pool, request({ title: 'prepared' }, 7, prepareKey), 'test:prepare', businessOperation, {
+    prepare: async () => { prepareCalls += 1; }
+  });
+  assert.strictEqual(result.replayed, true, 'prepare 收据已完整时应直接回放');
+  assert.strictEqual(prepareCalls, 1, '完整收据回放不得执行 prepare');
+  assert.strictEqual(db.businessWrites.length, writesAfterPrepare, 'prepare 收据回放不得重复业务写入');
+  assert.deepStrictEqual(db.events, ['pool.execute'], '完整收据回放不得获取事务连接');
+  db.events = [];
+  result = await runWriteTransaction(pool, request({ title: 'changed prepared' }, 7, prepareKey), 'test:prepare', businessOperation, {
+    prepare: async () => { prepareCalls += 1; }
+  });
+  assert.strictEqual(result.status, 409, 'prepare 路径的 payload 冲突仍必须返回 409');
+  assert.strictEqual(prepareCalls, 1, 'payload 冲突不得执行 prepare');
+  assert.strictEqual(db.businessWrites.length, writesAfterPrepare, 'prepare 路径的 payload 冲突不得写入业务数据');
+  assert.deepStrictEqual(db.events, ['pool.execute'], 'prepare 路径的已提交冲突不得获取事务连接');
+
   result = await runWriteTransaction(pool, request({ title: 'bad key' }, 7, 'short'), 'test:create', businessOperation);
   assert.strictEqual(result.status, 400, '短 key 必须在取连接前拒绝');
-  assert.strictEqual(db.businessWrites.length, 4);
+  assert.strictEqual(db.businessWrites.length, writesAfterPrepare);
+
+  db.events = [];
+  const prepareFailureConnections = db.connections.length;
+  const prepareFailureWrites = db.businessWrites.length;
+  const prepareFailureReceipts = db.receipts.size;
+  let prepareFailureCalls = 0;
+  result = await runWriteTransaction(pool, request({ title: 'prepare failure' }, 7, 'prepare-fail-123456'), 'test:prepare-failure', businessOperation, {
+    prepare: async () => {
+      prepareFailureCalls += 1;
+      db.events.push('prepare');
+      return { status: 503, body: { code: 503, message: '暂时不可用' } };
+    }
+  });
+  assert.deepStrictEqual(result, { status: 503, body: { code: 503, message: '暂时不可用' }, replayed: false });
+  assert.strictEqual(prepareFailureCalls, 1);
+  assert.strictEqual(db.connections.length, prepareFailureConnections, 'prepare 失败不得获取事务连接');
+  assert.strictEqual(db.businessWrites.length, prepareFailureWrites, 'prepare 失败不得执行业务写入');
+  assert.strictEqual(db.receipts.size, prepareFailureReceipts, 'prepare 失败不得创建收据');
+  assert.deepStrictEqual(db.events, ['pool.execute', 'prepare'], '有 key prepare 失败仍不得获取事务连接');
 
   result = await runWriteTransaction(pool, request({ title: 'client error' }), 'test:client-error', async () => ({
     status: 422, body: { code: 422, message: '业务校验失败' }

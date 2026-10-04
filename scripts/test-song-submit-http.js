@@ -5,16 +5,17 @@ const Module = require('module');
 const express = require('express');
 const { getChinaDate } = require('../services/date');
 
-const state = { songs: [], receipts: {}, maintenanceCalls: 0, maintenanceOk: true, notices: [], dailyLimit: 3, capacity: 10,
+const state = { songs: [], receipts: {}, maintenanceCalls: 0, maintenanceOk: true, allowAnonSong: false, notices: [], dailyLimit: 3, capacity: 10,
   slotAvailable: true, weekdays: '0,1,2,3,4,5,6', manualOverride: 0, failInsert: false, failRemaining: false, commits: 0, rollbacks: 0, releases: 0 };
 let transactionTail = Promise.resolve();
 const copy = value => JSON.parse(JSON.stringify(value));
 const unavailable = () => Object.assign(new Error('private SQL fixture details'), { code: 'ER_TEST_DATABASE' });
 const pool = {
-  async execute(sql) {
+  async execute(sql, params = []) {
     if (state.failRemaining) throw unavailable();
-    if (sql.includes('FROM settings')) return [[{ config_value: sql.includes('anon_song') ? 'false' : String(state.dailyLimit) }]];
+    if (sql.includes('FROM settings')) return [[{ config_value: sql.includes('anon_song') ? (state.allowAnonSong ? 'true' : 'false') : String(state.dailyLimit) }]];
     if (sql.includes('COUNT(*)')) return [[{ cnt: state.songs.length }]];
+    if (sql.startsWith('SELECT payload_hash')) return [[state.receipts[params.join('|')]].filter(Boolean)];
     throw new Error('unexpected non-transaction SQL');
   },
   async getConnection() {
@@ -49,7 +50,7 @@ const pool = {
         if (sql.startsWith('SELECT COUNT(*)')) {
           return [[{ cnt: working.songs.filter(song => sql.includes('WHERE user_id') ? song.user_id === params[0] : song.slot_date_id === params[0]).length }]];
         }
-        if (sql.startsWith('SELECT config_value')) return [[{ config_value: String(state.dailyLimit) }]];
+        if (sql.startsWith('SELECT config_value')) return [[{ config_value: sql.includes('anon_song') ? (state.allowAnonSong ? 'true' : 'false') : String(state.dailyLimit) }]];
         if (sql.startsWith('INSERT INTO song_requests')) {
           if (state.failInsert) throw unavailable();
           const id = working.songs.length + 1;
@@ -110,6 +111,12 @@ async function main() {
     assert.strictEqual(state.notices.length, 1, '重试不得重复审核通知');
     assert.strictEqual((await submit({ ...body, artist: '不同歌手' }, 'song-request-key-0001')).body.code, 409);
 
+    state.maintenanceOk = false;
+    const replayDuringMaintenanceFailure = await submit(body, 'song-request-key-0001');
+    assert.deepStrictEqual(replayDuringMaintenanceFailure, first, '已有成功收据时维护失败也必须回放原响应');
+    assert.strictEqual(state.maintenanceCalls, 1, '完整收据回放不得再次调用日期维护');
+    state.maintenanceOk = true;
+
     state.capacity = 1;
     assert.strictEqual((await submit(body, 'song-request-key-0002')).body.code, 400, '满额要返回明确业务错误');
     state.capacity = 10; state.dailyLimit = 1;
@@ -121,6 +128,20 @@ async function main() {
     assert.strictEqual((await submit({ ...body, artist: '' })).body.code, 400);
     assert.strictEqual((await submit({ ...body, is_anonymous: true })).body.code, 400, '关闭匿名时不能点匿名歌曲');
 
+    state.allowAnonSong = true;
+    const anonymousBody = { ...body, is_anonymous: true };
+    const anonymousKey = 'song-anon-key-0001';
+    const anonymousSuccess = await submit(anonymousBody, anonymousKey);
+    assert.strictEqual(anonymousSuccess.body.code, 200, '开启匿名时匿名歌曲必须提交成功');
+    const songCountAfterAnonymous = state.songs.length;
+    const noticeCountAfterAnonymous = state.notices.length;
+    state.allowAnonSong = false;
+    assert.deepStrictEqual(await submit(anonymousBody, anonymousKey), anonymousSuccess, '匿名设置变化后必须回放原成功响应');
+    assert.strictEqual(state.songs.length, songCountAfterAnonymous, '匿名幂等回放不得重复保存');
+    assert.strictEqual(state.notices.length, noticeCountAfterAnonymous, '匿名幂等回放不得重复通知');
+    assert.strictEqual((await submit(anonymousBody, 'song-anon-key-0002')).body.code, 400, '新的匿名请求必须遵守关闭后的设置');
+
+    const songsBeforeFailure = state.songs.length;
     state.failInsert = true;
     const rollbacksBeforeFailure = state.rollbacks;
     const releasesBeforeFailure = state.releases;
@@ -128,7 +149,7 @@ async function main() {
     assert.strictEqual(failed.status, 500);
     assert.strictEqual(failed.body.code, 500);
     assert(!JSON.stringify(failed.body).includes('private SQL'));
-    assert.strictEqual(state.songs.length, 1);
+    assert.strictEqual(state.songs.length, songsBeforeFailure);
     assert.strictEqual(state.rollbacks, rollbacksBeforeFailure + 1, 'INSERT 失败的本次请求必须回滚');
     assert.strictEqual(state.releases, releasesBeforeFailure + 1, 'INSERT 失败的本次请求必须释放连接');
     assert(!Object.keys(state.receipts).some(key => key.includes('song-request-key-retry')), '失败请求不得提交收据');
@@ -149,10 +170,10 @@ async function main() {
 
     const unauthenticated = await fetch(base + '/api/songs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     assert.strictEqual(unauthenticated.status, 401);
-    state.capacity = 3;
+    state.capacity = state.songs.length + 1;
     const concurrent = await Promise.all([submit(body, 'concurrent-song-key-01', 8), submit(body, 'concurrent-song-key-02', 9)]);
     assert.deepStrictEqual(concurrent.map(result => result.body.code).sort(), [200, 400], '最后一个名额只能由一个并发请求获得');
-    assert.strictEqual(state.songs.length, 3);
+    assert.strictEqual(state.songs.length, songsBeforeFailure + 2);
     assert(state.rollbacks > 0 && state.releases >= state.commits + state.rollbacks);
   } finally { await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }); }
   console.log('[song-submit-http] 通过：真实路由提交、幂等、容量/次数、匿名/日期校验、回滚与故障恢复');

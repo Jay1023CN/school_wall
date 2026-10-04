@@ -84,6 +84,7 @@
 - 持久任务与事务回归：`node scripts/test-schema-migrations.js`、`node scripts/test-write-transaction.js`、`node scripts/test-notification-outbox.js`、`node scripts/test-mp-sync-jobs.js`、`node scripts/test-content-transactions.js`
 - 改期重复请求：`npm run test:reschedule-idempotency`（同目标不重复写入，收据回放跳过通知）
 - 点歌提交路由：`npm run test:song-submit-http`（临时 HTTP 服务覆盖真实 POST handler、成功与重复提交、容量/次数、匿名校验和故障恢复；不写生产数据）
+- 后台分页浏览器：`python scripts/test-admin-pagination-browser.py`（需 Python Playwright 与已安装浏览器；默认 Chromium，可用 `WALL_BROWSER_CHANNEL=msedge` 指定 Edge；本地页面和模拟接口，覆盖移动/桌面边界、横屏、深色及九类列表）
 - 架构可靠性回归：`node scripts/test-architecture-reliability.js`（代理信任、点歌状态转换和前端幂等收据）
 - 管理与邮件链路语法：`node --check routes/admin.js`、`node --check services/email.js`、`node --check config/database.js`
 - 补丁空白：`git diff --check`

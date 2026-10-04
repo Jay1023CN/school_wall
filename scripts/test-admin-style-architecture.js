@@ -97,4 +97,11 @@ assert.ok(frontendCss.includes('.wechat-user-table tbody td:nth-child(4) .openid
 assert.ok(!adminRuntime.includes('style.cssText') && !adminRuntime.includes('<style>'), '运行时浮层不得再注入样式字符串');
 assert.ok(!/migrated:|mobile-[\w-]*final|layout-v2/.test(frontendCss), '后台样式不得保留历史 final/v2 覆盖块标记');
 
-console.log('[admin-style-architecture] 通过：后台样式入口、主题 token、点歌组件与镜像边界均已锁定');
+const mobileListFlow = frontendCss.slice(frontendCss.indexOf('/* 移动端卡片列表必须随内容增长'));
+assert(mobileListFlow.includes('@media (max-width: 768px)'), '列表高度修复必须只作用于移动端');
+for (const panel of ['users', 'posts', 'songs', 'daily-songs', 'feedbacks', 'logs', 'trash', 'postviews', 'messages']) {
+  assert(mobileListFlow.includes(`#panel-${panel}`), `${panel} 的移动列表必须随内容增长`);
+}
+assert(mobileListFlow.includes('height: auto !important;') && mobileListFlow.includes('max-height: none !important;'), '移动卡片列表不得保留桌面高度限制导致分页错位');
+
+console.log('[admin-style-architecture] 通过：后台样式入口、主题 token、移动分页与镜像边界均已锁定');

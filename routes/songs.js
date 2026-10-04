@@ -133,20 +133,6 @@ router.post('/', auth, async (req, res) => {
       return res.json({ code: 400, message: '歌曲名和歌手为必填项，请选择播放时段和日期' });
     }
 
-    // HTTP 提交和后台任务必须共用同一维护实例；旧独立函数已移入该服务。
-    if (!await maintenance.ensureFutureDates()) {
-      return res.status(503).json({ code: 503, message: '播放日期暂时无法加载，请稍后重试' });
-    }
-    
-    // 匿名点歌检查
-    if (anonymous) {
-      const [anonSetting] = await pool.execute("SELECT config_value FROM settings WHERE config_key = 'anon_song'");
-      const allowAnonSong = anonSetting.length > 0 && anonSetting[0].config_value === 'true';
-      if (!allowAnonSong) {
-        return res.json({ code: 400, message: '匿名点歌已关闭，请取消匿名后再提交' });
-      }
-    }
-    
     let pendingReviewNotice = null;
     const outcome = await runWriteTransaction(pool, req, 'songs:create', async connection => {
       const { today, rangeEnd } = getChinaDayRange();
@@ -167,6 +153,16 @@ router.post('/', auth, async (req, res) => {
       const actualSlotId = slotDate.slot_id;
       if (slot_id && String(slot_id) !== String(actualSlotId)) {
         return { status: 400, body: { code: 400, message: '时段日期不匹配' } };
+      }
+
+      // Keep the mutable anonymous-posting policy inside the same transaction
+      // as the song write.  Idempotent replays skip this operation entirely.
+      if (anonymous) {
+        const [anonSetting] = await connection.execute("SELECT config_value FROM settings WHERE config_key = 'anon_song'");
+        const allowAnonSong = anonSetting.length > 0 && anonSetting[0].config_value === 'true';
+        if (!allowAnonSong) {
+          return { status: 400, body: { code: 400, message: '匿名点歌已关闭，请取消匿名后再提交' } };
+        }
       }
 
       // 数据库中的 slot_dates 是历史生成记录；周期配置可能已被管理员调整。
@@ -213,6 +209,11 @@ router.post('/', auth, async (req, res) => {
         requesterName: anonymous ? '匿名' : (req.user.nickname || req.user.username || '同学')
       };
       return { status: 200, body: { code: 200, message: '点歌成功', data: { id: result.insertId } } };
+    }, {
+      prepare: async () => {
+        if (await maintenance.ensureFutureDates()) return null;
+        return { status: 503, body: { code: 503, message: '播放日期暂时无法加载，请稍后重试' } };
+      }
     });
     res.status(outcome.status).json(outcome.body);
     if (outcome.replayed || outcome.status >= 400) return;

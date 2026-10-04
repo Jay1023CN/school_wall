@@ -11215,3 +11215,19 @@ body.admin-page .user-dropdown .dropdown-item-danger:focus-visible {
     background: linear-gradient(120deg, #0eb967, #06a953);
     box-shadow: 0 5px 14px rgba(0, 185, 103, .18);
 }
+
+/* 移动端卡片列表必须随内容增长；桌面表格的固定高度会把分页排在溢出内容上方。 */
+@media (max-width: 768px) {
+    body.admin-page #panel-users .admin-table-wrapper,
+    body.admin-page #panel-posts .admin-table-wrapper,
+    body.admin-page #panel-songs .admin-table-wrapper,
+    body.admin-page #panel-daily-songs .admin-table-wrapper,
+    body.admin-page #panel-feedbacks .admin-table-wrapper,
+    body.admin-page #panel-logs .admin-table-wrapper,
+    body.admin-page #panel-trash .admin-table-wrapper,
+    body.admin-page #panel-postviews .admin-table-wrapper,
+    body.admin-page #panel-messages .msg-table-wrapper {
+        height: auto !important;
+        max-height: none !important;
+    }
+}
