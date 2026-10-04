@@ -11,7 +11,7 @@ const { repairWechatAuthor } = require('../services/wechat-author-repair');
 const copy = value => JSON.parse(JSON.stringify(value));
 const fixtureUser = { id: 17, nickname: '测试署名', username: 'fixture', openid: 'private-openid-fixture' };
 const fixtureRow = { id: 23, song_name: '测试歌', artist: '歌手', submitter: '匿名同学', status: 'pending', created_at: '2026-10-04' };
-const state = { users: [fixtureUser], rows: [fixtureRow], related: [], writes: 0, rollbacks: 0, releases: 0, connections: 0, failWrite: false };
+const state = { users: [fixtureUser], rows: [fixtureRow], related: [], writes: 0, rollbacks: 0, releases: 0, connections: 0, failWrite: false, bindBeforeWrite: false };
 const pool = { async getConnection() {
   state.connections++;
   let working;
@@ -24,16 +24,22 @@ const pool = { async getConnection() {
         return [state.users];
       }
       if (sql.startsWith('SELECT id, song_name')) {
-        assert(sql.includes('source = "wechat"') && sql.includes('INTERVAL 2 DAY') && sql.includes('LIMIT 1 FOR UPDATE'));
-        assert.deepStrictEqual(params, [fixtureUser.openid]);
+        assert(sql.includes('source = "wechat"') && sql.includes('INTERVAL 2 DAY') && sql.includes('FOR UPDATE'));
+        if (sql.includes('WHERE id = ?')) assert.deepStrictEqual(params, [23]);
+        else {
+          assert(sql.includes('LIMIT 1 FOR UPDATE'));
+          assert.deepStrictEqual(params, [fixtureUser.openid]);
+        }
         return [working];
       }
+      if (sql.startsWith('SELECT id FROM users')) return [state.users.map(user => ({ id: user.id }))];
       if (sql.startsWith('SELECT d.id AS record_id')) {
         assert(sql.includes('LIMIT 5') && sql.includes('INTERVAL 2 DAY') && sql.includes('d.source = "wechat"'));
         assert.deepStrictEqual(params, Array(4).fill('测试署名'));
         return [state.related];
       }
       if (sql.startsWith('UPDATE daily_song_recs')) {
+        if (sql.includes('NOT EXISTS') && state.bindBeforeWrite) return [{ affectedRows: 0 }];
         if (state.failWrite) throw Object.assign(new Error('private SQL details'), { code: 'ER_FIXTURE' });
         assert.deepStrictEqual(params, ['测试署名', 23, fixtureUser.openid, '匿名同学']);
         state.writes++;
@@ -105,6 +111,40 @@ async function main() {
     assert.equal(replay.body.data.changed, false);
     assert.equal(state.writes, 1, 'replay must not rewrite the row');
     assert.equal(state.releases, state.connections);
+
+    const manual = { mode: 'apply-record', record_id: 23, replacement_name: '测试署名', expected_song: '测试歌', expected_artist: '歌手' };
+    assert.equal((await repairWechatAuthor(pool, { ...manual, replacement_name: '' }, options)).status, 400);
+    assert.equal((await repairWechatAuthor(pool, { ...manual, expected_artist: '' }, options)).status, 400);
+    assert.equal((await repairWechatAuthor(pool, { ...manual, expected_artist: ' ' }, options)).status, 400);
+    state.rows = [{ ...fixtureRow, openid: fixtureUser.openid }];
+    assert.equal((await repairWechatAuthor(pool, { ...manual, expected_song: '其他歌曲' }, options)).status, 409);
+    assert.equal((await repairWechatAuthor(pool, { ...manual, expected_artist: '其他歌手' }, options)).status, 409);
+    assert.equal((await repairWechatAuthor(pool, manual, options)).status, 409, 'manual repair must not override a bound account');
+    state.users = [];
+    state.rows[0].submitter = '自选署名';
+    assert.equal((await repairWechatAuthor(pool, manual, options)).status, 409);
+    state.rows[0].submitter = '匿名同学';
+    await assert.rejects(repairWechatAuthor(pool, manual, { backupDir: blockingPath }));
+    assert.equal(state.writes, 1, 'manual repair also requires a successful backup');
+    state.failWrite = true;
+    await assert.rejects(repairWechatAuthor(pool, manual, options));
+    assert.equal(state.rows[0].submitter, '匿名同学');
+    state.failWrite = false;
+    state.bindBeforeWrite = true;
+    await assert.rejects(repairWechatAuthor(pool, manual, options));
+    assert.equal(state.rows[0].submitter, '匿名同学', 'UPDATE must recheck a binding created after inspection');
+    state.bindBeforeWrite = false;
+    const manualResult = await repairWechatAuthor(pool, manual, options);
+    assert.equal(manualResult.body.data.changed, true);
+    assert.equal(state.rows[0].submitter, '测试署名');
+    assert(!JSON.stringify(manualResult).includes(fixtureUser.openid));
+    const manualBackup = await fs.readFile(path.join(backupDir, manualResult.body.data.backup_id + '.json'), 'utf8');
+    assert.equal(JSON.parse(manualBackup).submitter, '匿名同学');
+    assert(!manualBackup.includes(fixtureUser.openid));
+    assert.equal((await repairWechatAuthor(pool, manual, options)).body.data.changed, false);
+    assert.equal(state.writes, 2);
+    assert.equal(state.releases, state.connections);
+    state.users = [fixtureUser];
 
     // Exercise the actual operator route, including authorization before DB use.
     const originalLoad = Module._load;
