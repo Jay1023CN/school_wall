@@ -37,6 +37,9 @@ includes(script, '"$NPM" ci || return 1', '存在前端锁文件时必须严格�
 assert(!script.includes('ci --omit=dev || "$NPM" install') && !script.includes('"$NPM" ci || "$NPM" install'), 'npm ci 失败时不得回退到 npm install 掩盖锁文件不一致');
 includes(script, 'check_frontend_mirror_for_rollback', '回滚历史版本时不能强制依赖新版本检查脚本');
 includes(script, 'wait_for_health', '部署必须等待服务健康检查通过');
+includes(script, '! check_database_startup || ! sync_frontend || ! restart_service', '数据库迁移预检必须在重启前执行');
+includes(script, 'restart_after_rollback', '预检失败回滚不得无故重启旧进程');
+includes(script, '--read-report', '失败部署状态必须提供脱敏结构诊断');
 includes(script, 'sudo -n systemctl', '非 root Webhook 进程必须通过受限 sudo 控制服务');
 includes(script, 'flock -n 9', '部署脚本必须使用 flock 防止重复部署');
 includes(script, 'DEPLOY_LOCK_DIR', '部署脚本必须提供无 flock 时的锁回退');

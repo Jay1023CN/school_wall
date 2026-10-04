@@ -869,7 +869,7 @@ async function initDB() {
 
     // 创建微信绑定记录表
     try {
-      await pool.execute(`
+      await connection.execute(`
         CREATE TABLE IF NOT EXISTS wechat_bindings (
           id INT AUTO_INCREMENT PRIMARY KEY,
           user_id INT NOT NULL,
@@ -888,7 +888,7 @@ async function initDB() {
     }
     // 兼容旧表缺少 bind_code 列。SHOW 失败时必须阻止启动，不能把数据库
     // 不可用误判为缺列。
-    const [bindCodeColumns] = await connection.execute(
+    const [bindCodeColumns] = await connection.query(
       'SHOW COLUMNS FROM wechat_bindings LIKE ?', ['bind_code']
     );
     if (bindCodeColumns.length === 0) {
@@ -988,14 +988,14 @@ async function initDB() {
       if (e.code !== 'ER_TABLE_EXISTS_ERR') throw e;
     }
     // 兼容旧表缺少 polished_content / images 列。
-    const [polishedContentColumns] = await connection.execute(
+    const [polishedContentColumns] = await connection.query(
       'SHOW COLUMNS FROM wechat_submit_sessions LIKE ?', ['polished_content']
     );
     if (polishedContentColumns.length === 0) {
       await executeIgnoringDuplicate(connection,
         'ALTER TABLE wechat_submit_sessions ADD COLUMN polished_content TEXT COMMENT \'AI润色后的内容\' AFTER content');
     }
-    const [imagesColumns] = await connection.execute(
+    const [imagesColumns] = await connection.query(
       'SHOW COLUMNS FROM wechat_submit_sessions LIKE ?', ['images']
     );
     if (imagesColumns.length === 0) {

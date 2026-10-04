@@ -161,6 +161,15 @@ function indexColumns(rows, keyName) {
     .map(row => String(row.Column_name || row.column_name || '').toLowerCase());
 }
 
+function compatibleReservationStatusType(type) {
+  const actual = normalizeType(type);
+  const varchar = actual.match(/^varchar\((\d+)\)$/);
+  if (varchar) return Number(varchar[1]) >= 'confirmed'.length;
+  if (!/^enum\((?:'[a-z_]+')(?:,'[a-z_]+')*\)$/.test(actual)) return false;
+  const values = [...actual.matchAll(/'([a-z_]+)'/g)].map(match => match[1]);
+  return values.includes('confirmed') && values.includes('cancelled');
+}
+
 async function validateSchemaContracts(executor) {
   assertExecutor(executor);
   for (const contract of SCHEMA_CONTRACTS) {
@@ -190,14 +199,38 @@ async function validateSchemaContracts(executor) {
     }
     for (const [name, expected] of Object.entries(contract.columns)) {
       const actual = columnMap.get(name);
-      if (normalizeType(actual.Type || actual.type) !== normalizeType(expected)) {
-        throw contractError(`${contract.table}.${name} 类型为 ${actual.Type || actual.type}，要求 ${expected}`, contract.table);
+      const reservationStatus = contract.table === 'slot_reservations' && name === 'status';
+      const compatible = reservationStatus
+        ? compatibleReservationStatusType(actual.Type || actual.type)
+        : normalizeType(actual.Type || actual.type) === normalizeType(expected);
+      if (!compatible) {
+        const error = contractError(`${contract.table}.${name} 类型为 ${actual.Type || actual.type}，要求 ${expected}`, contract.table);
+        error.actualType = normalizeType(actual.Type || actual.type);
+        error.expectedType = normalizeType(expected);
+        throw error;
+      }
+      if (reservationStatus) {
+        // Legacy ENUM sets can contain extra values. Accept compatible storage
+        // only when historical rows have the states this route understands.
+        const [unsupported] = await executor.execute("SELECT id FROM slot_reservations WHERE status IS NULL OR status NOT IN ('confirmed', 'cancelled') LIMIT 1");
+        if (unsupported.length) {
+          throw contractError('slot_reservations.status 存在不受支持的历史状态，要求 confirmed/cancelled', contract.table);
+        }
       }
     }
     const indexRows = Array.isArray(indexes) ? indexes : [];
     for (const required of contract.indexes) {
-      const rows = indexRows.filter(row => String(row.Key_name || row.key_name || '') === required.name);
-      const actualColumns = indexColumns(indexRows, required.name);
+      // Existing indexes may have a different name. These queries do not use
+      // index hints; the ordered columns and uniqueness are the contract.
+      const equivalentName = [...new Set(indexRows.map(row => String(row.Key_name || row.key_name || '')))].find(name => {
+        if (required.name === 'PRIMARY' && name !== 'PRIMARY') return false;
+        if (JSON.stringify(indexColumns(indexRows, name)) !== JSON.stringify(required.columns)) return false;
+        const row = indexRows.find(item => String(item.Key_name || item.key_name || '') === name);
+        return !required.unique || Number(row.Non_unique ?? row.non_unique) === 0;
+      });
+      const chosenName = equivalentName || required.name;
+      const rows = indexRows.filter(row => String(row.Key_name || row.key_name || '') === chosenName);
+      const actualColumns = indexColumns(indexRows, chosenName);
       if (!rows.length || JSON.stringify(actualColumns) !== JSON.stringify(required.columns)) {
         throw contractError(`${contract.table}.${required.name} 索引列不匹配：实际 ${actualColumns.join(',') || '不存在'}，要求 ${required.columns.join(',')}`, contract.table);
       }

@@ -26,6 +26,8 @@ DEPLOY_HEALTHCHECK_TIMEOUT="${DEPLOY_HEALTHCHECK_TIMEOUT:-10}"
 LOG_FILE="${DEPLOY_LOG_FILE:-$DEPLOY_DIR/logs/deploy.log}"
 DEPLOY_LOCK_PATH="${DEPLOY_LOCK_PATH:-$DEPLOY_DIR/.deploy.lock}"
 DEPLOY_STATUS_FILE="${DEPLOY_STATUS_FILE:-$DEPLOY_DIR/logs/deploy-status.json}"
+DATABASE_DIAGNOSTIC_FILE="$DEPLOY_DIR/logs/deploy-database-check.json"
+DEPLOY_DATABASE_ATTEMPT_ID="${DEPLOY_DATABASE_ATTEMPT_ID:-$(date -u '+%s')-$$}"
 DEPLOY_STATE="starting"
 # git reset 后重新执行工作树里的新脚本，避免本次部署继续使用旧版本函数。
 DEPLOY_REEXEC_AFTER_UPDATE="${DEPLOY_REEXEC_AFTER_UPDATE:-0}"
@@ -94,12 +96,16 @@ write_status() {
   local exit_code="${3:-}"
   local updated_at
   local temp_file
+  local diagnostics="null"
   updated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   temp_file="${DEPLOY_STATUS_FILE}.tmp.$$"
   mkdir -p "$(dirname -- "$DEPLOY_STATUS_FILE")" || return 0
+  if [ "$state" = "failed" ] && [ -f "$DATABASE_DIAGNOSTIC_FILE" ] && [ -f "$DEPLOY_DIR/scripts/check-database-startup.js" ]; then
+    diagnostics="$("$NODE" "$DEPLOY_DIR/scripts/check-database-startup.js" --read-report "$DATABASE_DIAGNOSTIC_FILE" "$revision" "$DEPLOY_DATABASE_ATTEMPT_ID" 2>/dev/null)" || diagnostics="null"
+  fi
   if [ -n "$exit_code" ]; then
-    printf '{"state":"%s","revision":"%s","updatedAt":"%s","exitCode":%s}\n' \
-      "$state" "$revision" "$updated_at" "$exit_code" > "$temp_file"
+    printf '{"state":"%s","revision":"%s","updatedAt":"%s","exitCode":%s,"diagnostics":%s}\n' \
+      "$state" "$revision" "$updated_at" "$exit_code" "$diagnostics" > "$temp_file"
   else
     printf '{"state":"%s","revision":"%s","updatedAt":"%s"}\n' \
       "$state" "$revision" "$updated_at" > "$temp_file"
@@ -303,6 +309,7 @@ run_systemctl() {
 }
 
 restart_service() {
+  DEPLOY_RESTART_ATTEMPTED=1
   if ! command -v systemctl >/dev/null 2>&1; then
     echo "[deploy] systemctl unavailable; refusing to report a deployment without restart"
     return 1
@@ -369,13 +376,19 @@ wait_for_health() {
 rollback() {
   local rollback_ok=1
   echo "[deploy] rolling back to $PREVIOUS_REV"
-  if git reset --hard "$PREVIOUS_REV" && run_npm_install && check_frontend_mirror_for_rollback && sync_frontend && restart_service && wait_for_health; then
+  if git reset --hard "$PREVIOUS_REV" && run_npm_install && check_frontend_mirror_for_rollback && sync_frontend && restart_after_rollback && wait_for_health; then
     rollback_ok=0
     echo "[deploy] rollback complete"
   else
     echo "[deploy] rollback health check failed; manual intervention required"
   fi
   return "$rollback_ok"
+}
+
+restart_after_rollback() {
+  if [ "${DEPLOY_RESTART_ATTEMPTED:-0}" = 1 ]; then
+    restart_service
+  fi
 }
 
 if ! git check-ref-format --branch "$DEPLOY_BRANCH" >/dev/null 2>&1; then
@@ -409,13 +422,20 @@ if [ "$DEPLOY_REEXEC_AFTER_UPDATE" != 1 ]; then
   export DEPLOY_REEXEC_AFTER_UPDATE=1
   export DEPLOY_LOCK_HELD=1
   export DEPLOY_PREVIOUS_REV="$PREVIOUS_REV"
+  export DEPLOY_DATABASE_ATTEMPT_ID
   if [ "${FALLBACK_LOCK_HELD:-0}" = 1 ]; then
     export DEPLOY_LOCK_FALLBACK=1
   fi
   exec "${BASH:-/bin/bash}" "$DEPLOY_DIR/deploy.sh"
 fi
 
-if ! run_npm_install || ! check_frontend_mirror || ! sync_frontend || ! restart_service || ! wait_for_health; then
+check_database_startup() {
+  # Validate migrations while the previous HTTP process still serves requests.
+  # A failed preflight preserves that process and publishes only safe identifiers.
+  "$NODE" "$DEPLOY_DIR/scripts/check-database-startup.js" "$DATABASE_DIAGNOSTIC_FILE" "$TARGET_REV" "$DEPLOY_DATABASE_ATTEMPT_ID"
+}
+
+if ! run_npm_install || ! check_frontend_mirror || ! check_database_startup || ! sync_frontend || ! restart_service || ! wait_for_health; then
   echo "[deploy] new version failed startup or health check"
   DEPLOY_STATE="failed"
   write_status "$DEPLOY_STATE" "$TARGET_REV" "1" || true

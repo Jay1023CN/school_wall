@@ -46,6 +46,9 @@ function makeExecutor(options) {
       if (/SELECT version FROM schema_migrations/.test(sql)) {
         return [state.applied.map(version => ({ version })), []];
       }
+      if (/SELECT id FROM slot_reservations WHERE status IS NULL/.test(sql)) {
+        return [options && options.unsupportedReservationStates ? [{ id: 1 }] : [], []];
+      }
       if (/^\s*CREATE TABLE IF NOT EXISTS/i.test(sql)) {
         const table = tableName(sql, 'CREATE TABLE IF NOT EXISTS');
         const contract = SCHEMA_CONTRACTS.find(item => item.table === table);
@@ -116,6 +119,16 @@ async function testVersionedRunner() {
   brokenUnique.state.schema.slot_reservations.indexes = brokenUnique.state.schema.slot_reservations.indexes.filter(index => index.Key_name !== 'unique_reservation');
   await assert.rejects(() => runSchemaMigrations(brokenUnique), error => error.code === 'SCHEMA_CONTRACT_MISMATCH' && /unique_reservation/.test(error.message));
 
+  const renamedIndex = makeExecutor({ applied: [1, 2], schema: cloneContractSchema() });
+  for (const row of renamedIndex.state.schema.slot_reservations.indexes) {
+    if (row.Key_name === 'unique_reservation') row.Key_name = 'legacy_unique_reservation';
+  }
+  await runSchemaMigrations(renamedIndex);
+  for (const row of renamedIndex.state.schema.slot_reservations.indexes) {
+    if (row.Key_name === 'legacy_unique_reservation') row.Non_unique = 1;
+  }
+  await assert.rejects(() => runSchemaMigrations(renamedIndex), error => error.code === 'SCHEMA_CONTRACT_MISMATCH');
+
   const legacyIntegerWidths = makeExecutor({
     applied: SCHEMA_MIGRATIONS.map(migration => migration.version),
     schema: cloneContractSchema()
@@ -132,6 +145,20 @@ async function testVersionedRunner() {
   });
   wrongEngine.state.schema.notification_outbox.engine = 'MyISAM';
   await assert.rejects(() => runSchemaMigrations(wrongEngine), error => error.code === 'SCHEMA_CONTRACT_MISMATCH' && /InnoDB/.test(error.message));
+
+  for (const type of ["enum('confirmed','cancelled','used')", 'varchar(20)']) {
+    const legacyStatus = makeExecutor({ applied: [1, 2], schema: cloneContractSchema() });
+    legacyStatus.state.schema.slot_reservations.columns.find(column => column.Field === 'status').Type = type;
+    await runSchemaMigrations(legacyStatus);
+    assert(legacyStatus.calls.some(call => /status IS NULL OR status NOT IN/.test(call.sql)), '兼容旧类型必须核对实际状态值');
+  }
+  for (const type of ["enum('pending','cancelled')", 'varchar(8)', 'int']) {
+    const incompatible = makeExecutor({ applied: [1, 2], schema: cloneContractSchema() });
+    incompatible.state.schema.slot_reservations.columns.find(column => column.Field === 'status').Type = type;
+    await assert.rejects(() => runSchemaMigrations(incompatible), error => error.code === 'SCHEMA_CONTRACT_MISMATCH' && /status/.test(error.message));
+  }
+  const unknownStatus = makeExecutor({ applied: [1, 2], schema: cloneContractSchema(), unsupportedReservationStates: true });
+  await assert.rejects(() => runSchemaMigrations(unknownStatus), error => error.code === 'SCHEMA_CONTRACT_MISMATCH' && /历史状态/.test(error.message));
 
   const half = makeExecutor({ applied: [], failAt: 'INSERT INTO schema_migrations' });
   await assert.rejects(() => runSchemaMigrations(half), /database unavailable/);
@@ -165,6 +192,11 @@ async function testStartupLockAndFailure() {
         return [[], []];
       },
       async execute(sql) {
+        if (/SHOW COLUMNS.+LIKE\s+\?/i.test(sql)) {
+          const error = new Error('SHOW LIKE placeholders require the text query protocol');
+          error.code = 'ER_PARSE_ERROR';
+          throw error;
+        }
         if (/GET_LOCK/.test(sql)) return [[{ acquired: 1 }], []];
         if (/RELEASE_LOCK/.test(sql)) { state.lockReleased += 1; return [[{ released: 1 }], []]; }
         if (state.failAt && String(sql).includes(state.failAt)) {
@@ -195,7 +227,7 @@ async function testStartupLockAndFailure() {
       poolOptions = options;
       return {
         async getConnection() { return fakeConnection('pool'); },
-        async execute(sql, params) { return fakeConnection('pool').execute(sql, params); }
+        async execute() { throw new Error('startup must reuse its held connection instead of queuing another pool query'); }
       };
     },
     async createConnection(options) {

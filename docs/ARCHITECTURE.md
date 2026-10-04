@@ -50,6 +50,8 @@ deploy.sh                 拉取、同步、重启、健康检查和回滚
 
 ## 事务收据与通知 outbox
 
+预约表的历史 `status` 列可保留支持 `confirmed/cancelled` 写入的旧 ENUM 或足够长的 VARCHAR；启动时只读核对历史值，NULL 或未知状态仍会阻止启动，不自动修改历史预约。索引校验按列顺序和唯一性识别等效旧索引，不要求普通索引名称一致。
+
 `services/write-transaction.js` 将业务写入和 API 幂等收据放在同一个 MySQL 事务中。带 `Idempotency-Key` 的请求必须先登录，键名为 16—128 个 ASCII 字符；相同用户、作用域和键会回放已保存响应，内容摘要变化返回 409。业务结果为 4xx 或 5xx 时回滚，异常也回滚并释放连接；没有键的写入仍使用同一事务边界，但不会提供回放能力。
 
 反馈提交由 `routes/feedback.js` 在同一事务中完成反馈写入和管理员邮件 outbox 登记。`services/notification-outbox.js` 按收件人去重，使用 120 秒租约、claim token 和指数退避重试，达到上限后标记为 `failed`。SMTP 发送函数返回成功只表示发送器接受了本次发送；该 outbox 是至少一次投递，丢失确认或租约恢复可能造成重复邮件，不能证明邮件已经进入收件箱。反馈表及历史业务表的兼容性 `ensure...` 启动 DDL 仍保留。
@@ -115,6 +117,7 @@ npm run build
 拉取指定发布源
   -> 安装依赖
   -> 检查 frontend/public 镜像
+  -> 数据库迁移预检（失败则保留旧进程）
   -> 同步 Nginx 静态目录（如配置）
   -> 重启服务
   -> 请求健康检查
@@ -123,6 +126,8 @@ npm run build
 ```
 
 脚本使用单实例锁，避免多个 webhook 同时 reset、安装和重启。健康检查只验证应用可用性，不把凭据写入日志。
+
+`scripts/check-database-startup.js` 在重启前按服务相同的环境加载规则执行数据库初始化和 schema 校验，不监听 HTTP、不启动后台发送任务。预检失败时恢复旧代码，保留未被重启的旧进程；`/api/deploy-status` 的 `diagnostics` 只公开该提交对应的错误码、SQL 操作类别和表名，不返回完整 SQL、参数、连接配置或异常消息。该预检包含 MySQL DDL，已完成的新增表不会随代码回滚而删除。
 
 Gitee webhook 使用 `X-Gitee-Token` 与环境变量 `DEPLOY_SECRET` 做定时安全比较，并只响应 `DEPLOY_BRANCH`（默认 `main`）的推送；请求返回 `202 Accepted` 只表示部署子进程已接受启动，不代表新版本已经上线。`GET /api/deploy-status` 使用同一凭据返回不含敏感信息的状态、提交和退出码，状态文件由脚本原子写入部署目录的日志目录。实际结果也写入部署日志，webhook 进程只记录不含凭据的启动错误。生产环境应由 Webhook 启动独立的 `wall-deploy.service`，让部署进程脱离 `wall.service` 的控制组；脚本默认通过服务器已配置凭据的 Gitee SSH 仓库拉取 `main`（可用环境变量切换为其他受信任地址），并在重启和健康检查失败时恢复部署前提交。由于 systemd 的 PATH 可能不包含面板 Node.js，脚本会探测 `/www/server/nodejs/*/bin/node` 并在安装依赖前确认 node/npm 可用；Webhook 以 `www` 用户运行时，仅通过 sudoers 授权启动部署单元、重启 `wall` 服务和查询状态。
 

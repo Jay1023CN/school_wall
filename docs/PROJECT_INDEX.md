@@ -28,6 +28,7 @@
 | 静态生成与检查 | `scripts/lib/frontend-assets.js`、`scripts/sync-frontend.js`、`scripts/check-frontend-mirror.js`、`scripts/build-static-site.js` | 共用文件规则；生成 `public/` 镜像和带哈希清单的 `dist/`；生产当前仍提供 `public/` |
 | 旧/备用模板 | `views/` | 不要默认视为当前渲染来源，需由调用链确认 |
 | 部署脚本 | `deploy.sh` | 部署和同步流程入口，修改部署时先读它 |
+| 部署数据库预检 | `scripts/check-database-startup.js`、`scripts/test-database-startup-check.js` | 重启前初始化/核验 schema，失败报告仅包含结构错误码；关联 `/api/deploy-status` |
 
 ## 功能入口地图
 
