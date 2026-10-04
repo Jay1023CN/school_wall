@@ -1,8 +1,39 @@
 const mysql = require('mysql2/promise');
 const path = require('path');
+const { runSchemaMigrations } = require('./schema-migrations');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const DB_NAME = process.env.DB_NAME || 'campus_wall';
+const INIT_LOCK_NAME = 'wall-schema-' + require('crypto').createHash('sha256').update(DB_NAME).digest('hex').slice(0, 32);
+const CONNECT_TIMEOUT_MS = 10000;
+
+function boundedInteger(value, fallback, min, max) {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) return fallback;
+  return parsed;
+}
+
+const CONNECTION_LIMIT = boundedInteger(process.env.DB_CONNECTION_LIMIT, 10, 1, 100);
+// queueLimit=0 means an unbounded queue in mysql2. Keep the default and all
+// invalid values bounded so an outage cannot turn into unbounded memory use.
+const QUEUE_LIMIT = boundedInteger(process.env.DB_QUEUE_LIMIT, 200, 1, 10000);
+
+function isDuplicateSchemaError(error) {
+  return Boolean(error && [
+    'ER_DUP_FIELDNAME',
+    'ER_DUP_KEYNAME',
+    'ER_TABLE_EXISTS_ERR'
+  ].includes(error.code));
+}
+
+async function executeIgnoringDuplicate(executor, sql, params) {
+  try {
+    return await executor.execute(sql, params);
+  } catch (error) {
+    if (!isDuplicateSchemaError(error)) throw error;
+    return undefined;
+  }
+}
 
 const FOLLOWS_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS follows (
@@ -26,7 +57,8 @@ const FEEDBACK_TABLE_SQL = `
     title VARCHAR(200) NOT NULL COMMENT '反馈标题',
     content TEXT NOT NULL COMMENT '反馈内容',
     contact VARCHAR(200) COMMENT '联系方式',
-    status VARCHAR(20) DEFAULT 'pending' COMMENT '状态：pending/processing/resolved/closed',
+    status VARCHAR(20) DEFAULT 'pending' COMMENT '状态：pending/processing/resolved/accepted/closed',
+    reward_points_awarded TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已发放反馈采纳积分',
     reply TEXT COMMENT '管理员回复',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -55,7 +87,18 @@ function ensureFollowsTable(executor) {
 }
 
 function ensureFeedbackTable(executor) {
-  return ensureTableOnce(executor, FEEDBACK_TABLE_SQL, () => feedbackTablePromise, (value) => { feedbackTablePromise = value; });
+  return ensureTableOnce(executor, FEEDBACK_TABLE_SQL, () => feedbackTablePromise, (value) => { feedbackTablePromise = value; })
+    .then(async () => {
+      const [columns] = await executor.query('SHOW COLUMNS FROM feedbacks LIKE ?', ['reward_points_awarded']);
+      if (columns.length === 0) {
+        try {
+          await executor.execute("ALTER TABLE feedbacks ADD COLUMN reward_points_awarded TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已发放反馈采纳积分'");
+        } catch (err) {
+          // 并发初始化时可能由另一请求先完成迁移。
+          if (err.code !== 'ER_DUP_FIELDNAME') throw err;
+        }
+      }
+    });
 }
 
 const NOTIFICATIONS_TABLE_SQL = `
@@ -114,8 +157,9 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD || '',
   database: DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+  connectionLimit: CONNECTION_LIMIT,
+  queueLimit: QUEUE_LIMIT,
+  connectTimeout: CONNECT_TIMEOUT_MS,
   charset: 'utf8mb4',
   dateStrings: true // 日期以字符串返回，避免时区转换
 });
@@ -128,6 +172,7 @@ async function initDB() {
     port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
+    connectTimeout: CONNECT_TIMEOUT_MS,
     charset: 'utf8mb4'
   });
 
@@ -138,8 +183,32 @@ async function initDB() {
     await initConn.end();
   }
 
-  // 第二步：用主连接池（已连到目标库）创建表
-  const connection = await pool.getConnection();
+  // 第二步：在 dedicated connection 上持有 MySQL advisory lock，防止多个
+  // 实例同时执行历史迁移和版本化迁移。锁连接必须保持到全部 DDL 完成。
+  const lockConnection = await mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: DB_NAME,
+    connectTimeout: CONNECT_TIMEOUT_MS,
+    charset: 'utf8mb4'
+  });
+  let lockAcquired = false;
+  try {
+    const [lockRows] = await lockConnection.execute(
+      'SELECT GET_LOCK(?, 30) AS acquired',
+      [INIT_LOCK_NAME]
+    );
+    if (Number(lockRows && lockRows[0] && lockRows[0].acquired) !== 1) {
+      const error = new Error(`数据库初始化锁获取失败: ${INIT_LOCK_NAME}`);
+      error.code = 'ER_GET_LOCK_FAILED';
+      throw error;
+    }
+    lockAcquired = true;
+
+    // 第三步：用主连接池（已连到目标库）创建表
+    const connection = await pool.getConnection();
   try {
     // 用户表
     await connection.execute(`
@@ -159,44 +228,33 @@ async function initDB() {
     `);
 
     // 为已有 users 表添加 openid 字段
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN openid VARCHAR(64) DEFAULT NULL COMMENT \'微信openid\' AFTER email');
-    } catch (e) { console.error('[DB迁移]', e.message); }
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN openid VARCHAR(64) DEFAULT NULL COMMENT \'微信openid\' AFTER email');
     
     // 为已有 users 表添加登录追踪字段（忽略已存在的错误）
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP NULL COMMENT \'上次登录时间\' AFTER updated_at');
-    } catch (e) { console.error('[DB迁移]', e.message); }
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN last_login_ip VARCHAR(45) DEFAULT \'\' COMMENT \'上次登录IP\' AFTER last_login_at');
-    } catch (e) { console.error('[DB迁移]', e.message); }
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN last_login_region VARCHAR(100) DEFAULT \'\' COMMENT \'上次登录IP归属地\' AFTER last_login_ip');
-    } catch (e) { console.error('[DB迁移]', e.message); }
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP NULL COMMENT \'上次登录时间\' AFTER updated_at');
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN last_login_ip VARCHAR(45) DEFAULT \'\' COMMENT \'上次登录IP\' AFTER last_login_at');
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN last_login_region VARCHAR(100) DEFAULT \'\' COMMENT \'上次登录IP归属地\' AFTER last_login_ip');
     // 用户资料扩展字段（编辑资料功能）
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN birthday DATE NULL COMMENT \'生日\' AFTER last_login_region');
-    } catch (e) { console.error('[DB迁移]', e.message); }
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN mbti VARCHAR(10) DEFAULT \'\' COMMENT \'MBTI性格\' AFTER birthday');
-    } catch (e) { console.error('[DB迁移]', e.message); }
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN gender VARCHAR(10) DEFAULT \'\' COMMENT \'性别\' AFTER mbti');
-    } catch (e) { console.error('[DB迁移]', e.message); }
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN hobbies VARCHAR(500) DEFAULT \'\' COMMENT \'兴趣爱好\' AFTER gender');
-    } catch (e) { console.error('[DB迁移]', e.message); }
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN birthday DATE NULL COMMENT \'生日\' AFTER last_login_region');
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN mbti VARCHAR(10) DEFAULT \'\' COMMENT \'MBTI性格\' AFTER birthday');
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN gender VARCHAR(10) DEFAULT \'\' COMMENT \'性别\' AFTER mbti');
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN hobbies VARCHAR(500) DEFAULT \'\' COMMENT \'兴趣爱好\' AFTER gender');
     // 封禁理由
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN ban_reason VARCHAR(500) DEFAULT NULL COMMENT \'封禁原因\' AFTER status');
-    } catch (e) { console.error('[DB迁移]', e.message); }
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN ban_reason VARCHAR(500) DEFAULT NULL COMMENT \'封禁原因\' AFTER status');
     // 封禁后登录尝试记录
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN ban_attempt_ip VARCHAR(45) DEFAULT \'\' COMMENT \'封禁后最后一次登录IP\' AFTER ban_reason');
-    } catch (e) { console.error('[DB迁移]', e.message); }
-    try {
-      await connection.execute('ALTER TABLE users ADD COLUMN ban_attempt_count INT DEFAULT 0 COMMENT \'封禁后登录尝试次数\' AFTER ban_attempt_ip');
-    } catch (e) { console.error('[DB迁移]', e.message); }
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN ban_attempt_ip VARCHAR(45) DEFAULT \'\' COMMENT \'封禁后最后一次登录IP\' AFTER ban_reason');
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE users ADD COLUMN ban_attempt_count INT DEFAULT 0 COMMENT \'封禁后登录尝试次数\' AFTER ban_attempt_ip');
 
     // 业务表结构统一在启动初始化阶段完成，路由加载时不得执行 DDL。
     await ensureFollowsTable(connection);
@@ -253,12 +311,10 @@ async function initDB() {
     }
     
     // 检查并添加评论表的IP字段（如果不存在）
-    try {
-      await connection.execute('ALTER TABLE comments ADD COLUMN ip_address VARCHAR(50) AFTER is_anonymous');
-      await connection.execute('ALTER TABLE comments ADD COLUMN ip_region VARCHAR(100) AFTER ip_address');
-    } catch (err) {
-      // 字段可能已存在，忽略错误
-    }
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE comments ADD COLUMN ip_address VARCHAR(50) AFTER is_anonymous');
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE comments ADD COLUMN ip_region VARCHAR(100) AFTER ip_address');
 
     // 评论点赞表
     await connection.execute(`
@@ -274,11 +330,8 @@ async function initDB() {
     `);
 
     // 检查并添加评论点赞数字段（如果不存在）
-    try {
-      await connection.execute('ALTER TABLE comments ADD COLUMN likes_count INT DEFAULT 0 AFTER is_anonymous');
-    } catch (err) {
-      // 字段可能已存在，忽略错误
-    }
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE comments ADD COLUMN likes_count INT DEFAULT 0 AFTER is_anonymous');
 
     // 评论回复表
     await connection.execute(`
@@ -297,19 +350,14 @@ async function initDB() {
     `);
 
     // 检查并添加评论回复的IP字段（如果不存在）
-    try {
-      await connection.execute('ALTER TABLE comment_replies ADD COLUMN ip_address VARCHAR(50) AFTER is_anonymous');
-      await connection.execute('ALTER TABLE comment_replies ADD COLUMN ip_region VARCHAR(100) AFTER ip_address');
-    } catch (err) {
-      // 字段可能已存在，忽略错误
-    }
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE comment_replies ADD COLUMN ip_address VARCHAR(50) AFTER is_anonymous');
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE comment_replies ADD COLUMN ip_region VARCHAR(100) AFTER ip_address');
 
     // 检查并添加评论回复的点赞数字段
-    try {
-      await connection.execute('ALTER TABLE comment_replies ADD COLUMN likes_count INT DEFAULT 0 AFTER is_anonymous');
-    } catch (err) {
-      // 字段可能已存在，忽略错误
-    }
+    await executeIgnoringDuplicate(connection,
+      'ALTER TABLE comment_replies ADD COLUMN likes_count INT DEFAULT 0 AFTER is_anonymous');
 
     // 回复点赞表
     await connection.execute(`
@@ -378,26 +426,21 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 确保 time_slots 表有 weekdays 字段（兼容已有数据库）
-    try {
-      const [timeColumns] = await connection.execute('SHOW COLUMNS FROM time_slots LIKE "weekdays"');
-      if (timeColumns.length === 0) {
-        await connection.execute('ALTER TABLE time_slots ADD COLUMN weekdays VARCHAR(20) DEFAULT \'1,2,3,4,5\' COMMENT \'生效的星期\' AFTER is_active');
-        console.log('✅ time_slots 表已添加 weekdays 字段');
-      }
-    } catch (e) {
-      // 表可能不存在，忽略错误
+    // 确保 time_slots 表有 weekdays 字段（兼容已有数据库）。SHOW 失败时
+    // 必须阻止启动，不能把数据库不可用误判为缺列。
+    const [timeColumns] = await connection.execute('SHOW COLUMNS FROM time_slots LIKE "weekdays"');
+    if (timeColumns.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE time_slots ADD COLUMN weekdays VARCHAR(20) DEFAULT \'1,2,3,4,5\' COMMENT \'生效的星期\' AFTER is_active');
+      console.log('✅ time_slots 表已添加 weekdays 字段');
     }
 
     // 周期时段的生效日期。NULL 兼容旧时段，表示不限制起始日。
-    try {
-      const [timeStartDateColumns] = await connection.execute('SHOW COLUMNS FROM time_slots LIKE "effective_start_date"');
-      if (timeStartDateColumns.length === 0) {
-        await connection.execute('ALTER TABLE time_slots ADD COLUMN effective_start_date DATE DEFAULT NULL COMMENT \'周期从此日期开始生效，NULL表示立即生效\' AFTER weekdays');
-        console.log('✅ time_slots 表已添加周期生效日期字段');
-      }
-    } catch (e) {
-      console.error('time_slots 生效日期字段检查失败:', e.message);
+    const [timeStartDateColumns] = await connection.execute('SHOW COLUMNS FROM time_slots LIKE "effective_start_date"');
+    if (timeStartDateColumns.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE time_slots ADD COLUMN effective_start_date DATE DEFAULT NULL COMMENT \'周期从此日期开始生效，NULL表示立即生效\' AFTER weekdays');
+      console.log('✅ time_slots 表已添加周期生效日期字段');
     }
 
     // 时段日期表 (slot_dates)
@@ -417,28 +460,22 @@ async function initDB() {
     // 确保 slot_dates 表有 is_active 字段。is_active=0 是管理员保留的
     // “该日期不开放投稿”例外，绝不能在启动时重置，否则自动补齐会让
     // 已关闭日期重新对用户开放。
-    try {
-      const [dateColumns] = await connection.execute('SHOW COLUMNS FROM slot_dates LIKE "is_active"');
-      if (dateColumns.length === 0) {
-        await connection.execute('ALTER TABLE slot_dates ADD COLUMN is_active TINYINT DEFAULT 1 COMMENT \'1启用 0禁用\' AFTER max_songs');
-        console.log('✅ slot_dates 表已添加 is_active 字段');
-      }
-      await connection.execute('UPDATE slot_dates SET is_active = 1 WHERE is_active IS NULL');
-    } catch (e) {
-      console.error('slot_dates 表检查/修复失败:', e.message);
+    const [dateColumns] = await connection.execute('SHOW COLUMNS FROM slot_dates LIKE "is_active"');
+    if (dateColumns.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE slot_dates ADD COLUMN is_active TINYINT DEFAULT 1 COMMENT \'1启用 0禁用\' AFTER max_songs');
+      console.log('✅ slot_dates 表已添加 is_active 字段');
     }
+    await connection.execute('UPDATE slot_dates SET is_active = 1 WHERE is_active IS NULL');
 
     // 单日例外：允许在编辑日历中临时加播或停播，后续改星期时不能被周期维护覆盖。
-    try {
-      const [overrideColumns] = await connection.execute('SHOW COLUMNS FROM slot_dates LIKE "manual_override"');
-      if (overrideColumns.length === 0) {
-        await connection.execute('ALTER TABLE slot_dates ADD COLUMN manual_override TINYINT DEFAULT 0 COMMENT \'1为管理员单日例外，不随星期周期重置\' AFTER is_active');
-        console.log('✅ slot_dates 表已添加单日例外字段');
-      }
-      await connection.execute('UPDATE slot_dates SET manual_override = 0 WHERE manual_override IS NULL');
-    } catch (e) {
-      console.error('slot_dates 单日例外字段检查失败:', e.message);
+    const [overrideColumns] = await connection.execute('SHOW COLUMNS FROM slot_dates LIKE "manual_override"');
+    if (overrideColumns.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE slot_dates ADD COLUMN manual_override TINYINT DEFAULT 0 COMMENT \'1为管理员单日例外，不随星期周期重置\' AFTER is_active');
+      console.log('✅ slot_dates 表已添加单日例外字段');
     }
+    await connection.execute('UPDATE slot_dates SET manual_override = 0 WHERE manual_override IS NULL');
 
     // 点歌时段表 (song_slots)
     await connection.execute(`
@@ -534,16 +571,12 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理操作日志'
     `);
 
-    // 为已有的 admin_logs 表添加 'warn' 枚举值（兼容旧数据库）
-    try {
-      await connection.execute(`
-        ALTER TABLE admin_logs 
-        MODIFY COLUMN level ENUM('info', 'warn', 'warning', 'error') DEFAULT 'info' COMMENT '日志级别'
-      `);
-      console.log('✅ admin_logs 表已添加 warn 枚举值');
-    } catch (e) {
-      // 忽略错误，可能表不存在或字段已修改
-    }
+    // 为已有的 admin_logs 表添加 'warn' 枚举值（兼容旧数据库）。
+    // 只有明确的重复类错误才允许继续，连接/表结构错误必须阻止启动。
+    await executeIgnoringDuplicate(connection, `
+      ALTER TABLE admin_logs
+      MODIFY COLUMN level ENUM('info', 'warn', 'warning', 'error') DEFAULT 'info' COMMENT '日志级别'
+    `);
 
     // 系统公告表
     await connection.execute(`
@@ -561,9 +594,13 @@ async function initDB() {
 
     await ensureFeedbackTable(connection);
 
+    // song_requests 的软删除字段必须先于下方联合索引创建。
+    await executeIgnoringDuplicate(connection,
+      "ALTER TABLE song_requests ADD COLUMN deleted_at TIMESTAMP NULL COMMENT '软删除时间' AFTER play_order");
+
     // 插入默认系统设置
     const defaultSettings = [
-      { key: 'site_name', value: '示例校园墙' },
+      { key: 'site_name', value: '嘉二の墙墙' },
       { key: 'site_description', value: '校园信息交流平台' },
       { key: 'allow_register', value: 'true' },
       { key: 'register_email_verify_enabled', value: 'false' },
@@ -648,25 +685,19 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帖子浏览记录'
     `);
 
-    try {
-      const [indexes] = await connection.query('SHOW INDEX FROM `post_views` WHERE Key_name = ?', ['idx_post_views_post_viewed']);
-      if (indexes.length === 0) {
-        await connection.query('ALTER TABLE `post_views` ADD INDEX `idx_post_views_post_viewed` (`post_id`, `viewed_at`)');
-      }
-    } catch (e) {
-      console.error('[DB迁移] post_views 联合索引创建失败:', e.message);
+    const [postViewIndexes] = await connection.query(
+      'SHOW INDEX FROM `post_views` WHERE Key_name = ?', ['idx_post_views_post_viewed']
+    );
+    if (postViewIndexes.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE `post_views` ADD INDEX `idx_post_views_post_viewed` (`post_id`, `viewed_at`)');
     }
 
     // 给 post_views 表添加 ip_region 字段
-    try {
-      await connection.execute(`
-        ALTER TABLE post_views
-        ADD COLUMN ip_region VARCHAR(100) DEFAULT NULL COMMENT '浏览者IP归属地'
-      `);
-      console.log('✅ post_views 表已添加 ip_region 字段');
-    } catch (e) {
-      // 字段可能已存在，忽略错误
-    }
+    await executeIgnoringDuplicate(connection, `
+      ALTER TABLE post_views
+      ADD COLUMN ip_region VARCHAR(100) DEFAULT NULL COMMENT '浏览者IP归属地'
+    `);
 
     // 头衔表
     await connection.execute(`
@@ -714,27 +745,6 @@ async function initDB() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户邮件通知偏好'
     `);
-
-    // 兼容旧表：如果缺少字段则补充
-    var migrateFields = [
-      "ALTER TABLE user_notify_settings ADD COLUMN notify_follow_post TINYINT(1) DEFAULT 1 COMMENT '关注的人发帖' AFTER notify_feedback_reply",
-      "ALTER TABLE user_notify_settings ADD COLUMN notify_message TINYINT(1) DEFAULT 1 COMMENT '收到私信' AFTER notify_follow_post",
-      "ALTER TABLE conversations ADD COLUMN user1_dnd TINYINT(1) DEFAULT 0 COMMENT '用户1免打扰' AFTER updated_at",
-      "ALTER TABLE conversations ADD COLUMN user2_dnd TINYINT(1) DEFAULT 0 COMMENT '用户2免打扰' AFTER user1_dnd",
-      "ALTER TABLE conversations ADD COLUMN user1_cleared_at TIMESTAMP NULL COMMENT '用户1清空时间' AFTER user2_dnd",
-      "ALTER TABLE conversations ADD COLUMN user2_cleared_at TIMESTAMP NULL COMMENT '用户2清空时间' AFTER user1_cleared_at",
-      "ALTER TABLE conversations ADD COLUMN user1_hidden_at TIMESTAMP NULL COMMENT '用户1删除会话时间' AFTER user2_cleared_at",
-      "ALTER TABLE conversations ADD COLUMN user2_hidden_at TIMESTAMP NULL COMMENT '用户2删除会话时间' AFTER user1_hidden_at",
-      "ALTER TABLE users ADD COLUMN openid VARCHAR(64) DEFAULT NULL COMMENT '微信openid' AFTER email",
-      "ALTER TABLE song_requests ADD COLUMN deleted_at TIMESTAMP NULL COMMENT '软删除时间' AFTER play_order"
-    ];
-    for (var i = 0; i < migrateFields.length; i++) {
-      try {
-        await pool.execute(migrateFields[i]);
-      } catch (e) {
-        // 字段已存在则忽略
-      }
-    }
 
     // 点歌表历史版本缺少部分字段时，先补字段再创建查询索引。
     // 使用 SHOW COLUMNS/SHOW INDEX 兼容 MySQL 5.7，不依赖 ADD IF NOT EXISTS。
@@ -829,8 +839,12 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帖子投票记录'
     `);
 
+    // 版本化新 schema 必须在 users/song_slots 等基础表完成后执行。
+    // 后面的性能索引检查因此可以直接依赖 slot_reservations 已存在。
+    await runSchemaMigrations(connection);
+
     // 列表、清理和预约名额查询使用的联合索引。SHOW INDEX + ALTER TABLE
-    // 保持 MySQL 5.7 兼容；预约表由旧版本/独立迁移创建时，暂时不存在也不阻塞启动。
+    // 保持 MySQL 5.7 兼容。
     const optionalPerformanceIndexes = [
       ['users', 'idx_users_created_at', '(`created_at`)'],
       ['comments', 'idx_comments_post_created_id', '(`post_id`, `created_at`, `id`)'],
@@ -849,9 +863,7 @@ async function initDB() {
           );
         }
       } catch (e) {
-        if (e.code !== 'ER_NO_SUCH_TABLE') {
-          console.error(`[DB迁移] ${tableName}.${indexName} 创建失败:`, e.message);
-        }
+        if (!isDuplicateSchemaError(e)) throw e;
       }
     }
 
@@ -874,9 +886,14 @@ async function initDB() {
     } catch (e) {
       if (e.code !== 'ER_TABLE_EXISTS_ERR') throw e;
     }
-    // 兼容旧表缺少 bind_code 列
-    try { await connection.execute("SELECT bind_code FROM wechat_bindings LIMIT 0"); } catch (e) {
-      try { await connection.execute('ALTER TABLE wechat_bindings ADD COLUMN bind_code VARCHAR(20) DEFAULT NULL COMMENT \'验证码\' AFTER scene_id'); } catch (e2) { if (e2.code !== 'ER_DUP_FIELDNAME') throw e2; }
+    // 兼容旧表缺少 bind_code 列。SHOW 失败时必须阻止启动，不能把数据库
+    // 不可用误判为缺列。
+    const [bindCodeColumns] = await connection.execute(
+      'SHOW COLUMNS FROM wechat_bindings LIKE ?', ['bind_code']
+    );
+    if (bindCodeColumns.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE wechat_bindings ADD COLUMN bind_code VARCHAR(20) DEFAULT NULL COMMENT \'验证码\' AFTER scene_id');
     }
 
     // 登录失败记录表（防暴力破解）
@@ -970,15 +987,23 @@ async function initDB() {
     } catch (e) {
       if (e.code !== 'ER_TABLE_EXISTS_ERR') throw e;
     }
-    // 兼容旧表缺少 polished_content / images 列
-    try { await connection.execute("SELECT polished_content FROM wechat_submit_sessions LIMIT 0"); } catch (e) {
-      try { await connection.execute('ALTER TABLE wechat_submit_sessions ADD COLUMN polished_content TEXT COMMENT \'AI润色后的内容\' AFTER content'); } catch (e2) { if (e2.code !== 'ER_DUP_FIELDNAME') throw e2; }
+    // 兼容旧表缺少 polished_content / images 列。
+    const [polishedContentColumns] = await connection.execute(
+      'SHOW COLUMNS FROM wechat_submit_sessions LIKE ?', ['polished_content']
+    );
+    if (polishedContentColumns.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE wechat_submit_sessions ADD COLUMN polished_content TEXT COMMENT \'AI润色后的内容\' AFTER content');
     }
-    try { await connection.execute("SELECT images FROM wechat_submit_sessions LIMIT 0"); } catch (e) {
-      try { await connection.execute('ALTER TABLE wechat_submit_sessions ADD COLUMN images TEXT COMMENT \'JSON数组: 已上传图片路径\' AFTER polished_content'); } catch (e2) { if (e2.code !== 'ER_DUP_FIELDNAME') throw e2; }
+    const [imagesColumns] = await connection.execute(
+      'SHOW COLUMNS FROM wechat_submit_sessions LIKE ?', ['images']
+    );
+    if (imagesColumns.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE wechat_submit_sessions ADD COLUMN images TEXT COMMENT \'JSON数组: 已上传图片路径\' AFTER polished_content');
     }
     // 兼容旧表 step 列长度不足
-    try { await connection.execute('ALTER TABLE wechat_submit_sessions MODIFY COLUMN step VARCHAR(30) DEFAULT \'idle\' COMMENT \'状态: idle/awaiting_title/awaiting_content/awaiting_polish_choice/awaiting_polish/awaiting_image\''); } catch (e) { console.error('[DB迁移]', e.message); }
+    await connection.execute('ALTER TABLE wechat_submit_sessions MODIFY COLUMN step VARCHAR(30) DEFAULT \'idle\' COMMENT \'状态: idle/awaiting_title/awaiting_content/awaiting_polish_choice/awaiting_polish/awaiting_image\'');
 
     // 微信点歌会话表（每日推歌专用）
     try {
@@ -1029,7 +1054,7 @@ async function initDB() {
       await connection.execute("ALTER TABLE daily_song_recs ADD COLUMN intro TEXT COMMENT 'AI生成的歌曲介绍' AFTER published_at");
       console.log('✅ daily_song_recs 表已添加 intro 字段');
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') console.error('[DB迁移]', e.message);
+      if (!isDuplicateSchemaError(e)) throw e;
     }
 
     // 候选可见性独立于发布状态：管理员可以先将不再需要的推荐移出候选，
@@ -1038,7 +1063,7 @@ async function initDB() {
       await connection.execute("ALTER TABLE daily_song_recs ADD COLUMN candidate_hidden_at TIMESTAMP NULL COMMENT '从公众号候选中移出时间，不改变同步状态' AFTER published_at");
       console.log('✅ daily_song_recs 表已添加候选移出字段');
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') console.error('[DB迁移]', e.message);
+      if (!isDuplicateSchemaError(e)) throw e;
     }
 
     // 添加 intro 字段到 wechat_song_recs
@@ -1046,7 +1071,7 @@ async function initDB() {
       await connection.execute("ALTER TABLE wechat_song_recs ADD COLUMN intro TEXT COMMENT '用户自定义推荐语' AFTER message");
       console.log('✅ wechat_song_recs 表已添加 intro 字段');
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') console.error('[DB迁移]', e.message);
+      if (!isDuplicateSchemaError(e)) throw e;
     }
 
     // 添加 display_name 字段到 wechat_song_recs
@@ -1054,7 +1079,7 @@ async function initDB() {
       await connection.execute("ALTER TABLE wechat_song_recs ADD COLUMN display_name VARCHAR(30) DEFAULT '' COMMENT '用户自选显示昵称' AFTER intro");
       console.log('✅ wechat_song_recs 表已添加 display_name 字段');
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') console.error('[DB迁移]', e.message);
+      if (!isDuplicateSchemaError(e)) throw e;
     }
 
     // 添加 lyrics 字段
@@ -1062,7 +1087,7 @@ async function initDB() {
       await connection.execute("ALTER TABLE daily_song_recs ADD COLUMN lyrics TEXT COMMENT '歌曲歌词' AFTER intro");
       console.log('✅ daily_song_recs 表已添加 lyrics 字段');
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') console.error('[DB迁移]', e.message);
+      if (!isDuplicateSchemaError(e)) throw e;
     }
 
     // 添加 song_info 字段
@@ -1070,7 +1095,7 @@ async function initDB() {
       await connection.execute("ALTER TABLE daily_song_recs ADD COLUMN song_info JSON COMMENT '歌曲详细信息(专辑/年份/曲风等)' AFTER lyrics");
       console.log('✅ daily_song_recs 表已添加 song_info 字段');
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') console.error('[DB迁移]', e.message);
+      if (!isDuplicateSchemaError(e)) throw e;
     }
 
     const dailySongIndexes = [
@@ -1108,6 +1133,22 @@ async function initDB() {
       if (e.code !== 'ER_TABLE_EXISTS_ERR') throw e;
     }
 
+    // 兼容旧表：基础表均已创建后，按同一 connection 补齐历史字段。
+    // 每条 ALTER 只忽略明确的重复字段错误；连接或表结构错误必须阻止启动。
+    const migrateFields = [
+      "ALTER TABLE user_notify_settings ADD COLUMN notify_follow_post TINYINT(1) DEFAULT 1 COMMENT '关注的人发帖' AFTER notify_feedback_reply",
+      "ALTER TABLE user_notify_settings ADD COLUMN notify_message TINYINT(1) DEFAULT 1 COMMENT '收到私信' AFTER notify_follow_post",
+      "ALTER TABLE conversations ADD COLUMN user1_dnd TINYINT(1) DEFAULT 0 COMMENT '用户1免打扰' AFTER updated_at",
+      "ALTER TABLE conversations ADD COLUMN user2_dnd TINYINT(1) DEFAULT 0 COMMENT '用户2免打扰' AFTER user1_dnd",
+      "ALTER TABLE conversations ADD COLUMN user1_cleared_at TIMESTAMP NULL COMMENT '用户1清空时间' AFTER user2_dnd",
+      "ALTER TABLE conversations ADD COLUMN user2_cleared_at TIMESTAMP NULL COMMENT '用户2清空时间' AFTER user1_cleared_at",
+      "ALTER TABLE conversations ADD COLUMN user1_hidden_at TIMESTAMP NULL COMMENT '用户1删除会话时间' AFTER user2_cleared_at",
+      "ALTER TABLE conversations ADD COLUMN user2_hidden_at TIMESTAMP NULL COMMENT '用户2删除会话时间' AFTER user1_hidden_at"
+    ];
+    for (const migrationSql of migrateFields) {
+      await executeIgnoringDuplicate(connection, migrationSql);
+    }
+
     // 私信消息表
     try {
       await connection.execute(`
@@ -1134,13 +1175,12 @@ async function initDB() {
     }
 
     // 私信按会话读取未删除消息时使用的联合索引。
-    try {
-      const [indexes] = await connection.query('SHOW INDEX FROM `messages` WHERE Key_name = ?', ['idx_messages_conversation_deleted_created']);
-      if (indexes.length === 0) {
-        await connection.query('ALTER TABLE `messages` ADD INDEX `idx_messages_conversation_deleted_created` (`conversation_id`, `deleted_at`, `created_at`)');
-      }
-    } catch (e) {
-      console.error('[DB迁移] messages 联合索引创建失败:', e.message);
+    const [messageIndexes] = await connection.query(
+      'SHOW INDEX FROM `messages` WHERE Key_name = ?', ['idx_messages_conversation_deleted_created']
+    );
+    if (messageIndexes.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE `messages` ADD INDEX `idx_messages_conversation_deleted_created` (`conversation_id`, `deleted_at`, `created_at`)');
     }
 
     // 用户黑名单表
@@ -1186,12 +1226,8 @@ async function initDB() {
 
     // ===== 积分 & 签到系统 =====
     // users 表加 points 列
-    try {
-      await connection.execute("ALTER TABLE users ADD COLUMN points INT DEFAULT 0 COMMENT '总积分' AFTER avatar");
-      console.log('✅ users 表已添加 points 列');
-    } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') console.error('[DB迁移]', e.message);
-    }
+    await executeIgnoringDuplicate(connection,
+      "ALTER TABLE users ADD COLUMN points INT DEFAULT 0 COMMENT '总积分' AFTER avatar");
     // 签到记录表
     try {
       await connection.execute(`
@@ -1231,20 +1267,13 @@ async function initDB() {
     } catch (e) {
       if (e.code !== 'ER_TABLE_EXISTS_ERR') throw e;
     }
-    try {
-      const [indexes] = await connection.query(
-        'SHOW INDEX FROM `points_log` WHERE Key_name = ?',
-        ['idx_points_user_created']
-      );
-      if (indexes.length === 0) {
-        await connection.query(
-          'ALTER TABLE `points_log` ADD INDEX `idx_points_user_created` (`user_id`, `created_at`)'
-        );
-      }
-    } catch (e) {
-      if (e.code !== 'ER_NO_SUCH_TABLE') {
-        console.error('[DB迁移] points_log.idx_points_user_created 创建失败:', e.message);
-      }
+    const [pointsIndexes] = await connection.query(
+      'SHOW INDEX FROM `points_log` WHERE Key_name = ?',
+      ['idx_points_user_created']
+    );
+    if (pointsIndexes.length === 0) {
+      await executeIgnoringDuplicate(connection,
+        'ALTER TABLE `points_log` ADD INDEX `idx_points_user_created` (`user_id`, `created_at`)');
     }
     // 等级头衔表
     try {
@@ -1276,26 +1305,26 @@ async function initDB() {
       [6, 200, '校园传奇', '#EF4444', 'rgba(239,68,68,0.1)', '👑']
     ];
     for (var li = 0; li < defaultLevels.length; li++) {
-      try {
-        await connection.execute(
-          'INSERT IGNORE INTO level_titles (level, min_points, title_name, title_color, title_bg, icon) VALUES (?, ?, ?, ?, ?, ?)',
-          defaultLevels[li]
-        );
-      } catch (e) {}
+      await connection.execute(
+        'INSERT IGNORE INTO level_titles (level, min_points, title_name, title_color, title_bg, icon) VALUES (?, ?, ?, ?, ?, ?)',
+        defaultLevels[li]
+      );
     }
 
-    for (var i = 0; i < migrateFields.length; i++) {
-      try {
-        await pool.execute(migrateFields[i]);
-      } catch (e) {
-        // 字段已存在则忽略
-      }
-    }
   } catch (err) {
     console.error('❌ 数据库初始化失败:', err.message);
     throw err;
   } finally {
     connection.release();
+  }
+  } finally {
+    try {
+      if (lockAcquired) {
+        await lockConnection.execute('SELECT RELEASE_LOCK(?)', [INIT_LOCK_NAME]);
+      }
+    } finally {
+      await lockConnection.end();
+    }
   }
 }
 

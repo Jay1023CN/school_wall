@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '..');
 const route = fs.readFileSync(path.join(root, 'routes', 'deploy.js'), 'utf8');
 const script = fs.readFileSync(path.join(root, 'deploy.sh'), 'utf8');
 const architecture = fs.readFileSync(path.join(root, 'docs', 'ARCHITECTURE.md'), 'utf8');
+const server = fs.readFileSync(path.join(root, 'http', 'static-pages.js'), 'utf8');
 
 function includes(source, fragment, message) {
   assert(source.includes(fragment), message);
@@ -58,6 +59,11 @@ includes(script, 'deploy exit: $status', '部署日志必须记录最终退出�
 includes(script, 'DEPLOY_STATUS_FILE', '部署必须写入状态文件');
 includes(script, 'write_status "$DEPLOY_STATE" "$TARGET_REV" "0"', '部署成功必须记录目标提交');
 assert(!/https?:\/\/[^/\s@]+:[^/\s@]+@/.test(script), '脚本不得内置带凭据的远端 URL');
+
+includes(server, "/[\\\\/]admin[\\\\/]/i.test(filePath)", '后台静态资源必须单独识别，避免部署后继续命中旧脚本');
+includes(server, "res.setHeader('Surrogate-Control', 'no-cache')", '后台静态资源必须同时要求浏览器和代理重新校验');
+includes(server, 'function sendHtmlPage(res, relativePath)', '无扩展名页面别名必须复用 HTML 防缓存响应');
+includes(server, "app.get('/post/:id', (req, res) => sendHtmlPage", '动态帖子详情页面也必须携带 HTML 重新校验响应头');
 
 includes(architecture, 'node scripts/test-deployment-static.js', '部署文档必须记录部署静态检查');
 includes(architecture, '202 Accepted', '部署文档必须说明 webhook 仅代表异步启动已接受');

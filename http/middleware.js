@@ -8,7 +8,11 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 function registerMiddlewares(app, { logging = true,
-  allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',') } = {}) {
+  allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://wall.jay23.cn').split(',') } = {}) {
+  // Trust only configured proxy addresses, never every caller's forwarded headers.
+  const trustedProxies = process.env.TRUST_PROXY || 'loopback';
+  if (['true', '1', '*'].includes(trustedProxies)) throw new Error('TRUST_PROXY must name trusted proxy addresses or subnets');
+  app.set('trust proxy', trustedProxies.split(',').map(value => value.trim()).filter(Boolean));
   // 中间件
   app.use(compression()); // 响应压缩
   // CORS：仅允许指定域名
@@ -54,7 +58,7 @@ function registerMiddlewares(app, { logging = true,
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    if (req.secure) {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
     next();

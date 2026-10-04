@@ -1,115 +1,92 @@
-# 校墙项目代码索引
+# 校墙项目源码索引
 
-> 本文件按当前源码整理，目标是让后续维护可以先定位入口，再阅读局部代码。路径均相对于项目根目录。
+> 目的：让 Codex 和开发者先命中入口文件，再按调用链展开，减少无效的全仓库搜索。索引只记录稳定的导航信息，不替代源码事实。
 
-> 公开镜像约定：这里不包含生产数据、凭据或部署配置，也不得用它部署生产环境。
+## 使用方法
 
-## 公开协作入口
+1. 先按下面的功能表选择页面入口或后端路由。
+2. 先读入口文件及其直接依赖，再根据实际调用关系扩展搜索。
+3. 如果索引与源码不一致，以当前源码和实际运行结果为准，并在任务完成后更新本文件。
 
-- `README.md`：公开项目首页，说明产品能力、原创实现、脱敏边界和本地启动方式。
-- `LICENSE`、`NOTICE`、`CITATION.cff`：Apache-2.0 许可、Jay071023 归属声明和标准引用信息。
-- `CONTRIBUTING.md`：Issue、分支、镜像同步和 Pull Request 的贡献规则。
-- `CODE_OF_CONDUCT.md`：公开协作的行为与隐私边界。
-- `SECURITY.md`：私密安全问题反馈规则；漏洞细节不得进入公开 Issue。
-- `.github/workflows/ci.yml`：GitHub `main` 推送和 Pull Request 的 Node 20 验证流程，不发布 npm 包或生产服务。
-- `.github/ISSUE_TEMPLATE/` 与 `.github/pull_request_template.md`：公开协作模板，要求移除真实内容、凭据、私有地址和安全细节。
+## 运行与目录关系
 
-## 运行与部署入口
-
-- `server.js`、`config/environment.js`：环境加载、服务启动和退出入口。
-- `app.js` → `http/middleware.js`、`http/static-pages.js`、`http/routes.js`：HTTP 应用组装，不初始化数据库、不监听、不启动后台任务。
-- `services/runtime.js`：数据库初始化、HTTP 监听、后台任务和有界退出的运行生命周期。
-- `jobs/index.js`、`services/task-lifecycle.js`：维护任务显式启停；加载路由不创建维护定时器。
-- `modules/songs/index.js` → `services/song-maintenance.js` → `repositories/song-maintenance.js`：点歌维护依赖组装、规则编排与 SQL 数据访问；HTTP 和后台任务共享服务实例。
-- `config/database.js`：数据库连接池配置。
-- `scripts/create-initial-admin.js`：公开版首次搭建的显式管理员初始化命令；先初始化数据库结构，再创建不覆盖已有账号的 `super_admin`。
-- `routes/`：HTTP 路由层；认证在 `routes/auth.js`，站点信息/主题在 `routes/site.js`，后台设置在 `routes/admin.js`，时段日历接口位于 `routes/admin/slots.js` 并由管理入口挂载；部署在 `routes/deploy.js`。
-- `services/`：邮件、AI、头像、微信公众号等业务服务；路由层只编排请求和响应。
-- `deploy.sh`：服务器端更新脚本；部署前要核对 `server.js`、`routes/deploy.js` 和服务器上的进程管理配置。
-- 管理员版本查看：`routes/admin.js` 的 `/api/admin/deployment-status` 读取脱敏部署记录，`frontend/admin/index.html` 的“系统设置”仅向有设置权限的管理员展示提交号、状态和更新时间。
-- 管理后台更新记录：发布时由维护 Agent 在 `config/release-notes.json` 写入简短的改动说明；`services/release-notes.js` 统一校验，`routes/admin.js` 的 `/api/admin/release-notes` 仅向有设置权限的管理员只读提供，`frontend/admin/index.html` 的“系统设置”展示。不要做前台入口、强制弹窗或后台编辑器；每次推送 Gitee 并部署前，先把本次功能修复或优化补进该文件。
-
-## 前端页面定位
-
-`frontend/` 是唯一静态源码，`public/` 是 Node 静态服务使用的生成镜像。修改 HTML、页面 JS、CSS 后执行 `npm run sync:frontend` 和 `npm run check:mirrors`。
-
-静态生成入口为 `scripts/lib/frontend-assets.js`、`scripts/sync-frontend.js`、`scripts/check-frontend-mirror.js`、`scripts/build-static-site.js`。`npm run build` 生成带提交号和文件哈希清单的 `dist/`；`npm run test:frontend-assets` 验证同步冲突保护、上传隔离和输出路径边界。
-
-| 功能 | 页面 | 主要脚本/样式 |
+| 作用 | 位置 | 说明 |
 | --- | --- | --- |
-| 首页/校墙 | `frontend/index.html` | `frontend/js/home.js`、`frontend/js/side-cards.js`、`frontend/css/mobile-fix.css` |
-| 帖子详情/评论 | `frontend/post-detail.html` | `frontend/js/detail.js`、`frontend/js/detail-emojis.js`、`frontend/css/style.css` |
-| 我的/个人中心 | `frontend/profile.html` | 页面内脚本、`frontend/js/profile.js`、`frontend/css/mobile-fix.css`；资料卡含移动端退出登录入口 |
-| 广播站/点歌 | `frontend/radio.html` | `frontend/js/radio.js`、`frontend/css/radio.css`（页面终态布局）、`frontend/css/mobile-fix.css`（公共移动兼容） |
-| 私信 | `frontend/messages.html` | `frontend/js/messages.js`、`frontend/css/mobile-fix.css` |
-| 登录/注册 | `frontend/login.html`、`frontend/register.html` | `frontend/js/auth.js` |
-| 管理后台 | `frontend/admin/index.html` | 页面内后台模块脚本和样式 |
-| 公众号推送 | `frontend/admin/mp-draft.html` | `frontend/admin/js/mp-draft-utils.js`（文本/视频预览工具）、`frontend/admin/js/mp-draft-ui.js`（状态提示）、`routes/mp-draft.js`、`services/mp-draft.js`；热门帖、周/月活跃榜、图片/视频预览和异步草稿同步，手动同步与一键发布共用微信图片/视频素材处理链 |
+| 服务入口 | `server.js`、`config/environment.js` | 环境配置与进程启动、退出 |
+| HTTP 应用组装 | `app.js` → `http/middleware.js`、`http/static-pages.js`、`http/routes.js` | 中间件、静态页面与 API 挂载；构建应用不初始化数据库、不监听、不启动任务 |
+| 运行生命周期 | `services/runtime.js` | 数据库初始化、监听、任务启动、有界退出 |
+| 数据库初始化与迁移 | `config/database.js`、`config/schema-migrations.js` | 历史表仍由启动 DDL/字段索引检查兼容；新表由 `schema_migrations` 记录版本化迁移 |
+| 写入事务与幂等 | `services/write-transaction.js` | 业务写入与 `api_write_requests` 收据同事务；键和 payload 冲突返回 409 |
+| 数据库事务退出 | `services/database-transaction.js` | 回滚失败销毁连接，避免未知事务状态回池 |
+| 通知 outbox | `services/notification-outbox.js`、`jobs/index.js` | 反馈管理员通知在业务事务中登记，后台按租约、claim token 和退避重试；SMTP 至少一次，不证明收件箱到达 |
+| 公众号持久同步 | `services/mp-sync-jobs.js`、`routes/mp-draft.js` | `mp_sync_jobs` 队列、owner 锁、租约恢复与 `needs_review` 人工核对；未知微信结果不自动重发 |
+| 点歌状态转换 | `services/song-state-transitions.js` | 在行锁和旧状态条件下完成审核状态转换，冲突统一返回 409 |
+| 后台任务入口 | `jobs/index.js`、`services/task-lifecycle.js`、`services/cleanup.js`、`services/mp-sync-jobs.js`、`services/notification-outbox.js` | 显式启停验证码、点赞、点歌、公众号同步、通知 outbox 和清理任务；数据库租约支持进程重启恢复；路由加载不创建维护定时器 |
+| 点歌维护分层 | `modules/songs/index.js` → `services/song-maintenance.js` → `repositories/song-maintenance.js` | HTTP 与后台任务共享服务实例；服务编排日期与归档规则，repository 执行 SQL |
+| 实际静态目录 | `public/` | `express.static` 当前提供的页面、CSS、JS |
+| 前端源码 | `frontend/` | 唯一静态源码；通过 `npm run sync:frontend` 生成 `public/` 镜像 |
+| 静态生成与检查 | `scripts/lib/frontend-assets.js`、`scripts/sync-frontend.js`、`scripts/check-frontend-mirror.js`、`scripts/build-static-site.js` | 共用文件规则；生成 `public/` 镜像和带哈希清单的 `dist/`；生产当前仍提供 `public/` |
+| 旧/备用模板 | `views/` | 不要默认视为当前渲染来源，需由调用链确认 |
+| 部署脚本 | `deploy.sh` | 部署和同步流程入口，修改部署时先读它 |
 
-发帖媒体链路：`frontend/new-post.html` / `frontend/js/post.js` 负责统一图片+视频选择、预览和提交（最多9张图片、1个视频；iOS 使用可点击封面层和行内播放兜底）；`frontend/js/post-editor.js` 是投稿页和编辑页共用的可视化编辑器，编辑时直接显示粗体/斜体，提交时转换为兼容存储格式；`routes/upload.js` 的 `/api/upload/post-images`、`/api/upload/post-video` 负责鉴权、类型/大小/文件头校验，视频固定落在 `uploads/videos`；`routes/posts.js` 与 `config/database.js` 的 `video_url` 字段负责保存、列表和详情返回；`services/cleanup.js` 每日清理未发布帖子媒体（图片7天、视频30天），已审核通过的帖子媒体受保护；首页/详情展示分别在 `frontend/js/home.js`、`frontend/js/detail.js`。
+## 功能入口地图
 
-公众号推送链路：`frontend/admin/mp-draft.html` 选择帖子并生成图文预览，`routes/mp-draft.js` 读取 `video_url` / `video_poster`，在预览和公众号正文中加入视频播放器及站内打开链接；微信侧若过滤外链播放器，链接仍作为兜底入口。同步前由页面的 `getArticleForSync` 校验内存文章；若浏览器状态丢失但预览区仍是有效内容，会从当前预览恢复文章再同步，不能误报“请先生成图文预览”。
+### 前端页面
 
-公众号视频链路：`routes/mp-draft.js` 必须在热点列表和生成内容查询中保留 `video_url`；公众号正文使用“打开原帖播放视频”的稳定入口（站外视频不直接嵌入草稿），`frontend/admin/mp-draft.html` 的客户端预览模板也必须保留同一入口，避免二次渲染时丢失。同步公众号永久素材时，站内允许上传的 MP4、WebM、OGV 均通过 `services/mp-draft.js` 的同一媒体链路处理：MP4 直接上传，其他格式仅在服务器临时转为兼容 MP4 后上传，站内原视频不会改写或删除。生产环境须提供 `ffmpeg` 与 `ffprobe`（可用 `FFMPEG_PATH`、`FFPROBE_PATH` 指定路径）；缺失、转码失败或结果超过微信大小上限时必须把明确失败原因回传同步结果，不能伪造成功。
+| 功能 | 先看这些文件 | 后端入口 |
+| --- | --- | --- |
+| 首页/帖子流 | `frontend/index.html`、`frontend/js/home.js`、`frontend/js/app.js` | `routes/posts.js`、`routes/auth.js` |
+| 帖子详情/回复 | `frontend/post-detail.html`、`frontend/js/detail.js`、`frontend/js/detail-replies.js` | `routes/posts.js` |
+| 电台/歌曲 | `frontend/radio.html`、`frontend/js/radio.js`、`frontend/css/radio-polish-enhanced.css` | `routes/songs.js` |
+| 管理后台 | `frontend/admin/index.html`、`public/admin/index.html` | `routes/admin.js` |
+| 点歌审核与拒绝通知 | `frontend/admin/index.html`、`routes/admin.js`、`services/email.js` | `config/database.js`、`settings.song_reject_reasons`、`song_requests.reject_reason` |
+| 每日歌曲独立页 | `frontend/admin/mp-draft.html`、`public/admin/mp-draft.html` | `routes/mp-draft.js`、`services/mp-draft.js` |
+| 微信公众号回调与绑定 | `frontend/profile.html`、`frontend/register.html` | `routes/wechat.js`、`services/wechat*.js`；回调为 `/api/wechat/callback` |
+| 意见反馈 | `frontend/feedback.html` | `routes/feedback.js` |
+| 消息 | `frontend/messages.html`、`frontend/js/messages.js`、`frontend/css/messages-polish-enhanced.css` | `routes/messages.js` |
+| 个人主页 | `frontend/profile.html`、`frontend/css/profile-polish-enhanced.css` | `routes/auth.js` |
+| 登录与账号 | `frontend/js/auth.js` | `routes/auth.js` |
 
-其他协议、编辑、反馈和错误页也加载统一主题脚本：`agreement.html`、`privacy.html`、`edit-post.html`、`edit-profile.html`、`new-post.html`、`post-detail.html`、`feedback.html`、`404.html`、`reset-password.html`。
+公共样式主要在 `frontend/css/`，常用入口为 `style.css`、`base.css`、`responsive.css`、`mobile-fix.css`；页面级美化补丁放在 `*-polish-enhanced.css`，并同步到 `public/`。
 
-## 主题与首屏启动
+### 后端路由与服务
 
-- `frontend/js/theme-mode.js` 与 `public/js/theme-mode.js`：读取 `/api/site-info`，只应用教师节（含黑板/开学季氛围）或 `520` 主题，切换 `mode-teacher` / `mode-festival-520` 并发出 `festival-theme-ready`；仅使用带时效的已确认本地提示提前预载主题 CSS，最终仍以接口结果为准。
-- `frontend/css/teacher.css` 与 `public/css/teacher.css`：教师节视觉主题。
-- `frontend/css/festival-520.css` 与 `public/css/festival-520.css`：520 主题视觉和装饰。
-- 各页面 `<head>` 的 `app-boot-style` / `app-booting`：主题就绪前隐藏页面，监听 `festival-theme-ready` 后释放；必须保留短超时兜底，不能使用 `load` 事件提前放行。
-- `frontend/admin/index.html` 中的节日设置是唯一主题选择入口，选项应保持“教师节 / 黑板主题”和“520 告白季”两项；后端兼容旧值 `back_to_school` 时归一化为教师节。
+常规路由集中在 `routes/`：
 
-## 邮箱验证码
+`auth.js`、`posts.js`、`songs.js`、`admin.js`、`feedback.js`、`notices.js`、`messages.js`、`wechat.js`、`checkin.js`、`reservations.js`、`notifications.js`、`leaderboard.js`、`upload.js`、`follows.js`、`mp-draft.js`、`hitokoto.js`、`site.js`、`health.js`、`deploy.js`。
 
-匿名发布权限由 `routes/posts.js`、`routes/songs.js` 按 `settings` 实时校验；对应回归入口为 `scripts/test-anonymous-policy.js`。反馈邮件由 `routes/feedback.js` 调用 `services/email.js`，回归入口为 `scripts/test-feedback-notices.js`、`scripts/test-email-service.js`。
+匿名发布权限由 `routes/posts.js`、`routes/songs.js` 按 `settings` 实时校验；对应回归入口为 `scripts/test-anonymous-policy.js`。反馈邮件由 `routes/feedback.js` 通过 `services/notification-outbox.js` 登记，再由 `services/email.js` 发送，回归入口为 `scripts/test-feedback-notices.js`、`scripts/test-email-service.js`。
 
-- 前端发送入口：`frontend/js/auth.js` 的注册邮箱验证码请求；输入和复制按钮在 `frontend/register.html`。
-- 后端发送入口：`routes/auth.js` 的 `/api/auth/send-register-email-code`。
-- 后端生成/校验：使用 Node `crypto` 生成验证码，服务端只保存哈希和过期时间，注册时再次哈希比对；前端只提交邮箱和验证码，不生成、不回传验证码。
-- 邮件发送：`services/email.js`。后台开关和 SMTP 配置在 `routes/admin.js`、`frontend/admin/index.html`。
-- 图片验证码是兼容回退，不应在邮箱验证已开启时阻塞默认注册流程；修改认证流程时必须同时覆盖 `frontend/public` 和后端路由测试。
+可复用业务逻辑集中在 `services/`，包括 `ai.js`、`email.js`、`wechat.js`、`wechat-flows.js`、`wechat-reply.js`、`wechat-token.js`、`mp-draft.js`、`mp-sync-jobs.js`、`notification-outbox.js`、`song-state-transitions.js`、`write-transaction.js` 等。遇到接口问题，按“页面调用 → `routes/` → `services/` → 数据访问/外部服务”顺序追踪。
 
-## 响应式约定
+管理 API 入口为 `routes/admin.js`；每日推歌和时段日历接口分别位于 `routes/admin/daily-songs.js`、`routes/admin/slots.js`，由管理入口挂载到原 API 前缀下，并继续继承管理后台登录与员工身份校验。公众号推送入口单独挂载为 `/api/mp`，但仍由 `routes/mp-draft.js` 统一执行员工与权限校验。`POST /api/mp/sync-review` 仅允许最高管理员且具备 `songs:review` 权限的任务所有者处理 `needs_review` 或补标记失败的 `mark_failed`：`created` 需 `media_id`，`not_created` 需 `confirm_no_draft=true`，系统不会自动重发未知结果。
 
-- 断点约定：`min-width: 769px` 为桌面布局，`max-width: 768px` 才允许移动布局；不要用“内容少/卡片窄”代替 viewport 断点判断。
-- 公共层：`frontend/css/style.css`、`base.css`、`responsive.css`、`mobile-fix.css`，对应 `public/css/` 镜像。
-- 页面专属样式尽量作用域到页面根类（如 `.home-page`、`.profile-page`、`.radio-page`），移动规则写在明确的 `@media (max-width: 768px)` 中，避免全局选择器反向覆盖桌面布局。
-- 首页侧栏定位：`frontend/index.html` 的 `side-cards-left/right` 与 `frontend/js/side-cards.js`；签到卡由 `frontend/js/home.js` 的 `loadCheckinStatus` / `syncCheckinPlacement` 管理。
-- 动态互动区：`frontend/js/home.js` 的 `renderPostCard`、`toggleLike`、`toggleFavorite`，样式集中在 `mobile-fix.css` 的首页作用域块。
+## 常见边界
 
-## 常用检查
+- 管理后台主页面与每日歌曲页面是两个功能边界；修后台布局、权限或管理接口时不要顺手修改 `mp-draft`。
+- `frontend/` 与 `public/` 不是任意复制关系；先确认对应文件，再做最小同步。
+- `views/` 只有在 `server.js` 或调用链证明会使用时才是修改目标。
+- `dist/` 是本地构建产物和哈希清单，不是当前 Express 静态目录；部署静态目录由私有运维配置决定。
+- 不在索引中记录密钥、Cookie、服务器密码或完整线上配置。
+- 多个 Git 远程并存；发布前必须由任务明确指定目标远程。
 
-```powershell
-npm run test:feedback-clarity
-npm run check:mirrors
-npm run check:privacy
-npm test
-node scripts/test-cleanup.js
-node scripts/test-radio-layout.js
-node scripts/test-site-info-sharing.js
-node scripts/test-home-request-race.js
-node scripts/test-responsive-boundary.js
-node scripts/test-detail-interactions.js
-npm run test:runtime
-npm run test:http
-npm run test:song-maintenance
-node scripts/test-post-media-editor.js
-node scripts/test-mp-draft-modules.js
-node --check frontend/js/home.js
-node --check frontend/js/theme-mode.js
-```
+## 验证入口
 
-涉及首屏、主题、路由或验证码时，额外运行对应 `scripts/test-*.js`，并检查 `git diff --check`。部署前确认工作区干净、目标提交已推送到 Gitee，部署后核对健康检查和线上提交号。
+- 服务语法：`node --check server.js`
+- 运行生命周期：`npm run test:runtime`（离线任务测试及临时端口真实监听，不连接业务数据库）
+- HTTP 兼容：`npm run test:http`（模拟数据库、临时端口，验证页面与权限响应）
+- 点歌维护：`npm run test:song-maintenance`（注入时钟与数据访问，验证周期、生效日期、容量及归档条件）
+- 静态流水线：`npm run test:frontend-assets`、`npm run build`（临时目录回归；同步镜像并生成静态产物）
+- 用户反馈回归：`npm run test:feedback-clarity`（评论计数、发布身份说明、点歌名额提示和分类筛选）
+- 公众号推送回归：`npm run test:mp-draft-modules`、`npm run test:mp-draft-flow`、`npm run test:mp-weekly-song-schedule`（模块镜像、同步终态、推送页面和排期）
+- 持久任务与事务回归：`node scripts/test-schema-migrations.js`、`node scripts/test-write-transaction.js`、`node scripts/test-notification-outbox.js`、`node scripts/test-mp-sync-jobs.js`、`node scripts/test-content-transactions.js`
+- 改期重复请求：`npm run test:reschedule-idempotency`（同目标不重复写入，收据回放跳过通知）
+- 架构可靠性回归：`node scripts/test-architecture-reliability.js`（代理信任、点歌状态转换和前端幂等收据）
+- 管理与邮件链路语法：`node --check routes/admin.js`、`node --check services/email.js`、`node --check config/database.js`
+- 补丁空白：`git diff --check`
+- 前端静态改动：检查 `frontend/` 与 `public/` 对应文件内容是否同步。
+- 页面改动：在实际运行页面和目标视口验证，不只看源码或构建输出。
 
-## 低耦合整理建议
+## 更新规则
 
-以下是后续建议，不是本文件对源码行为的替代说明：
-
-1. 把各页面重复的 `app-booting` 内联逻辑收敛为一个极小的公共启动约定；首屏关键 CSS 可以保留内联，业务逻辑不要复制到每个 HTML。
-2. 把首页侧栏卡片的渲染、排列和断点判断集中到一个模块，页面只提供容器和数据入口。
-3. 把注册/登录的验证码状态机集中在认证模块，HTML 只保留表单和无障碍状态节点。
-4. 继续保持 `frontend/` 与 `public/` 的镜像检查，不要让一个目录成为“临时修改目录”而忘记同步。
-5. 大范围视觉调整先改公共 token/页面作用域，再改组件细节，避免用更高优先级的全局规则层层覆盖旧规则。
+只有在入口、运行副本、目录边界或验证命令发生变化时更新本索引；保持它短小、可执行，避免变成第二份 README。

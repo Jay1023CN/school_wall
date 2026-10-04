@@ -24,7 +24,7 @@ const MP_VIDEO_TRANSCODE_TIMEOUT_MS = 180000;
 const MP_VIDEO_PROBE_TIMEOUT_MS = 15000;
 const MP_VIDEO_TEMP_PREFIX = 'campus-wall-mp-video-';
 const CONTROLLED_VIDEO_RELATIVE_RE = /^uploads\/videos\/video_[A-Za-z0-9_-]+\.(?:mp4|webm|ogv)$/i;
-const PUBLIC_WALL_ORIGIN = (process.env.PUBLIC_WALL_ORIGIN || 'http://localhost:3000').replace(/\/$/, '');
+const PUBLIC_WALL_ORIGIN = (process.env.PUBLIC_WALL_ORIGIN || 'https://wall.jay23.cn').replace(/\/$/, '');
 const FFMPEG_COMMAND = process.env.FFMPEG_PATH || 'ffmpeg';
 const FFPROBE_COMMAND = process.env.FFPROBE_PATH || 'ffprobe';
 
@@ -94,9 +94,9 @@ function toWechatDraftArticle(article) {
   }
 
   payload.title = article.title;
-  payload.author = article.author || '示例校园校园墙';
+  payload.author = article.author || '嘉二校园墙';
   payload.digest = article.digest;
-  payload.content_source_url = article.content_source_url || 'http://localhost:3000';
+  payload.content_source_url = article.content_source_url || 'https://wall.jay23.cn';
   payload.show_cover_pic = normalizeFlag(article.show_cover_pic, 1);
   payload.need_open_comment = normalizeFlag(article.need_open_comment, 1);
   payload.only_fans_can_comment = normalizeFlag(article.only_fans_can_comment, 0);

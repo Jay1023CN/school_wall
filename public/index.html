@@ -4,7 +4,7 @@
   <style id="app-boot-style">
     html.app-booting { background: #f7f1e6; }
     html.app-booting body { visibility: hidden; }
-    html.app-booting::before { content: "✦ 示例校园墙 · 正在加载"; position: fixed; inset: 0; z-index: 2147483646; display: flex; align-items: center; justify-content: center; padding-bottom: 42px; box-sizing: border-box; background: linear-gradient(135deg, #f8f3e9, #eaf3ee); color: #2f6f68; font: 600 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: .12em; }
+    html.app-booting::before { content: "✦ 嘉二の墙墙 · 正在加载"; position: fixed; inset: 0; z-index: 2147483646; display: flex; align-items: center; justify-content: center; padding-bottom: 42px; box-sizing: border-box; background: linear-gradient(135deg, #f8f3e9, #eaf3ee); color: #2f6f68; font: 600 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: .12em; }
     .pull-refresh-indicator { position: fixed; top: calc(var(--navbar-height, 64px) + 6px); left: 50%; z-index: 2147483645; display: flex; align-items: center; gap: 10px; box-sizing: border-box; padding: 8px 20px 8px 16px; transform: translateX(-50%) translateY(-120px); border: 1px solid rgba(255, 107, 157, .2); border-radius: 9999px; background: rgba(255, 255, 255, .94); box-shadow: 0 8px 30px rgba(30, 41, 59, .14); color: #1e293b; font: 500 .82rem/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; opacity: 0; visibility: hidden; pointer-events: none; transition: transform .25s ease, opacity .25s ease, visibility .25s ease; }
     .pull-refresh-indicator.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
     .pull-refresh-indicator .refresh-icon { display: block; width: 20px; height: 20px; flex: 0 0 auto; color: #ff6b9d; }
@@ -41,18 +41,18 @@
   <meta name="msvalidate.01" content="8DA0B640EFE57429657B25E97269E4DA" />
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>示例校园墙 - 校园信息交流平台</title>
+  <title>嘉二の墙墙 - 校园信息交流平台</title>
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <link rel="apple-touch-icon" href="/favicon.png" sizes="180x180">
   <link rel="logo" href="/logo-search.png" type="image/png">
-  <meta name="application-name" content="示例校园墙">
+  <meta name="application-name" content="嘉二の墙墙">
   <meta name="theme-color" content="#FAFBFE" id="themeColorMeta">
 
   <!-- SEO Meta Tags -->
-  <meta name="description" content="示例校园墙 — 校园信息交流平台。匿名发帖畅所欲言，校园广播站点歌为你传递心声，快来体验吧！">
-  <meta name="keywords" content="示例校园,示例校园,校园墙,校园信息,匿名发帖,校园广播,点歌,表白墙,求助,二手交易,校园社区,上海市嘉定区第二中学">
-  <meta name="author" content="示例校园墙">
-  <link rel="canonical" href="http://localhost:3000/">
+  <meta name="description" content="嘉二の墙墙 — 校园信息交流平台。匿名发帖畅所欲言，校园广播站点歌为你传递心声，快来体验吧！">
+  <meta name="keywords" content="嘉定二中,嘉二,校园墙,校园信息,匿名发帖,校园广播,点歌,表白墙,求助,二手交易,校园社区,上海市嘉定区第二中学">
+  <meta name="author" content="嘉二の墙墙">
+  <link rel="canonical" href="https://wall.jay23.cn/">
 
   <!-- 搜索引擎验证 -->
   <meta name="google-site-verification" content="YOUR_GOOGLE_VERIFICATION_CODE">
@@ -60,19 +60,19 @@
   <meta name="sogou_site_verification" content="YOUR_SOGOU_VERIFICATION_CODE"/>
 
   <!-- QQ/微信分享 Open Graph -->
-  <meta property="og:title" content="示例校园墙 - 校园信息交流平台">
+  <meta property="og:title" content="嘉二の墙墙 - 校园信息交流平台">
   <meta property="og:description" content="匿名发帖畅所欲言，校园广播站点歌为你传递心声，快来体验吧！">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="http://localhost:3000">
-  <meta property="og:site_name" content="示例校园墙">
+  <meta property="og:url" content="https://wall.jay23.cn">
+  <meta property="og:site_name" content="嘉二の墙墙">
   <meta property="og:locale" content="zh_CN">
-  <meta property="og:image" content="http://localhost:3000/images/show.jpg">
+  <meta property="og:image" content="https://wall.jay23.cn/images/show.jpg">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="示例校园墙 - 校园信息交流平台">
+  <meta name="twitter:title" content="嘉二の墙墙 - 校园信息交流平台">
   <meta name="twitter:description" content="匿名发帖畅所欲言，校园广播站点歌为你传递心声，快来体验吧！">
-  <meta name="twitter:image" content="http://localhost:3000/images/show.jpg">
+  <meta name="twitter:image" content="https://wall.jay23.cn/images/show.jpg">
   <link rel="preconnect" href="https://v1.hitokoto.cn" crossorigin>
 
   <!-- P0-1: 关键 CSS 内联 - variables + base + 关键首屏样式 -->
@@ -92,15 +92,15 @@
       --shadow-primary: 0 4px 14px rgba(255,107,157,.25); --shadow-secondary: 0 4px 14px rgba(167,139,250,.25);
       --transition-fast: .15s ease; --transition-normal: .25s ease; --transition-slow: .4s cubic-bezier(.4,0,.2,1);
       --navbar-height: 64px; --container-max: 680px;
-      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'HarmonyOS Sans SC', sans-serif;
     }
     [data-theme="dark"] {
-      --bg-primary: #1a1423; --bg-secondary: #2a1f33; --bg-card: #2a1f33; --bg-glass: rgba(42,31,51,.82);
-      --text-primary: #f5e6f0; --text-secondary: #d4b8cf; --text-light: #a88ba3; --text-inverse: #1a1423;
-      --border-light: #3d2d48; --border-color: #4d3a58;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,.25); --shadow-md: 0 4px 12px rgba(0,0,0,.35);
-      --shadow-lg: 0 8px 30px rgba(0,0,0,.4); --shadow-xl: 0 20px 60px rgba(0,0,0,.5);
-      --shadow-primary: 0 4px 14px rgba(255,107,157,.35); --shadow-secondary: 0 4px 14px rgba(167,139,250,.35);
+      --bg-primary: #0F1218; --bg-secondary: #161B24; --bg-card: #1B212D; --bg-glass: rgba(27,33,45,.82); --bg-elevated: #242C3C;
+      --text-primary: #F1F5F9; --text-secondary: #94A3B8; --text-light: #64748B; --text-inverse: #0F1218;
+      --border-light: rgba(255,255,255,.05); --border-color: rgba(255,255,255,.09);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.35); --shadow-md: 0 4px 16px rgba(0,0,0,.45);
+      --shadow-lg: 0 10px 32px rgba(0,0,0,.55); --shadow-xl: 0 20px 60px rgba(0,0,0,.65);
+      --shadow-primary: 0 4px 18px rgba(255,117,165,.3); --shadow-secondary: 0 4px 18px rgba(167,139,250,.3);
     }
     html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
     body { font-family: var(--font-sans); background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; margin: 0; padding: 0; min-height: 100vh; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -166,7 +166,7 @@
   <!-- 导航栏 -->
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
-      <a href="/" class="nav-logo">🏠 示例校园墙</a>
+      <a href="/" class="nav-logo">🏠 嘉二の墙墙</a>
       <div class="nav-links" id="navLinks">
         <a href="/" class="nav-link" data-page="home"><span>🏠</span> 首页</a>
         <a href="/radio" class="nav-link" data-page="radio"><span>🎵</span> 点歌</a>
@@ -194,7 +194,7 @@
   <!-- 主内容区 -->
   <div class="main-content">
     <!-- SEO H1标签（视觉隐藏但对搜索引擎可见） -->
-    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">示例校园墙 - 校园信息交流平台，匿名发帖、校园点歌、表白求助</h1>
+    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">嘉二の墙墙 - 校园信息交流平台，匿名发帖、校园点歌、表白求助</h1>
 
     <!-- 教师节主题寄语：默认隐藏，仅在管理员开启教师节模式时展示 -->
     <section class="teacher-theme-hero" aria-label="教师节主题寄语" hidden>
@@ -232,9 +232,9 @@
         <div class="quick-card-icon">✏️</div>
         <div class="quick-card-text">发布动态</div>
       </a>
-      <div class="quick-card quick-card-gaokao" id="gaokaoCard">
-        <div class="quick-card-icon">📚</div>
-        <div class="quick-card-text">高考倒计时</div>
+      <div class="quick-card quick-card-gaokao" id="gaokaoCard" title="点击切换春考/等级考/高考倒计时">
+        <div class="quick-card-icon">🌸</div>
+        <div class="quick-card-text">上海春考倒计时</div>
         <div class="quick-card-countdown" id="gaokaoCountdown"></div>
       </div>
       <div class="quick-card quick-card-hitokoto" id="hitokotoCard">
@@ -343,9 +343,9 @@
     <!-- 左侧卡片组 -->
     <div class="side-cards-group side-cards-left">
       <!-- 高考倒计时 -->
-      <div class="side-card glass-effect" id="sideGaokao">
-        <div class="side-card-icon">📚</div>
-        <div class="side-card-title">高考倒计时</div>
+      <div class="side-card glass-effect" id="sideGaokao" title="点击切换春考/等级考/高考倒计时">
+        <div class="side-card-icon">🌸</div>
+        <div class="side-card-title">上海春考倒计时</div>
         <div class="side-card-countdown" id="sideGaokaoCountdown"></div>
         <div class="side-card-progress">
           <div class="progress-ring">
@@ -469,7 +469,7 @@
 
   <!-- 页脚 -->
   <footer class="footer">
-    <p>&copy; 2026 示例校园墙 All Rights Reserved</p>
+    <p>&copy; 2026 嘉二の墙墙 All Rights Reserved</p>
     <p>
       <a href="/agreement" target="_blank">用户协议</a> |
       <a href="/privacy" target="_blank">隐私政策</a> |
@@ -482,22 +482,22 @@
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "示例校园墙",
-    "alternateName": ["示例校园校园墙", "示例校园信息交流平台", "上海市嘉定区第二中学校园墙"],
-    "url": "http://localhost:3000/",
-    "description": "示例校园校园信息交流平台。匿名发帖畅所欲言，校园广播站点歌为你传递心声。",
+    "name": "嘉二の墙墙",
+    "alternateName": ["嘉定二中校园墙", "嘉二信息交流平台", "上海市嘉定区第二中学校园墙"],
+    "url": "https://wall.jay23.cn/",
+    "description": "嘉定二中校园信息交流平台。匿名发帖畅所欲言，校园广播站点歌为你传递心声。",
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "http://localhost:3000/?search={search_term_string}",
+      "target": "https://wall.jay23.cn/?search={search_term_string}",
       "query-input": "required name=search_term_string"
     },
     "publisher": {
       "@type": "Organization",
-      "name": "示例校园墙",
-      "url": "http://localhost:3000/",
+      "name": "嘉二の墙墙",
+      "url": "https://wall.jay23.cn/",
       "logo": {
         "@type": "ImageObject",
-        "url": "http://localhost:3000/logo-search.png",
+        "url": "https://wall.jay23.cn/logo-search.png",
         "width": 220,
         "height": 220
       }
@@ -514,7 +514,7 @@
       "@type": "ListItem",
       "position": 1,
       "name": "首页",
-      "item": "http://localhost:3000/"
+      "item": "https://wall.jay23.cn/"
     }]
   }
   </script>
@@ -532,7 +532,7 @@
     </div>
   </div>
 
-  <script defer src="/js/app.js"></script>
+  <script defer src="/js/app.js?v=2026100401"></script>
   <script defer src="/js/user-card.js"></script>
   <script defer src="/js/index-theme.js"></script>
   <script defer src="/js/home.js"></script>
@@ -843,7 +843,7 @@
       window.updateNotificationBadge = updateNotificationBadge;
     })();
 
-    // ===== 倒计时（高考/等级考切换） =====
+    // ===== 校园大考倒计时（上海春考/等级考/高考联动切换） =====
     (function() {
       const el = document.getElementById('gaokaoCountdown');
       const sideEl = document.getElementById('sideGaokaoCountdown');
@@ -853,18 +853,17 @@
       const sideGaokaoTitle = sideGaokao ? sideGaokao.querySelector('.side-card-title') : null;
       const sideGaokaoIcon = sideGaokao ? sideGaokao.querySelector('.side-card-icon') : null;
 
-      // 快捷功能卡片中的标题
+      // 快捷功能卡片中的标题与图标
       const gaokaoCard = document.getElementById('gaokaoCard');
       const gaokaoCardText = gaokaoCard ? gaokaoCard.querySelector('.quick-card-text') : null;
       const gaokaoCardIcon = gaokaoCard ? gaokaoCard.querySelector('.quick-card-icon') : null;
 
-      let currentMode = 'gaokao';
-      let autoSwitchInterval;
-
       const exams = {
-        gaokao: { name: '高考', month: 6, day: 7, hour: 9, icon: '📚' },
-        dengkao: { name: '等级考', month: 5, day: 5, hour: 9, icon: '📝' }
+        chunkao: { name: '上海春考', shortName: '春考', month: 1, day: 6, hour: 9, icon: '🌸' },
+        dengkao: { name: '等级考', shortName: '等级考', month: 5, day: 5, hour: 9, icon: '📝' },
+        gaokao: { name: '高考', shortName: '高考', month: 6, day: 7, hour: 9, icon: '📚' }
       };
+      const examOrder = ['chunkao', 'dengkao', 'gaokao'];
 
       function getExamDate(exam) {
         const now = new Date();
@@ -876,12 +875,29 @@
         return examDate;
       }
 
+      function getNearestMode() {
+        const now = new Date();
+        let minDiff = Infinity;
+        let nearest = 'chunkao';
+        examOrder.forEach(key => {
+          const diff = getExamDate(exams[key]) - now;
+          if (diff > 0 && diff < minDiff) {
+            minDiff = diff;
+            nearest = key;
+          }
+        });
+        return nearest;
+      }
+
+      let currentMode = getNearestMode();
+      let autoSwitchInterval = null;
+
       function update() {
         const now = new Date();
         const exam = exams[currentMode];
         const examDate = getExamDate(exam);
         const diff = examDate - now;
-        const totalDays = currentMode === 'gaokao' ? 365 : 365;
+        const totalDays = 365;
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
         const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -893,7 +909,7 @@
         if (el) el.textContent = displayText;
         if (sideEl) sideEl.textContent = displayText;
 
-        // 更新两侧卡片的标题和图标
+        // 更新侧边栏卡片的标题和图标
         if (sideGaokaoTitle) sideGaokaoTitle.textContent = exam.name + '倒计时';
         if (sideGaokaoIcon) sideGaokaoIcon.textContent = exam.icon;
 
@@ -914,14 +930,42 @@
       }
 
       function switchMode() {
-        currentMode = currentMode === 'gaokao' ? 'dengkao' : 'gaokao';
+        const idx = examOrder.indexOf(currentMode);
+        currentMode = examOrder[(idx + 1) % examOrder.length];
         update();
+      }
+
+      function resetAutoSwitch() {
+        if (autoSwitchInterval) clearInterval(autoSwitchInterval);
+        autoSwitchInterval = setInterval(switchMode, 6000);
       }
 
       update();
       setInterval(update, 60000); // 每分钟更新
+      resetAutoSwitch();
 
-      // 侧边栏 gaokao 已移除(去重),仅快捷卡片保留
+      // 绑定移动端快捷卡片点击切换
+      if (gaokaoCard) {
+        gaokaoCard.style.cursor = 'pointer';
+        gaokaoCard.addEventListener('click', function(e) {
+          e.preventDefault();
+          switchMode();
+          resetAutoSwitch();
+          gaokaoCard.style.transform = 'scale(0.95)';
+          setTimeout(() => { gaokaoCard.style.transform = ''; }, 140);
+        });
+      }
+
+      // 绑定侧边栏卡片点击切换
+      if (sideGaokao) {
+        sideGaokao.style.cursor = 'pointer';
+        sideGaokao.addEventListener('click', function() {
+          switchMode();
+          resetAutoSwitch();
+          sideGaokao.style.transform = 'scale(0.96)';
+          setTimeout(() => { sideGaokao.style.transform = ''; }, 140);
+        });
+      }
     })();
 
     // ===== 移动端移除侧边栏卡片,节省 DOM =====
@@ -1400,7 +1444,7 @@
 
     // ===== 动态加载站点设置 =====
     (function() {
-      const defaultSiteName = '示例校园墙';
+      const defaultSiteName = '嘉二の墙墙';
       const defaultSiteDesc = '校园信息交流平台';
       const CACHE_KEY = 'siteSettings';
       const CACHE_TTL = 3600 * 1000; // 1 小时

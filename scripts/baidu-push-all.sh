@@ -6,7 +6,7 @@ set -euo pipefail
 : "${DB_NAME:?请设置 DB_NAME}"
 : "${BAIDU_PUSH_TOKEN:?请设置 BAIDU_PUSH_TOKEN}"
 
-BAIDU_SITE_URL="${BAIDU_SITE_URL:-https://campus-wall.example}"
+BAIDU_SITE_URL="${BAIDU_SITE_URL:-https://wall.jay23.cn}"
 BAIDU_PUSH_API="${BAIDU_PUSH_API:-http://data.zz.baidu.com/urls}"
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-3306}"

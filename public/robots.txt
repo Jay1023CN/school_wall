@@ -1,5 +1,5 @@
-# 示例校园墙 robots.txt
-# http://localhost:3000
+# 嘉二の墙墙 robots.txt
+# https://wall.jay23.cn
 
 User-agent: *
 Allow: /
@@ -24,4 +24,4 @@ Allow: /login
 Allow: /register
 
 # Sitemap 地址（动态生成，包含所有帖子）
-Sitemap: http://localhost:3000/api/sitemap.xml
+Sitemap: https://wall.jay23.cn/api/sitemap.xml

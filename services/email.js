@@ -102,7 +102,7 @@ function normalizeEmailSettings(settings) {
     smtpUser,
     smtpPass,
     smtpFrom: String(settings.smtp_from || '').trim(),
-    siteName: String(settings.site_name || '示例校园墙').replace(/[\r\n<>]/g, '').trim() || '示例校园墙'
+    siteName: String(settings.site_name || '嘉二の墙墙').replace(/[\r\n<>]/g, '').trim() || '嘉二の墙墙'
   };
 }
 
@@ -180,7 +180,7 @@ async function createTransporter() {
   return { transporter: entry.transporter, smtp_from: entry.smtp_from, smtp_user: entry.smtp_user, entry };
 }
 
-async function sendEmail(to, subject, html, type, userName) {
+async function sendEmail(to, subject, html, type, userName, deliveryOptions = {}) {
   type = type || '';
   if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
     await logEmailSafely(to, subject, type, '无效邮箱', 'fail', '邮箱格式错误', userName);
@@ -195,17 +195,17 @@ async function sendEmail(to, subject, html, type, userName) {
     }
     const { transporter, smtp_from, smtp_user, entry } = result;
     entry.activeSends += 1;
-    const safeSiteName = String(entry.site_name || '示例校园墙').replace(/[\r\n<>]/g, '').trim() || '示例校园墙';
+    const safeSiteName = String(entry.site_name || '嘉二の墙墙').replace(/[\r\n<>]/g, '').trim() || '嘉二の墙墙';
     let from;
     if (smtp_from && smtp_from.indexOf('<') > -1) {
       from = smtp_from;
     } else if (smtp_user) {
       from = smtp_from ? smtp_from + ' <' + smtp_user + '>' : safeSiteName + ' <' + smtp_user + '>';
     } else {
-      from = process.env.SMTP_FROM || '"' + safeSiteName + '" <noreply@localhost:3000>';
+      from = process.env.SMTP_FROM || '"' + safeSiteName + '" <noreply@wall.jay23.cn>';
     }
     await withTimeout(
-      transporter.sendMail({ from, to, subject, html }),
+      transporter.sendMail({ from, to, subject, html, ...(deliveryOptions.messageId ? { messageId: deliveryOptions.messageId } : {}) }),
       SMTP_SEND_TIMEOUT_MS,
       'SMTP发送超时'
     );
@@ -241,9 +241,9 @@ function decoEmoji(title) {
 }
 
 function kawaiiLayout(title, bodyContent, siteUrl, siteName) {
-  const brandName = escapeHtml(siteName || '示例校园墙');
+  const brandName = escapeHtml(siteName || '嘉二の墙墙');
   const safeTitle = escapeHtml(title || '来自站点的一封信');
-  const safeSiteUrl = escapeHtml(siteUrl || process.env.SITE_URL || 'http://localhost:3000');
+  const safeSiteUrl = escapeHtml(siteUrl || process.env.SITE_URL || 'https://wall.jay23.cn');
   return `
   <!DOCTYPE html>
   <html>
@@ -320,8 +320,8 @@ function getSongSchedule(p) {
 function songEmailLayout(title, preheader, bodyContent, actionUrl, actionText, options) {
   options = options || {};
   const safeTitle = escapeHtml(title || '广播站点歌通知');
-  const safePreheader = escapeHtml(preheader || '示例校园墙广播站通知');
-  const safeUrl = escapeHtml(actionUrl || process.env.SITE_URL || 'http://localhost:3000');
+  const safePreheader = escapeHtml(preheader || '嘉二の墙墙广播站通知');
+  const safeUrl = escapeHtml(actionUrl || process.env.SITE_URL || 'https://wall.jay23.cn');
   const safeActionText = escapeHtml(actionText || '打开校园墙');
   const accent = options.accent || '#ec4899';
   const accentSoft = options.accentSoft || '#fff1f6';
@@ -339,7 +339,7 @@ function songEmailLayout(title, preheader, bodyContent, actionUrl, actionText, o
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #f1ddea;border-radius:22px;overflow:hidden;">
         <tr><td style="height:6px;padding:0;background-color:${accent};font-size:0;line-height:0;">&nbsp;</td></tr>
         <tr><td style="padding:22px 22px 20px;background-color:${accentSoft};">
-          <div style="margin:0 0 7px;color:${accent};font-size:12px;font-weight:800;letter-spacing:1.4px;line-height:18px;">示例校园墙 · 校园广播站</div>
+          <div style="margin:0 0 7px;color:${accent};font-size:12px;font-weight:800;letter-spacing:1.4px;line-height:18px;">嘉二の墙墙 · 校园广播站</div>
           <div style="margin:0;color:#33263d;font-size:24px;font-weight:800;line-height:32px;">${safeTitle}</div>
           <div style="margin:8px 0 0;color:#8d7795;font-size:12px;line-height:18px;">一封关于你点歌的小消息</div>
         </td></tr>
@@ -404,7 +404,7 @@ function songApprovedEmailHtml(p) {
     ${songInfoCard(p)}
     ${songScheduleCard(schedule, '已加入播放安排', '#7c3aed', '#f6f1ff')}
     <div style="margin:0 0 8px;padding:12px 14px;background-color:#fffaf0;border:1px solid #f4e5bd;border-radius:12px;color:#80632b;font-size:13px;line-height:21px;">到点记得来听听；如果临时调整，后台会再次通知你。</div>`;
-  return songEmailLayout('点歌通过啦', '你的点歌已安排在 ' + schedule.playDate + ' ' + schedule.timeRange + ' 播放。', body, process.env.SITE_URL || 'http://localhost:3000/radio', '查看我的点歌', { accent: '#7c3aed', accentSoft: '#f6f1ff' });
+  return songEmailLayout('点歌通过啦', '你的点歌已安排在 ' + schedule.playDate + ' ' + schedule.timeRange + ' 播放。', body, process.env.SITE_URL || 'https://wall.jay23.cn/radio', '查看我的点歌', { accent: '#7c3aed', accentSoft: '#f6f1ff' });
 }
 
 function songPendingAdminEmailHtml(p, adminUrl) {
@@ -421,12 +421,12 @@ function songPlayedEmailHtml(p) {
   const body = `<p style="margin:0 0 14px;color:#4c3c55;font-size:16px;line-height:25px;">${nickname} 同学，你点的歌已经顺利播放啦 🎉</p>
     ${songInfoCard(p)}
     <div style="margin:0 0 8px;padding:13px 14px;background-color:#eefbf4;border:1px solid #ccefdc;border-radius:12px;color:#3e7154;font-size:13px;line-height:21px;">谢谢你的参与。想把下一首歌送给谁，随时再来点一首。</div>`;
-  return songEmailLayout('你的点歌已经播放', '你点的《' + String(p.songName || '这首歌') + '》已经在广播站播放。', body, process.env.SITE_URL || 'http://localhost:3000/radio', '再去点一首歌', { accent: '#159a62', accentSoft: '#eefbf4' });
+  return songEmailLayout('你的点歌已经播放', '你点的《' + String(p.songName || '这首歌') + '》已经在广播站播放。', body, process.env.SITE_URL || 'https://wall.jay23.cn/radio', '再去点一首歌', { accent: '#159a62', accentSoft: '#eefbf4' });
 }
 
 function registrationEmailHtml(code, nickname, siteName, siteDescription, siteUrl) {
   const safeNickname = escapeHtml(nickname || '同学');
-  const safeSiteName = escapeHtml(siteName || '示例校园墙');
+  const safeSiteName = escapeHtml(siteName || '嘉二の墙墙');
   const safeDescription = escapeHtml(siteDescription || '校园信息交流平台');
   const safeCode = escapeHtml(code);
   const body = `
@@ -450,8 +450,8 @@ function registrationEmailHtml(code, nickname, siteName, siteDescription, siteUr
 
 async function sendRegistrationCodeEmail(email, code, nickname) {
   const settings = await getEmailSettings();
-  const siteName = String(settings.site_name || '示例校园墙').replace(/[\r\n]/g, '').trim() || '示例校园墙';
-  const siteUrl = process.env.SITE_URL || 'http://localhost:3000';
+  const siteName = String(settings.site_name || '嘉二の墙墙').replace(/[\r\n]/g, '').trim() || '嘉二の墙墙';
+  const siteUrl = process.env.SITE_URL || 'https://wall.jay23.cn';
   const subject = '【' + siteName + '】注册邮箱验证码';
   const html = registrationEmailHtml(code, nickname, siteName, settings.site_description, siteUrl);
   return sendEmail(email, subject, html, 'register_code', nickname);
@@ -475,7 +475,7 @@ async function checkUserNotify(userId, type) {
 const NOTIFY_TYPES = {
   comment: {
     title: '有新的评论啦',
-    subject: '💬 收到新评论 · 示例校园墙',
+    subject: '💬 收到新评论 · 嘉二の墙墙',
     notifyField: 'notify_comment',
     buildBody: function(p) {
       return `<p style="font-size:15px;color:#4A3F5C;margin:0 0 12px;line-height:1.7;">亲爱的 <strong style="color:#FF6B9D;">${p.postAuthorNickname}</strong> 同学：</p>
@@ -487,7 +487,7 @@ ${contentCard(`<div style="font-size:14px;color:#4A3F5C;line-height:1.8;">${p.co
   },
   like: {
     title: '有人喜欢了你的帖子',
-    subject: '❤️ 收到点赞 · 示例校园墙',
+    subject: '❤️ 收到点赞 · 嘉二の墙墙',
     notifyField: 'notify_like',
     buildBody: function(p) {
       return `<p style="font-size:15px;color:#4A3F5C;margin:0 0 12px;line-height:1.7;">亲爱的 <strong style="color:#FF6B9D;">${p.userNickname}</strong> 同学：</p>
@@ -499,7 +499,7 @@ ${contentCard('<div style="text-align:center;font-size:40px;line-height:1;">❤�
   },
   mention: {
     title: '有人在评论中提到了你',
-    subject: '📢 有人提到了你 · 示例校园墙',
+    subject: '📢 有人提到了你 · 嘉二の墙墙',
     notifyField: 'notify_mention',
     buildBody: function(p) {
       return `<p style="font-size:15px;color:#4A3F5C;margin:0 0 12px;line-height:1.7;">亲爱的 <strong style="color:#C084FC;">${p.userNickname}</strong> 同学：</p>
@@ -511,7 +511,7 @@ ${contentCard(`<div style="font-size:14px;color:#4A3F5C;line-height:1.8;">${p.co
   },
   follower: {
     title: '有新的小粉丝',
-    subject: '🌟 新粉丝 · 示例校园墙',
+    subject: '🌟 新粉丝 · 嘉二の墙墙',
     notifyField: 'notify_follower',
     buildBody: function(p) {
       return `<p style="font-size:15px;color:#4A3F5C;margin:0 0 12px;line-height:1.7;">亲爱的 <strong style="color:#FF6B9D;">${p.userNickname}</strong> 同学：</p>
@@ -522,7 +522,7 @@ ${contentCard('<div style="text-align:center;font-size:40px;line-height:1;">🌟
   },
   post_approved: {
     title: '审核通过啦',
-    subject: '✅ 帖子审核通过 · 示例校园墙',
+    subject: '✅ 帖子审核通过 · 嘉二の墙墙',
     notifyField: 'notify_post_approved',
     buildBody: function(p) {
       return `<p style="font-size:15px;color:#4A3F5C;margin:0 0 12px;line-height:1.7;">亲爱的 <strong style="color:#FF6B9D;">${p.userNickname}</strong> 同学：</p>
@@ -532,7 +532,7 @@ ${contentCard(`<div style="text-align:center;font-size:18px;font-weight:600;colo
   },
   post_rejected: {
     title: '审核未通过',
-    subject: '💔 帖子未通过审核 · 示例校园墙',
+    subject: '💔 帖子未通过审核 · 嘉二の墙墙',
     notifyField: 'notify_post_rejected',
     buildBody: function(p) {
       return `<p style="font-size:15px;color:#4A3F5C;margin:0 0 12px;line-height:1.7;">亲爱的 <strong style="color:#FF6B9D;">${p.userNickname}</strong> 同学：</p>
@@ -546,7 +546,7 @@ ${contentCard(`
   },
   song_approved: {
     title: '点歌通过啦',
-    subject: '🎵 点歌审核通过 · 示例校园墙',
+    subject: '🎵 点歌审核通过 · 嘉二の墙墙',
     notifyField: 'notify_song_approved',
     buildBody: function(p) {
       // 审核通过邮件走独立模板，避免旧的卡哇伊布局在各类客户端中出现低对比度文字。
@@ -555,7 +555,7 @@ ${contentCard(`
   },
   song_rejected: {
     title: '本期暂未选中',
-    subject: '🎧 本期点歌暂未选中 · 示例校园墙',
+    subject: '🎧 本期点歌暂未选中 · 嘉二の墙墙',
     notifyField: 'notify_song_rejected',
     buildBody: function(p) {
       const schedule = getSongSchedule(p);
@@ -570,12 +570,12 @@ ${contentCard(`
           <tr><td style="padding:0 16px 15px;color:#765347;font-size:14px;line-height:22px;word-break:break-word;">${reason ? '原因：' + escapeHtml(reason).replace(/\n/g, '<br>') : '这期安排暂时没有为它留出位置。'}</td></tr>
         </table>
         <div style="margin:0 0 8px;padding:12px 14px;background-color:#fff7fb;border:1px solid #f1ddea;border-radius:12px;color:#705d78;font-size:13px;line-height:21px;">别灰心，欢迎下次再来点歌；我们会继续期待在广播里听到你的选择。</div>`;
-      return songEmailLayout('这首歌本期暂未选中', '你点的《' + String(p.songName || '这首歌') + '》本期暂未安排播放，欢迎下次再来点歌。', body, process.env.SITE_URL || 'http://localhost:3000/radio', '再去点一首歌', { accent: '#d97706', accentSoft: '#fff4ee' });
+      return songEmailLayout('这首歌本期暂未选中', '你点的《' + String(p.songName || '这首歌') + '》本期暂未安排播放，欢迎下次再来点歌。', body, process.env.SITE_URL || 'https://wall.jay23.cn/radio', '再去点一首歌', { accent: '#d97706', accentSoft: '#fff4ee' });
     }
   },
   song_played: {
     title: '点歌已经播放啦',
-    subject: '🎉 您的点歌已播放 · 示例校园墙',
+    subject: '🎉 您的点歌已播放 · 嘉二の墙墙',
     notifyField: 'notify_song_played',
     buildBody: function(p) {
       return songPlayedEmailHtml(p);
@@ -583,7 +583,7 @@ ${contentCard(`
   },
   feedback_reply: {
     title: '反馈回复',
-    subject: '📬 反馈收到回复 · 示例校园墙',
+    subject: '📬 反馈收到回复 · 嘉二の墙墙',
     notifyField: 'notify_feedback_reply',
     buildBody: function(p) {
       return `<p style="font-size:15px;color:#4A3F5C;margin:0 0 12px;line-height:1.7;">亲爱的 <strong style="color:#FF6B9D;">${p.userNickname}</strong> 同学：</p>
@@ -597,10 +597,10 @@ ${contentCard(`
   },
   follow_post: {
     title: '关注的人有新帖子',
-    subject: '📝 关注的人发布了新帖子 · 示例校园墙',
+    subject: '📝 关注的人发布了新帖子 · 嘉二の墙墙',
     notifyField: 'notify_follow_post',
     buildBody: function(p) {
-      var postLink = 'http://localhost:3000/post/' + p.postId;
+      var postLink = 'https://wall.jay23.cn/post/' + p.postId;
       return `<p style="font-size:15px;color:#4A3F5C;margin:0 0 12px;line-height:1.7;">亲爱的 <strong style="color:#FF6B9D;">${p.followerNickname}</strong> 同学：</p>
 <p style="font-size:15px;color:#4A3F5C;margin:0 0 6px;"><strong style="color:#C084FC;">${p.posterNickname}</strong> 发布了新帖子 📝</p>
 <div style="font-size:12px;color:#B8A9D4;margin-bottom:4px;">📌 标题：《${p.postTitle}》</div>
@@ -679,20 +679,14 @@ async function notifyFeedbackReply(userEmail, userNickname, feedbackTitle, reply
   return notifyUser('feedback_reply', { email: userEmail, nickname: userNickname, userId: userId, userNickname: userNickname, feedbackTitle: feedbackTitle, replyContent: replyContent });
 }
 
-async function notifyAdminsNewFeedback(feedback) {
-  const { pool } = require('../config/database');
-  const [admins] = await pool.execute(
-    'SELECT id, email, nickname, username FROM users WHERE role IN ("admin", "super_admin") AND status = 1 AND email IS NOT NULL AND email != ""'
-  );
-  if (admins.length === 0) return;
-
+function buildAdminFeedbackEmail(feedback) {
   const typeNames = { suggest: '功能建议', bug: 'Bug 反馈', complaint: '投诉', other: '其他' };
   const safeType = escapeHtml(typeNames[feedback.type] || '其他');
   const safeTitle = escapeHtml(feedback.title || '未命名反馈');
   const safeRequester = escapeHtml(feedback.requesterName || '用户');
   const preview = String(feedback.content || '').slice(0, 160);
   const safePreview = escapeHtml(preview);
-  const adminUrl = escapeHtml((process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '') + '/admin');
+  const adminUrl = escapeHtml((process.env.SITE_URL || 'https://wall.jay23.cn').replace(/\/$/, '') + '/admin');
   const body = `<p style="font-size:15px;color:#4A3F5C;line-height:1.7;">有一条新的意见反馈等待处理。</p>
     ${contentCard(`<div style="line-height:1.8;color:#4A3F5C;">
       <div>编号：#${Number(feedback.id) || 0}</div><div>类型：${safeType}</div>
@@ -701,12 +695,21 @@ async function notifyAdminsNewFeedback(feedback) {
     </div>`)}
     <p style="font-size:14px;"><a href="${adminUrl}" style="color:#9D4EDD;">前往后台「反馈管理」查看和回复</a></p>`;
   const html = kawaiiLayout('收到新的意见反馈', body, adminUrl);
+  return { subject: '💬 新意见反馈 · 嘉二の墙墙', html };
+}
+
+async function notifyAdminsNewFeedback(feedback) {
+  const { pool } = require('../config/database');
+  const [admins] = await pool.execute(
+    'SELECT id, email, nickname, username FROM users WHERE role IN ("admin", "super_admin") AND status = 1 AND email IS NOT NULL AND email != ""'
+  );
+  const { html } = buildAdminFeedbackEmail(feedback);
   const sentEmails = new Set();
   for (const admin of admins) {
     const email = String(admin.email).trim();
     if (sentEmails.has(email.toLowerCase())) continue;
     sentEmails.add(email.toLowerCase());
-    await sendEmail(email, '💬 新意见反馈 · 校园墙', html, 'admin_new_feedback', admin.nickname || admin.username || '管理员');
+    await sendEmail(email, '💬 新意见反馈 · 嘉二の墙墙', html, 'admin_new_feedback', admin.nickname || admin.username || '管理员');
   }
 }
 
@@ -722,7 +725,7 @@ async function notifyAdminNewPostPending(postId, postTitle, posterNickname, post
     );
     if (admins.length === 0) return;
 
-    const siteUrl = process.env.SITE_URL || 'http://localhost:3000';
+    const siteUrl = process.env.SITE_URL || 'https://wall.jay23.cn';
     const adminUrl = siteUrl + '/admin';
     const contentPreview = (postContent || '').substring(0, 100);
 
@@ -749,7 +752,7 @@ async function notifyAdminNewPostPending(postId, postTitle, posterNickname, post
 
     for (const admin of admins) {
       const adminName = admin.nickname || admin.username || '管理员';
-      await sendEmail(admin.email, '📝 新帖子待审核 · 示例校园墙', kawaiiLayout('新帖子待审核', body), 'admin_pending_post', adminName);
+      await sendEmail(admin.email, '📝 新帖子待审核 · 嘉二の墙墙', kawaiiLayout('新帖子待审核', body), 'admin_pending_post', adminName);
     }
   } catch (err) {
     console.error('[Email] 通知管理员审核失败:', err.message);
@@ -771,7 +774,7 @@ async function notifyRadioAdminsNewSongPending(song) {
     );
     if (radioAdmins.length === 0) return;
 
-    const siteUrl = process.env.SITE_URL || 'http://localhost:3000';
+    const siteUrl = process.env.SITE_URL || 'https://wall.jay23.cn';
     const songAdminUrl = siteUrl.replace(/\/$/, '') + '/admin';
     const html = songPendingAdminEmailHtml(song || {}, songAdminUrl);
 
@@ -780,7 +783,7 @@ async function notifyRadioAdminsNewSongPending(song) {
       if (sentEmails.has(String(radioAdmin.email).toLowerCase())) continue;
       sentEmails.add(String(radioAdmin.email).toLowerCase());
       const adminName = radioAdmin.nickname || radioAdmin.username || '广播管理员';
-      await sendEmail(radioAdmin.email, '🎵 新点歌待审核 · 示例校园墙', html, 'song_pending_admin', adminName);
+      await sendEmail(radioAdmin.email, '🎵 新点歌待审核 · 嘉二の墙墙', html, 'song_pending_admin', adminName);
     }
   } catch (err) {
     console.error('[Email] 通知广播管理员审核失败:', err.message);
@@ -791,6 +794,6 @@ module.exports = {
   sendEmail, kawaiiLayout, sendRegistrationCodeEmail,
   notifyNewComment, notifyNewLike, notifyMention, notifyNewFollower,
   notifyPostApproved, notifyPostRejected, notifySongApproved, notifySongRejected,
-  notifySongPlayed, notifyFeedbackReply, notifyAdminsNewFeedback, notifyFollowPost, notifyAdminNewPostPending,
+  notifySongPlayed, notifyFeedbackReply, buildAdminFeedbackEmail, notifyAdminsNewFeedback, notifyFollowPost, notifyAdminNewPostPending,
   notifyRadioAdminsNewSongPending
 };

@@ -25,7 +25,7 @@ function createRuntime({ app, initialize, startTasks, drainTasks, closeDatabase,
         server.once('listening', onListening);
       });
       if (stopped) throw new Error('Runtime is stopping');
-      stopTasks = startTasks();
+      stopTasks = await startTasks();
       return server;
     })();
     return starting;

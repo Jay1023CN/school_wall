@@ -262,25 +262,33 @@ document.addEventListener('DOMContentLoaded', function() {
         if (playlistNotice) playlistNotice.textContent = '📢 暂无播放记录，快去点一首吧~';
       } else {
         playlist.innerHTML = '';
-        if (playlistNotice) playlistNotice.textContent = '📢 播放状态暂时不可用，请稍后重试';
+        showPlaylistLoadError();
       }
     } catch (err) {
       playlist.innerHTML = '';
-      if (playlistNotice) playlistNotice.textContent = '📢 播放状态暂时不可用，请稍后重试';
+      showPlaylistLoadError();
     }
+  }
+
+  function showPlaylistLoadError() {
+    if (!playlistNotice) return;
+    playlistNotice.innerHTML = '📢 播放状态暂时不可用，请稍后重试 ' +
+      '<button type="button" class="radio-state-retry">重新加载</button>';
+    var retryBtn = playlistNotice.querySelector('.radio-state-retry');
+    if (retryBtn) retryBtn.addEventListener('click', loadPlaylist);
   }
 
   async function loadMySongs() {
     var token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    var section = document.getElementById('mySongsSection');
+    var list = document.getElementById('mySongsList');
+    var empty = document.getElementById('mySongsEmpty');
     if (!token) {
-      document.getElementById('mySongsSection').style.display = 'none';
+      section.style.display = 'none';
       return;
     }
     try {
       var data = await authFetch('/api/songs/my');
-      var section = document.getElementById('mySongsSection');
-      var list = document.getElementById('mySongsList');
-      var empty = document.getElementById('mySongsEmpty');
       if (data.code === 200 && data.data && data.data.length > 0) {
         section.style.display = 'block';
         var html = '';
@@ -314,12 +322,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         empty.style.display = 'none';
-      } else {
+      } else if (data.code === 200 || data.code === 401) {
         section.style.display = 'none';
+      } else {
+        showMySongsLoadError(section, list, empty);
       }
     } catch (err) {
       console.error('加载我的点歌失败:', err);
+      showMySongsLoadError(section, list, empty);
     }
+  }
+
+  function showMySongsLoadError(section, list, empty) {
+    section.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    empty.innerHTML = '我的点歌暂时加载失败，请稍后重试。 <button type="button" class="radio-state-retry">重新加载</button>';
+    var retryBtn = empty.querySelector('.radio-state-retry');
+    if (retryBtn) retryBtn.addEventListener('click', loadMySongs);
   }
 
   // 撤回点歌

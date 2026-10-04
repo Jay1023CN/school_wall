@@ -225,9 +225,26 @@ async function stepSongName(openid, text) {
 }
 
 async function stepSongArtist(openid, text) {
+  var artist = String(text || '').trim();
+  if (!artist || artist === '跳过') return { text: T.songArtistRequired() };
+
+  var stateRows = await pool.execute(
+    'SELECT song_name FROM wechat_song_recs WHERE openid = ? AND step = "song_artist" LIMIT 1',
+    [openid]
+  );
+  var songName = stateRows[0] && stateRows[0][0] ? stateRows[0][0].song_name : '';
+  var songInfo = await aiService.searchSongInfo(songName, artist, { verifyOnly: true });
+  if (!songInfo) {
+    await pool.execute(
+      'UPDATE wechat_song_recs SET step = "song_name", song_name = NULL, artist = NULL, updated_at = NOW() WHERE openid = ?',
+      [openid]
+    );
+    return { text: T.songNotFound(songName, artist) };
+  }
+
   await pool.execute(
     'UPDATE wechat_song_recs SET step = "song_intro", artist = ?, updated_at = NOW() WHERE openid = ?',
-    [text === '跳过' ? '' : text, openid]
+    [artist, openid]
   );
   return { text: T.songAskIntro() };
 }

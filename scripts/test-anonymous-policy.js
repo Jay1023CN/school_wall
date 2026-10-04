@@ -8,12 +8,22 @@ const settings = { anon_post: 'false', anon_comment: 'false', post_review: 'fals
 let existingPostAnonymous = 0;
 const writes = [];
 const pool = {
+  async getConnection() {
+    let writeCheckpoint = writes.length;
+    return {
+      async beginTransaction() { writeCheckpoint = writes.length; },
+      async commit() {},
+      async rollback() { writes.splice(writeCheckpoint); },
+      release() {},
+      execute: (...args) => pool.execute(...args)
+    };
+  },
   async execute(sql, params) {
     if (sql.includes('FROM settings WHERE config_key = ?')) {
       const value = settings[params[0]];
       return [value === undefined ? [] : [{ config_value: value }]];
     }
-    if (sql.includes('SELECT user_id, title, content, category') && sql.includes('FROM posts')) {
+    if (sql.includes('SELECT user_id, title, content') && sql.includes('FROM posts')) {
       return [[{ user_id: 7, title: '原帖', content: '正文', is_anonymous: existingPostAnonymous, is_deleted: 0 }]];
     }
     if (sql.includes('SELECT id FROM posts WHERE id = ? AND status = "approved"')) return [[{ id: 3 }]];

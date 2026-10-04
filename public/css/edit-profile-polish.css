@@ -1,0 +1,153 @@
+/* 编辑资料页：暖白、砖红与杏色，避免高饱和粉紫渐变。 */
+body.edit-profile-page {
+  --edit-accent: #a95663;
+  --edit-accent-strong: #914b58;
+  --edit-accent-soft: #fff5f1;
+  --edit-border: #eadbd4;
+  --edit-ink: #3e3740;
+  --edit-muted: #857681;
+}
+
+body.edit-profile-page .edit-profile-back-btn {
+  color: var(--edit-accent-strong) !important;
+  background: #fffaf7 !important;
+  border: 1px solid var(--edit-border) !important;
+  box-shadow: 0 3px 12px rgba(116, 72, 72, 0.06) !important;
+}
+
+body.edit-profile-page .edit-profile-back-btn:hover,
+body.edit-profile-page .edit-profile-back-btn:focus-visible {
+  color: var(--edit-accent-strong) !important;
+  background: var(--edit-accent-soft) !important;
+  border-color: #d9adb0 !important;
+  box-shadow: 0 6px 16px rgba(145, 75, 88, 0.12) !important;
+}
+
+body.edit-profile-page .edit-profile-card {
+  border-color: var(--edit-border) !important;
+  background: rgba(255, 253, 251, 0.96) !important;
+  box-shadow: 0 12px 32px rgba(116, 72, 72, 0.08) !important;
+}
+
+body.edit-profile-page .edit-profile-header {
+  background: linear-gradient(180deg, #fff8f4 0%, #fffdfb 100%) !important;
+  border-bottom-color: var(--edit-border) !important;
+}
+
+body.edit-profile-page .edit-profile-title,
+body.edit-profile-page .edit-profile-label {
+  color: var(--edit-ink) !important;
+}
+
+body.edit-profile-page .edit-profile-subtitle,
+body.edit-profile-page .edit-profile-hint {
+  color: var(--edit-muted) !important;
+}
+
+body.edit-profile-page .edit-profile-input,
+body.edit-profile-page .edit-profile-select,
+body.edit-profile-page .edit-profile-textarea {
+  color: var(--edit-ink) !important;
+  background: #fffaf7 !important;
+  border-color: var(--edit-border) !important;
+}
+
+body.edit-profile-page .edit-profile-input:focus,
+body.edit-profile-page .edit-profile-select:focus,
+body.edit-profile-page .edit-profile-textarea:focus {
+  border-color: var(--edit-accent) !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(169, 86, 99, 0.13) !important;
+}
+
+body.edit-profile-page .edit-profile-input::placeholder,
+body.edit-profile-page .edit-profile-textarea::placeholder {
+  color: #a99599 !important;
+}
+
+body.edit-profile-page .edit-gender-tab {
+  color: var(--edit-muted) !important;
+  background: #fffaf7 !important;
+  border-color: var(--edit-border) !important;
+}
+
+body.edit-profile-page .edit-gender-tab:hover,
+body.edit-profile-page .edit-gender-tab.active {
+  color: var(--edit-accent-strong) !important;
+  background: var(--edit-accent-soft) !important;
+  border-color: #d9adb0 !important;
+}
+
+body.edit-profile-page .edit-gender-tab.active {
+  box-shadow: 0 0 0 3px rgba(169, 86, 99, 0.1) !important;
+}
+
+body.edit-profile-page .edit-avatar-preview {
+  border-color: var(--edit-border) !important;
+}
+
+body.edit-profile-page .edit-avatar-upload:hover .edit-avatar-preview {
+  border-color: var(--edit-accent) !important;
+}
+
+body.edit-profile-page .edit-profile-footer {
+  border-top-color: var(--edit-border) !important;
+}
+
+body.edit-profile-page .edit-profile-save-btn {
+  color: #fff !important;
+  background: var(--edit-accent-strong) !important;
+  box-shadow: 0 7px 18px rgba(145, 75, 88, 0.2) !important;
+}
+
+body.edit-profile-page .edit-profile-save-btn:hover,
+body.edit-profile-page .edit-profile-save-btn:focus-visible {
+  background: var(--edit-accent) !important;
+  box-shadow: 0 10px 22px rgba(145, 75, 88, 0.24) !important;
+}
+
+[data-theme="dark"] body.edit-profile-page .edit-profile-card {
+  background: #211d20 !important;
+  border-color: rgba(234, 219, 212, 0.14) !important;
+}
+
+[data-theme="dark"] body.edit-profile-page .edit-profile-header {
+  background: #292124 !important;
+  border-bottom-color: rgba(234, 219, 212, 0.14) !important;
+}
+
+[data-theme="dark"] body.edit-profile-page .edit-profile-title,
+[data-theme="dark"] body.edit-profile-page .edit-profile-label {
+  color: #f7eeeb !important;
+}
+
+[data-theme="dark"] body.edit-profile-page .edit-profile-subtitle,
+[data-theme="dark"] body.edit-profile-page .edit-profile-hint {
+  color: #cbb9b7 !important;
+}
+
+[data-theme="dark"] body.edit-profile-page .edit-profile-input,
+[data-theme="dark"] body.edit-profile-page .edit-profile-select,
+[data-theme="dark"] body.edit-profile-page .edit-profile-textarea,
+[data-theme="dark"] body.edit-profile-page .edit-gender-tab {
+  color: #f7eeeb !important;
+  background: #292326 !important;
+  border-color: rgba(234, 219, 212, 0.18) !important;
+}
+
+[data-theme="dark"] body.edit-profile-page .edit-gender-tab:hover,
+[data-theme="dark"] body.edit-profile-page .edit-gender-tab.active {
+  color: #f4c7c5 !important;
+  background: rgba(169, 86, 99, 0.18) !important;
+  border-color: rgba(217, 173, 176, 0.55) !important;
+}
+
+[data-theme="dark"] body.edit-profile-page .edit-profile-footer {
+  border-top-color: rgba(234, 219, 212, 0.14) !important;
+}
+
+@media (max-width: 768px) {
+  body.edit-profile-page .edit-profile-save-btn {
+    min-height: 50px;
+  }
+}

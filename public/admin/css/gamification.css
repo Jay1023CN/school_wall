@@ -1,0 +1,918 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+        html { height: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fb; color: #333; min-height: 100%; height: auto; overflow-y: auto;
+        }
+        [data-theme="dark"] body { background: #13151f; color: #e0e0e0; }
+
+        .top-bar {
+            background: linear-gradient(135deg, #C084FC 0%, #FF6B9D 100%);
+            color: white; padding: 16px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .top-bar h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .top-bar .back-link {
+            color: white; text-decoration: none; font-size: 14px;
+            display: flex; align-items: center; gap: 6px; opacity: 0.85;
+            padding: 6px 14px; border-radius: 20px; background: rgba(255,255,255,0.15);
+            transition: opacity 0.2s, background 0.2s;
+        }
+        .top-bar .back-link:hover { opacity: 1; background: rgba(255,255,255,0.25); }
+        .top-bar .top-right { display: flex; align-items: center; gap: 12px; }
+        .top-bar .top-right .btn {
+            padding: 6px 16px; border: none; border-radius: 20px; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .top-bar .top-right .btn-primary { background: white; color: #C084FC; }
+        .top-bar .top-right .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px; margin-bottom: 24px;
+        }
+        .stat-card {
+            background: white; border-radius: 16px; padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e8ecf4;
+        }
+        [data-theme="dark"] .stat-card { background: #1a1d2e; border-color: #2d3348; }
+        .stat-card .stat-value { font-size: 2rem; font-weight: 800; color: #C084FC; }
+        .stat-card .stat-label { font-size: 0.85rem; color: #94a3b8; margin-top: 4px; }
+        [data-theme="dark"] .stat-card .stat-value { color: #a78bfa; }
+
+        .tab-bar {
+            display: flex; gap: 4px; background: white; border-radius: 12px;
+            padding: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        [data-theme="dark"] .tab-bar { background: #1a1d2e; }
+        .tab-btn {
+            flex: 1; padding: 12px 16px; border: none; background: transparent;
+            font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 10px;
+            color: #94a3b8; transition: all 0.2s; white-space: nowrap;
+        }
+        .tab-btn:hover { color: #C084FC; background: rgba(192,132,252,0.08); }
+        .tab-btn.active { color: white; background: linear-gradient(135deg, #C084FC, #FF6B9D); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card {
+            background: white; border-radius: 16px; overflow: visible;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e8ecf4;
+        }
+        [data-theme="dark"] .card { background: #1a1d2e; border-color: #2d3348; }
+        .card .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .card table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 500px; }
+        .card th {
+            padding: 12px 16px; text-align: left; font-weight: 600;
+            color: #64748b; border-bottom: 2px solid #e8ecf4; background: #f8fafc;
+        }
+        [data-theme="dark"] .card th { color: #94a3b8; border-bottom-color: #2d3348; background: #1e2235; }
+        .card td { padding: 12px 16px; border-bottom: 1px solid #e8ecf4; }
+        [data-theme="dark"] .card td { border-bottom-color: #2d3348; }
+        .card tr:hover td { background: rgba(192,132,252,0.04); }
+        .card tr:last-child td { border-bottom: none; }
+
+        .rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 0.75rem; font-weight: 700; }
+        .rank-1 { background: #fef3c7; color: #d97706; }
+        .rank-2 { background: #f1f5f9; color: #64748b; }
+        .rank-3 { background: #fef2f2; color: #dc2626; }
+        [data-theme="dark"] .rank-1 { background: #78350f; color: #fbbf24; }
+        [data-theme="dark"] .rank-2 { background: #1e293b; color: #94a3b8; }
+        [data-theme="dark"] .rank-3 { background: #450a0a; color: #fca5a5; }
+
+        .user-cell { display: flex; align-items: center; gap: 10px; }
+        .user-cell .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #e2e8f0; }
+        .user-cell .nickname { font-weight: 600; }
+
+        .streak-badge { background: #f0fdf4; color: #16a34a; padding: 2px 10px; border-radius: 99px; font-size: 0.8rem; font-weight: 600; }
+        [data-theme="dark"] .streak-badge { background: #052e16; color: #4ade80; }
+
+        .pos-points { color: #16a34a; font-weight: 700; }
+        .neg-points { color: #dc2626; font-weight: 700; }
+
+        .loading-row td { text-align: center; padding: 40px; color: #94a3b8; }
+        .error-row td { text-align: center; padding: 40px; color: #ef4444; }
+        .empty-row td { text-align: center; padding: 40px; color: #94a3b8; }
+
+        .loading-spinner {
+            display: inline-block; width: 20px; height: 20px;
+            border: 3px solid #e2e8f0; border-top-color: #C084FC;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            vertical-align: middle; margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .form-card {
+            background: white; border-radius: 16px; padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e8ecf4;
+            margin-bottom: 20px;
+        }
+        [data-theme="dark"] .form-card { background: #1a1d2e; border-color: #2d3348; }
+        .form-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 6px; }
+        [data-theme="dark"] .form-group label { color: #94a3b8; }
+
+        .form-input, .form-select {
+            width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px;
+            font-size: 0.9rem; background: #f8fafc; transition: border-color 0.2s;
+            color: #333;
+        }
+        [data-theme="dark"] .form-input, [data-theme="dark"] .form-select {
+            background: #1e2235; border-color: #2d3348; color: #e0e0e0;
+        }
+        .form-input:focus, .form-select:focus { outline: none; border-color: #C084FC; }
+
+        .user-search-wrap { position: relative; }
+        .user-search-results {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+            max-height: 200px; overflow-y: auto; z-index: 50; display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        [data-theme="dark"] .user-search-results { background: #1a1d2e; border-color: #2d3348; }
+        .user-search-results .result-item {
+            padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+            border-bottom: 1px solid #f0f0f0; font-size: 0.85rem;
+        }
+        [data-theme="dark"] .user-search-results .result-item { border-bottom-color: #2d3348; }
+        .user-search-results .result-item:hover { background: rgba(192,132,252,0.08); }
+        .user-search-results .result-item:last-child { border-bottom: none; }
+        .user-search-results .result-item img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+
+        .selected-user {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; background: #f0fdf4; border-radius: 10px;
+            margin-top: 8px; font-size: 0.9rem;
+        }
+        [data-theme="dark"] .selected-user { background: #052e16; }
+        .selected-user img { width: 28px; height: 28px; border-radius: 50%; }
+        .selected-user .remove-btn {
+            margin-left: auto; cursor: pointer; color: #94a3b8;
+            padding: 2px 8px; border-radius: 6px; font-size: 1rem;
+        }
+        .selected-user .remove-btn:hover { background: #fef2f2; color: #dc2626; }
+        [data-theme="dark"] .selected-user .remove-btn:hover { background: #450a0a; }
+
+        .quick-amounts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .quick-amounts .qa-btn {
+            padding: 6px 14px; border: 1px solid #e2e8f0; border-radius: 8px;
+            background: #f8fafc; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+            color: #64748b; transition: all 0.2s;
+        }
+        [data-theme="dark"] .quick-amounts .qa-btn { background: #1e2235; border-color: #2d3348; color: #94a3b8; }
+        .quick-amounts .qa-btn:hover { border-color: #C084FC; color: #C084FC; }
+        .quick-amounts .qa-btn.deduct { color: #dc2626; }
+        .quick-amounts .qa-btn.deduct:hover { border-color: #dc2626; color: #dc2626; }
+
+        .form-submit {
+            padding: 10px 24px; border: none; border-radius: 10px;
+            background: linear-gradient(135deg, #C084FC, #FF6B9D);
+            color: white; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .form-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(192,132,252,0.3); }
+        .form-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 12px; font-size: 0.9rem; font-weight: 600;
+            z-index: 999; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            animation: toastIn 0.3s ease;
+        }
+        .toast-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .toast-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        [data-theme="dark"] .toast-success { background: #052e16; border-color: #166534; }
+        [data-theme="dark"] .toast-error { background: #450a0a; border-color: #991b1b; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+        @media (max-width: 600px) {
+            .top-bar { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+            .top-bar h1 { font-size: 16px; }
+            .container { padding: 16px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card { padding: 14px; }
+            .stat-card .stat-value { font-size: 1.4rem; }
+            .card th, .card td { padding: 10px 12px; }
+            .user-cell .avatar { width: 26px; height: 26px; }
+        }
+        [data-theme="dark"] .cleanup-btn { border-color: #475569 !important; }
+        [data-theme="dark"] .cleanup-btn-default { background:#1e293b;color:#94a3b8;border-color:#475569; }
+        [data-theme="dark"] .cleanup-btn-warn { background:#422006;color:#fbbf24;border-color:#78350f; }
+        [data-theme="dark"] .cleanup-btn-danger { background:#450a0a;color:#fca5a5;border-color:#7f1d1d; }
+        [data-theme="dark"] .cleanup-btn-purple { background:#2e1065;color:#c4b5fd;border-color:#5b21b6; }
+
+body.admin-gamification-page {
+        background: linear-gradient(135deg, #fff7fb 0%, #f8f2ff 55%, #f2f7ff 100%);
+      }
+      body.admin-gamification-page .top-bar {
+        padding: 18px clamp(16px, 4vw, 42px);
+        background: linear-gradient(135deg, #c084fc 0%, #ff6b9d 100%);
+        box-shadow: 0 8px 24px rgba(255, 107, 157, 0.16);
+      }
+      body.admin-gamification-page .container {
+        width: min(1120px, calc(100% - 32px));
+        padding: 26px 0 48px;
+      }
+      body.admin-gamification-page .card,
+      body.admin-gamification-page .form-card {
+        border-radius: 20px;
+        border: 1px solid rgba(255, 107, 157, 0.1);
+        box-shadow: 0 8px 24px rgba(167, 139, 250, 0.08);
+      }
+      body.admin-gamification-page .stats-grid {
+        gap: 14px;
+      }
+      body.admin-gamification-page .stat-card {
+        transition: transform .2s, box-shadow .2s;
+      }
+      body.admin-gamification-page .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(255, 107, 157, 0.12);
+      }
+      body.admin-gamification-page .tab-bar {
+        gap: 6px;
+        padding: 6px;
+        border-radius: 16px;
+        background: rgba(255,255,255,.72);
+      }
+      body.admin-gamification-page .tab-btn {
+        min-height: 42px;
+        border-radius: 12px;
+      }
+      body.admin-gamification-page .table-wrap {
+        border-radius: 16px;
+        overflow-x: auto;
+      }
+      body.admin-gamification-page .form-input,
+      body.admin-gamification-page .form-select {
+        min-height: 44px;
+        border-radius: 12px;
+      }
+      @media (max-width: 700px) {
+        body.admin-gamification-page .container {
+          width: min(100% - 20px, 560px);
+          padding-top: 16px;
+        }
+        body.admin-gamification-page .top-bar {
+          padding: 14px 14px;
+        }
+        body.admin-gamification-page .top-bar h1 {
+          font-size: 17px;
+        }
+        body.admin-gamification-page .top-bar .top-right {
+          gap: 6px;
+        }
+        body.admin-gamification-page .tab-bar {
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+        body.admin-gamification-page .tab-bar::-webkit-scrollbar {
+          display: none;
+        }
+        body.admin-gamification-page .tab-btn {
+          min-width: 92px;
+          white-space: nowrap;
+        }
+      }
+      @media (max-width: 430px) {
+        html,
+        body.admin-gamification-page {
+          overflow-x: hidden;
+        }
+        body.admin-gamification-page .top-bar {
+          align-items: flex-start;
+          gap: 10px;
+        }
+        body.admin-gamification-page .top-bar h1 {
+          min-height: 44px;
+          line-height: 44px;
+        }
+        body.admin-gamification-page .top-bar .top-right {
+          width: 100%;
+          gap: 8px;
+        }
+        body.admin-gamification-page .top-bar .top-right .btn,
+        body.admin-gamification-page .top-bar .back-link {
+          min-height: 44px;
+          flex: 1 1 0;
+          justify-content: center;
+          padding: 10px 12px;
+        }
+        body.admin-gamification-page .stats-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+        body.admin-gamification-page .stat-card {
+          min-width: 0;
+          min-height: 88px;
+          padding: 12px 10px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        body.admin-gamification-page .stat-card .stat-value {
+          font-size: 1.3rem;
+          line-height: 1.25;
+          overflow-wrap: anywhere;
+        }
+        body.admin-gamification-page .stat-card #g-weekly-star {
+          font-size: 1rem !important;
+          line-height: 1.3;
+        }
+        body.admin-gamification-page .stat-card .stat-label {
+          line-height: 1.35;
+        }
+        body.admin-gamification-page .tab-bar {
+          margin-bottom: 14px;
+          gap: 4px;
+          padding: 4px;
+          border-radius: 14px;
+        }
+        body.admin-gamification-page .tab-btn {
+          flex: 0 0 auto;
+          min-width: 88px;
+          min-height: 48px;
+          padding: 12px 10px;
+        }
+        body.admin-gamification-page .card {
+          min-width: 0;
+        }
+        body.admin-gamification-page .card .table-wrap {
+          max-width: 100%;
+          overflow-x: auto;
+          overscroll-behavior-x: contain;
+        }
+        body.admin-gamification-page .card th,
+        body.admin-gamification-page .card td {
+          padding: 12px 10px;
+          white-space: nowrap;
+        }
+        body.admin-gamification-page .form-card {
+          padding: 16px 14px;
+          border-radius: 16px;
+        }
+        body.admin-gamification-page .form-card h3 {
+          margin-bottom: 18px;
+        }
+        body.admin-gamification-page .form-group {
+          margin-bottom: 18px;
+        }
+        body.admin-gamification-page .form-input,
+        body.admin-gamification-page .form-select {
+          min-height: 48px;
+          padding: 12px;
+          font-size: 16px;
+        }
+        body.admin-gamification-page .user-search-results .result-item {
+          min-height: 48px;
+          padding: 10px 12px;
+        }
+        body.admin-gamification-page .quick-amounts {
+          gap: 8px;
+        }
+        body.admin-gamification-page .quick-amounts .qa-btn {
+          min-height: 44px;
+          padding: 10px 12px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        body.admin-gamification-page .form-submit {
+          min-height: 48px;
+          padding: 12px 18px;
+        }
+        body.admin-gamification-page #tab-log > div:first-child {
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: stretch;
+          gap: 8px !important;
+        }
+        body.admin-gamification-page #log-user-search {
+          min-width: 0;
+          max-width: none !important;
+        }
+        body.admin-gamification-page #tab-log > div:first-child .form-submit {
+          width: auto;
+          min-width: 72px;
+          padding: 12px 14px !important;
+        }
+        body.admin-gamification-page #log-pagination {
+          flex-wrap: wrap;
+        }
+        body.admin-gamification-page #log-pagination .form-submit {
+          width: auto;
+          flex: 1 1 120px;
+        }
+        body.admin-gamification-page #tab-log > div:last-child {
+          margin-top: 20px !important;
+          padding-top: 16px !important;
+        }
+        body.admin-gamification-page #tab-log > div:last-child > div:last-child {
+          gap: 8px !important;
+        }
+        body.admin-gamification-page .cleanup-btn {
+          min-height: 44px;
+          flex: 1 1 calc(50% - 4px);
+          padding: 10px 12px !important;
+        }
+        body.admin-gamification-page #grant-result {
+          overflow-x: auto;
+        }
+        body.admin-gamification-page #grant-result table {
+          min-width: 500px;
+        }
+        #award-modal > div {
+          width: calc(100vw - 24px) !important;
+          max-width: none !important;
+          max-height: calc(100dvh - 24px) !important;
+          padding: 20px 16px !important;
+          border-radius: 16px !important;
+        }
+        #award-modal > div > div:last-child {
+          flex-wrap: wrap;
+        }
+        #award-modal .form-submit {
+          width: auto;
+          min-width: 112px;
+          flex: 1 1 0;
+        }
+        #award-candidates {
+          max-height: min(300px, 36vh) !important;
+        }
+        #award-candidates .candidate-item {
+          min-height: 56px;
+          padding: 10px 8px !important;
+        }
+        #award-candidates .candidate-item > div {
+          min-width: 0;
+          overflow-wrap: anywhere;
+        }
+        #award-candidates .candidate-item > div span {
+          overflow-wrap: anywhere;
+        }
+      }
+
+/* 积分运营页：桌面清晰、窄屏不撑宽的最终布局层 */
+      body.admin-gamification-page {
+        --page-ink: #24324a;
+        --page-muted: #7b879d;
+        --page-line: #e8ecf4;
+        --page-accent: #a56be8;
+        --page-accent-soft: rgba(192, 132, 252, .12);
+        overflow-x: hidden;
+      }
+      body.admin-gamification-page .top-bar {
+        min-height: 72px;
+        gap: 16px;
+      }
+      body.admin-gamification-page .top-bar h1 {
+        min-width: 0;
+        line-height: 1.25;
+      }
+      body.admin-gamification-page .top-bar .top-right {
+        min-width: 0;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      body.admin-gamification-page .top-bar .top-right .btn,
+      body.admin-gamification-page .top-bar .back-link {
+        min-height: 38px;
+        white-space: nowrap;
+      }
+      body.admin-gamification-page .container {
+        min-width: 0;
+      }
+      body.admin-gamification-page .stats-grid {
+        align-items: stretch;
+      }
+      body.admin-gamification-page .stat-card {
+        min-width: 0;
+        overflow: hidden;
+      }
+      body.admin-gamification-page .stat-card .stat-value {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      body.admin-gamification-page .tab-bar {
+        align-items: stretch;
+      }
+      body.admin-gamification-page .tab-btn {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      body.admin-gamification-page .card {
+        min-width: 0;
+        overflow: hidden;
+      }
+      body.admin-gamification-page .card .table-wrap {
+        min-width: 0;
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+      body.admin-gamification-page .card table {
+        min-width: 560px;
+      }
+      body.admin-gamification-page .card th,
+      body.admin-gamification-page .card td {
+        vertical-align: middle;
+      }
+      body.admin-gamification-page .user-cell {
+        min-width: 0;
+      }
+      body.admin-gamification-page .user-cell .nickname {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      body.admin-gamification-page .form-card {
+        min-width: 0;
+      }
+      body.admin-gamification-page .form-card h3 {
+        color: var(--page-ink);
+        line-height: 1.35;
+      }
+      body.admin-gamification-page .form-group,
+      body.admin-gamification-page .user-search-wrap {
+        min-width: 0;
+      }
+      body.admin-gamification-page .form-input,
+      body.admin-gamification-page .form-select,
+      body.admin-gamification-page .form-submit {
+        max-width: 100%;
+      }
+      body.admin-gamification-page .form-input,
+      body.admin-gamification-page .form-select {
+        min-width: 0;
+      }
+      body.admin-gamification-page .user-search-results {
+        max-width: 100%;
+        max-height: min(280px, 42vh);
+      }
+      body.admin-gamification-page .user-search-results .result-item {
+        min-width: 0;
+      }
+      body.admin-gamification-page .user-search-results .result-item span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      body.admin-gamification-page .user-search-results .result-item > span:last-child {
+        margin-left: auto;
+      }
+      body.admin-gamification-page .selected-user {
+        min-width: 0;
+      }
+      body.admin-gamification-page .selected-user > span:not(.remove-btn) {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      body.admin-gamification-page .quick-amounts .qa-btn {
+        font: inherit;
+        user-select: none;
+        touch-action: manipulation;
+      }
+      body.admin-gamification-page #tab-grant > .form-card > .form-submit {
+        min-width: 160px;
+      }
+      body.admin-gamification-page #grant-result {
+        overflow: hidden;
+      }
+      body.admin-gamification-page #grant-result .grant-result-table {
+        width: 100%;
+        min-width: 0;
+      }
+      body.admin-gamification-page .log-filter-bar {
+        min-width: 0;
+      }
+      body.admin-gamification-page #log-pagination {
+        min-width: 0;
+        align-items: center;
+      }
+      body.admin-gamification-page #log-pagination span {
+        text-align: center;
+        line-height: 1.4;
+      }
+      body.admin-gamification-page .log-cleanup {
+        min-width: 0;
+      }
+      body.admin-gamification-page .cleanup-btn {
+        min-height: 38px;
+        white-space: nowrap;
+      }
+      body.admin-gamification-page #award-modal {
+        padding: 16px;
+        overscroll-behavior: contain;
+      }
+      body.admin-gamification-page #award-modal > div {
+        width: min(560px, 100%);
+        max-width: 100%;
+        max-height: min(720px, calc(100dvh - 32px));
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+      body.admin-gamification-page #award-modal .form-group {
+        min-width: 0;
+      }
+      body.admin-gamification-page #award-modal .form-select,
+      body.admin-gamification-page #award-modal .form-input {
+        width: 100%;
+      }
+      body.admin-gamification-page #award-candidates {
+        overflow-x: hidden !important;
+        overscroll-behavior: contain;
+      }
+      body.admin-gamification-page #award-candidates .candidate-item {
+        min-width: 0;
+      }
+      body.admin-gamification-page #award-candidates .candidate-item > div {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      body.admin-gamification-page #award-modal > div > div:last-child {
+        margin-top: 18px;
+      }
+      [data-theme="dark"] body.admin-gamification-page #award-modal > div {
+        background: #1a1d2e !important;
+        color: #e0e0e0;
+      }
+      [data-theme="dark"] body.admin-gamification-page #award-candidates {
+        border-color: #2d3348 !important;
+      }
+
+      @media (min-width: 701px) {
+        body.admin-gamification-page #tab-grant > .form-card {
+          max-width: 760px;
+        }
+        body.admin-gamification-page #tab-log > .card {
+          box-shadow: 0 10px 30px rgba(167, 139, 250, .08);
+        }
+      }
+
+      @media (max-width: 700px) {
+        body.admin-gamification-page .top-bar {
+          align-items: center;
+        }
+        body.admin-gamification-page .top-bar .top-right {
+          flex: 0 1 auto;
+        }
+        body.admin-gamification-page .container {
+          width: calc(100% - 24px);
+          padding-bottom: 32px;
+        }
+        body.admin-gamification-page .tab-bar {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          overflow: visible;
+        }
+        body.admin-gamification-page .tab-btn {
+          flex: 1 1 auto;
+          width: 100%;
+        }
+        body.admin-gamification-page .card .table-wrap {
+          overflow-x: visible;
+        }
+        body.admin-gamification-page .card table,
+        body.admin-gamification-page .card table tbody,
+        body.admin-gamification-page .card table tr,
+        body.admin-gamification-page .card table td {
+          display: block;
+        }
+        body.admin-gamification-page .card table {
+          min-width: 0;
+        }
+        body.admin-gamification-page .card table thead {
+          display: none;
+        }
+        body.admin-gamification-page .card table tbody tr:not(.loading-row):not(.empty-row):not(.error-row) {
+          display: grid;
+          grid-template-columns: minmax(78px, .38fr) minmax(0, 1fr);
+          gap: 8px 12px;
+          padding: 13px 14px;
+          border-bottom: 1px solid var(--page-line);
+        }
+        body.admin-gamification-page .card table tbody tr:not(.loading-row):not(.empty-row):not(.error-row):last-child {
+          border-bottom: 0;
+        }
+        body.admin-gamification-page .card table tbody tr:not(.loading-row):not(.empty-row):not(.error-row) td {
+          display: grid;
+          grid-template-columns: minmax(78px, .38fr) minmax(0, 1fr);
+          grid-column: 1 / -1;
+          gap: 12px;
+          align-items: center;
+          min-width: 0;
+          padding: 0;
+          border: 0;
+          line-height: 1.4;
+        }
+        body.admin-gamification-page .user-search-results .result-item {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
+        }
+        body.admin-gamification-page .user-search-results .result-item img {
+          grid-row: span 2;
+        }
+        body.admin-gamification-page .user-search-results .result-item > span:last-child {
+          grid-column: 2;
+          margin-left: 0;
+        }
+        body.admin-gamification-page .card table tbody tr:not(.loading-row):not(.empty-row):not(.error-row) td::before {
+          content: attr(data-label);
+          color: var(--page-muted);
+          font-size: .78rem;
+          font-weight: 600;
+        }
+        body.admin-gamification-page .card table tbody tr:not(.loading-row):not(.empty-row):not(.error-row) td > * {
+          min-width: 0;
+        }
+        body.admin-gamification-page .card table tbody tr:not(.loading-row):not(.empty-row):not(.error-row) .user-cell {
+          justify-content: flex-start;
+        }
+        body.admin-gamification-page .loading-row td,
+        body.admin-gamification-page .empty-row td,
+        body.admin-gamification-page .error-row td {
+          display: block;
+          padding: 36px 16px;
+          text-align: center;
+        }
+        body.admin-gamification-page .quick-amounts {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        body.admin-gamification-page .quick-amounts .qa-btn {
+          width: 100%;
+          padding: 10px 6px;
+          text-align: center;
+        }
+        body.admin-gamification-page #tab-grant > .form-card > .form-submit {
+          width: 100%;
+        }
+        body.admin-gamification-page .log-filter-bar {
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 8px !important;
+          align-items: stretch;
+        }
+        body.admin-gamification-page .log-filter-bar #log-user-search {
+          width: 100%;
+          max-width: none !important;
+        }
+        body.admin-gamification-page .log-filter-bar .form-submit {
+          min-width: 72px;
+          padding: 10px 14px !important;
+        }
+        body.admin-gamification-page #log-pagination {
+          flex-wrap: wrap;
+        }
+        body.admin-gamification-page #log-pagination .form-submit {
+          flex: 1 1 120px;
+          min-width: 0;
+        }
+        body.admin-gamification-page .log-cleanup-actions {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        body.admin-gamification-page .cleanup-btn {
+          width: 100%;
+          padding: 10px 8px !important;
+        }
+        body.admin-gamification-page #grant-result .grant-result-table,
+        body.admin-gamification-page #grant-result .grant-result-table tbody,
+        body.admin-gamification-page #grant-result .grant-result-table tr,
+        body.admin-gamification-page #grant-result .grant-result-table td {
+          display: block;
+        }
+        body.admin-gamification-page #grant-result .grant-result-table {
+          min-width: 0;
+        }
+        body.admin-gamification-page #grant-result .grant-result-table thead {
+          display: none;
+        }
+        body.admin-gamification-page #grant-result .grant-result-table tr {
+          display: grid;
+          grid-template-columns: minmax(78px, .38fr) minmax(0, 1fr);
+          gap: 7px 12px;
+          padding: 9px 0;
+          border-bottom: 1px solid var(--page-line);
+        }
+        body.admin-gamification-page #grant-result .grant-result-table tr:last-child {
+          border-bottom: 0;
+        }
+        body.admin-gamification-page #grant-result .grant-result-table td {
+          display: grid;
+          grid-template-columns: minmax(78px, .38fr) minmax(0, 1fr);
+          grid-column: 1 / -1;
+          gap: 12px;
+          padding: 0 !important;
+          border: 0 !important;
+          align-items: center;
+        }
+        body.admin-gamification-page #grant-result .grant-result-table td::before {
+          content: attr(data-label);
+          color: var(--page-muted);
+          font-size: .78rem;
+          font-weight: 600;
+        }
+        body.admin-gamification-page #award-modal {
+          padding: 12px;
+          align-items: flex-start !important;
+        }
+        body.admin-gamification-page #award-modal > div {
+          width: 100% !important;
+          max-height: calc(100dvh - 24px) !important;
+          margin: 0 auto;
+          padding: 22px 16px 16px !important;
+          border-radius: 18px !important;
+        }
+        body.admin-gamification-page #award-modal > div > div:last-child {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px !important;
+        }
+        body.admin-gamification-page #award-modal > div > div:last-child .form-submit {
+          width: 100%;
+          min-width: 0;
+          padding-left: 8px;
+          padding-right: 8px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        body.admin-gamification-page .top-bar {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 10px;
+        }
+        body.admin-gamification-page .top-bar h1 {
+          width: 100%;
+        }
+        body.admin-gamification-page .top-bar .top-right {
+          width: 100%;
+        }
+        body.admin-gamification-page .top-bar .top-right .btn,
+        body.admin-gamification-page .top-bar .back-link {
+          flex: 1 1 0;
+          justify-content: center;
+          padding-left: 8px;
+          padding-right: 8px;
+        }
+        body.admin-gamification-page .container {
+          width: calc(100% - 20px);
+        }
+        body.admin-gamification-page .tab-bar {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        body.admin-gamification-page .tab-btn {
+          padding-left: 6px;
+          padding-right: 6px;
+          font-size: 13px;
+        }
+        body.admin-gamification-page .card table tbody tr:not(.loading-row):not(.empty-row):not(.error-row) {
+          grid-template-columns: minmax(66px, .34fr) minmax(0, 1fr);
+          gap: 7px 9px;
+          padding-left: 11px;
+          padding-right: 11px;
+        }
+        body.admin-gamification-page .card table tbody tr:not(.loading-row):not(.empty-row):not(.error-row) td {
+          gap: 9px;
+          grid-template-columns: minmax(66px, .34fr) minmax(0, 1fr);
+        }
+        body.admin-gamification-page #grant-result .grant-result-table tr,
+        body.admin-gamification-page #grant-result .grant-result-table td {
+          grid-template-columns: minmax(66px, .34fr) minmax(0, 1fr);
+          gap: 9px;
+        }
+        body.admin-gamification-page .quick-amounts .qa-btn {
+          font-size: 13px;
+        }
+        body.admin-gamification-page .log-filter-bar {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        body.admin-gamification-page .log-filter-bar .form-submit {
+          width: 100%;
+        }
+        body.admin-gamification-page .log-cleanup-actions {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        body.admin-gamification-page *,
+        body.admin-gamification-page *::before,
+        body.admin-gamification-page *::after {
+          animation-duration: .01ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-duration: .01ms !important;
+        }
+      }
+
+      .candidate-item:hover {
+        background: rgba(192, 132, 252, 0.08);
+      }

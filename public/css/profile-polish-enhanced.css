@@ -172,3 +172,410 @@ span[style*="background: linear-gradient(135deg, rgba(255, 107, 157, 0.1)"] {
   border-radius: 999px !important;
   font-weight: 700 !important;
 }
+
+/* 个人中心操作区：三个动作各自有清晰层级，避免整排粉紫渐变抢视觉。 */
+body.profile-page #profileCard > .btn-edit-profile {
+  border-radius: 14px !important;
+  min-height: 46px;
+  margin-top: 10px;
+  box-shadow: none !important;
+  letter-spacing: 0.01em;
+}
+
+body.profile-page #profileCard > .btn-edit-profile:first-of-type {
+  background: #fff1f4 !important;
+  color: #c24166 !important;
+  border: 1px solid #f6c8d5 !important;
+}
+
+body.profile-page #profileCard > .btn-edit-profile.btn-secondary {
+  background: #f6f7fb !important;
+  color: #596579 !important;
+  border: 1px solid #e2e6ef !important;
+}
+
+body.profile-page #profileCard > .btn-edit-profile.btn-admin {
+  background: #fff8eb !important;
+  color: #a96b18 !important;
+  border: 1px solid #f1d79e !important;
+}
+
+body.profile-page #profileCard > .btn-edit-profile:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 5px 14px rgba(75, 61, 91, 0.08) !important;
+}
+
+body.profile-page #feedbackToggleBtn {
+  margin-top: 18px !important;
+  padding: 15px 17px !important;
+  background: linear-gradient(135deg, #fffaf5, #fff4f7) !important;
+  border: 1px solid #f1d9d4 !important;
+  color: #684f5d !important;
+  box-shadow: 0 8px 20px rgba(143, 91, 105, 0.08) !important;
+}
+
+body.profile-page #feedbackToggleBtn > span:first-child {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 11px;
+  background: #ffe8ee;
+  font-size: 1.05rem !important;
+}
+
+body.profile-page #feedbackInlineForm {
+  padding: 20px 17px !important;
+  background: #fffdfb !important;
+  border: 1px solid #f0dedc !important;
+  box-shadow: 0 10px 26px rgba(126, 92, 83, 0.1) !important;
+}
+
+body.profile-page #feedbackInlineForm select,
+body.profile-page #feedbackInlineForm input,
+body.profile-page #feedbackInlineForm textarea {
+  border: 1px solid #eadfe3 !important;
+  background: #fff !important;
+  color: #4b4050 !important;
+}
+
+body.profile-page #fbSubmitBtn {
+  background: #c85b7d !important;
+  box-shadow: 0 6px 14px rgba(200, 91, 125, 0.2) !important;
+}
+
+body.profile-page .profile-my-post-views {
+  gap: 5px;
+  background: #f5f7fb !important;
+  color: #667085 !important;
+  border: 1px solid #e5e9f0;
+}
+
+body.profile-page .profile-my-post-views svg { opacity: 0.85; }
+
+body.profile-page .profile-checkin-encouragement,
+body.profile-page .profile-checkin-title-goal {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff8ec;
+  color: #8a6740;
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+body.profile-page .profile-checkin-title-goal {
+  background: #fff0f4;
+  color: #b34f70;
+  font-weight: 700;
+}
+
+[data-theme="dark"] body.profile-page .profile-checkin-encouragement { background: rgba(245, 190, 94, .12); color: #f1c875; }
+[data-theme="dark"] body.profile-page .profile-checkin-title-goal { background: rgba(255, 101, 132, .12); color: #ff9fba; }
+
+/* 移动端意见反馈：保持为轻量的设置卡片，避免渐变按钮抢占页面视觉 */
+@media (max-width: 768px) {
+  body.profile-page #feedbackToggleBtn {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-height: 58px !important;
+    box-sizing: border-box !important;
+    margin: 14px 0 0 !important;
+    padding: 10px 12px !important;
+    border: 1px solid #eadfe3 !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    color: #554657 !important;
+    box-shadow: 0 4px 14px rgba(80, 55, 72, 0.07) !important;
+    transform: none !important;
+  }
+
+  body.profile-page #feedbackToggleBtn::before,
+  body.profile-page #feedbackToggleBtn::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  body.profile-page #feedbackToggleBtn > span:first-child {
+    display: inline-flex !important;
+    flex: 0 0 36px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    margin: 0 !important;
+    border: 1px solid #f5d6df !important;
+    border-radius: 11px !important;
+    background: #fff1f4 !important;
+    color: #c65378 !important;
+    font-size: 1rem !important;
+  }
+
+  body.profile-page #feedbackToggleBtn > span:nth-child(2) {
+    min-width: 0 !important;
+    color: #554657 !important;
+    font-size: 0.94rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+  }
+
+  body.profile-page #feedbackToggleBtn #feedbackArrow {
+    display: inline-flex !important;
+    flex: 0 0 26px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    height: 26px !important;
+    margin-left: auto !important;
+    border-radius: 50% !important;
+    background: #f7f3f6 !important;
+    color: #8b7180 !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+  }
+
+  body.profile-page #feedbackInlineForm {
+    margin-top: 8px !important;
+    padding: 14px !important;
+    border: 1px solid #eadfe3 !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-shadow: 0 5px 16px rgba(80, 55, 72, 0.06) !important;
+  }
+
+  body.profile-page #feedbackInlineForm::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  body.profile-page #feedbackInlineForm > div {
+    margin-bottom: 10px !important;
+  }
+
+  body.profile-page #feedbackInlineForm input,
+  body.profile-page #feedbackInlineForm select,
+  body.profile-page #feedbackInlineForm textarea {
+    width: 100% !important;
+    min-height: 44px !important;
+    box-sizing: border-box !important;
+    padding: 10px 12px !important;
+    border: 1px solid #eadfe3 !important;
+    border-radius: 11px !important;
+    background: #fcfafc !important;
+    color: #4b4050 !important;
+    font-size: 0.9rem !important;
+  }
+
+  body.profile-page #feedbackInlineForm textarea {
+    min-height: 104px !important;
+    line-height: 1.55 !important;
+  }
+
+  body.profile-page #feedbackInlineForm input:focus,
+  body.profile-page #feedbackInlineForm select:focus,
+  body.profile-page #feedbackInlineForm textarea:focus {
+    border-color: #d77b98 !important;
+    box-shadow: 0 0 0 3px rgba(215, 123, 152, 0.14) !important;
+  }
+
+  body.profile-page #feedbackInlineForm #fbSubmitBtn {
+    width: 100% !important;
+    min-height: 46px !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: #b95478 !important;
+    color: #fff !important;
+    box-shadow: 0 5px 12px rgba(185, 84, 120, 0.2) !important;
+    font-size: 0.94rem !important;
+  }
+}
+
+[data-theme="dark"] body.profile-page #feedbackToggleBtn,
+[data-theme="dark"] body.profile-page #feedbackInlineForm {
+  border-color: var(--border-light) !important;
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] body.profile-page #feedbackToggleBtn > span:first-child {
+  border-color: rgba(255, 159, 186, 0.2) !important;
+  background: rgba(255, 101, 132, 0.14) !important;
+  color: #ff9fba !important;
+}
+
+[data-theme="dark"] body.profile-page #feedbackToggleBtn > span:nth-child(2) {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] body.profile-page #feedbackToggleBtn #feedbackArrow {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #d7c6d8 !important;
+}
+
+[data-theme="dark"] body.profile-page #feedbackInlineForm input,
+[data-theme="dark"] body.profile-page #feedbackInlineForm select,
+[data-theme="dark"] body.profile-page #feedbackInlineForm textarea {
+  border-color: var(--border-color) !important;
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 账号操作区：反馈、编辑、密码和后台入口共用同一套可扩展操作卡片 */
+body.profile-page .profile-action-stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 10px;
+}
+
+body.profile-page .profile-account-actions {
+  margin-top: 14px;
+}
+
+body.profile-page .profile-action-entry {
+  margin-top: 0 !important;
+}
+
+body.profile-page .profile-action-btn {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 54px !important;
+  box-sizing: border-box !important;
+  gap: 11px !important;
+  margin: 0 !important;
+  padding: 9px 13px !important;
+  border: 1px solid #eadfe3 !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  color: #554657 !important;
+  box-shadow: 0 4px 14px rgba(80, 55, 72, 0.06) !important;
+  font-size: 0.94rem !important;
+  font-weight: 700 !important;
+  text-align: left !important;
+  transform: none !important;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s !important;
+}
+
+body.profile-page .profile-action-btn:hover,
+body.profile-page .profile-action-btn:focus-visible {
+  border-color: #dfa0b4 !important;
+  box-shadow: 0 7px 18px rgba(185, 84, 120, 0.12) !important;
+  transform: translateY(-1px) !important;
+}
+
+body.profile-page .profile-action-icon {
+  display: inline-flex !important;
+  flex: 0 0 36px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  border: 1px solid #f1dce3 !important;
+  border-radius: 11px !important;
+  background: #fff5f7 !important;
+  font-size: 1rem !important;
+  line-height: 1 !important;
+}
+
+body.profile-page .profile-action-icon .ui-action-svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+}
+
+body.profile-page .profile-action-btn > span:nth-child(2) {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: #554657 !important;
+}
+
+body.profile-page .profile-action-arrow {
+  display: inline-flex !important;
+  flex: 0 0 26px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 50% !important;
+  background: #f7f3f6 !important;
+  color: #8b7180 !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+}
+
+body.profile-page .profile-action-primary .profile-action-icon {
+  background: #fff1f4 !important;
+  border-color: #f4ccd8 !important;
+}
+
+body.profile-page .profile-action-secondary .profile-action-icon {
+  background: #f3f6fb !important;
+  border-color: #dde5f0 !important;
+}
+
+body.profile-page .profile-action-admin .profile-action-icon {
+  background: #fff8eb !important;
+  border-color: #f0d8a7 !important;
+}
+
+[data-theme="dark"] body.profile-page .profile-action-btn {
+  border-color: var(--border-light) !important;
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] body.profile-page .profile-action-btn:hover {
+  background: var(--bg-card-hover) !important;
+  border-color: rgba(255, 107, 157, 0.3) !important;
+}
+
+[data-theme="dark"] body.profile-page .profile-action-btn > span:nth-child(2) {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] body.profile-page .profile-action-icon {
+  border-color: var(--border-light) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] body.profile-page .profile-action-arrow {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #d7c6d8 !important;
+}
+
+@media (max-width: 768px) {
+  body.profile-page .profile-action-stack {
+    gap: 9px;
+  }
+
+  body.profile-page .profile-action-btn {
+    min-height: 56px !important;
+    padding: 10px 12px !important;
+  }
+}
+/* 个人页内容保持窄栏居中；宽屏仍保留两侧信息卡。 */
+@media (min-width: 769px) {
+  body.profile-page .main-content {
+    width: min(700px, calc(100% - 32px)) !important;
+    max-width: 700px !important;
+    margin-inline: auto !important;
+  }
+
+}
+
+/* 中等桌面没有足够横向空间时收起侧栏；宽屏再恢复两侧信息卡。 */
+@media (min-width: 769px) and (max-width: 1240px) {
+  body.profile-page .side-cards-container {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1241px) {
+  body.profile-page .side-cards-container {
+    display: flex !important;
+  }
+}

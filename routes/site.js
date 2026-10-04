@@ -4,7 +4,7 @@ const { pool } = require('../config/database');
 const { getChinaDate, toChinaDate } = require('../services/date');
 
 const router = express.Router();
-const SITE_URL = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/+$/, '');
+const SITE_URL = (process.env.SITE_URL || 'https://wall.jay23.cn').replace(/\/+$/, '');
 const WEATHER_CACHE_MS = 3 * 60 * 1000;
 const HISTORY_CACHE_MS = 5 * 60 * 1000;
 let weatherCache = null;
@@ -70,7 +70,7 @@ router.get('/site-info', async (req, res) => {
     return {
       code: 200,
       data: {
-        site_name: settings.site_name || '示例校园墙',
+        site_name: settings.site_name || '嘉二の墙墙',
         site_description: settings.site_description || '',
         anon_post: settings.anon_post === 'true',
         anon_comment: settings.anon_comment === 'true',
@@ -92,7 +92,7 @@ router.get('/site-info', async (req, res) => {
     return res.json({
       code: 200,
       data: {
-        site_name: '示例校园墙',
+        site_name: '嘉二の墙墙',
         site_description: '',
         anon_post: false,
         anon_comment: false,

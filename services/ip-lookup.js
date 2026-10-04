@@ -25,10 +25,8 @@ const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7天
  * 获取客户端真实IP
  */
 function getClientIp(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-         req.headers['x-real-ip'] ||
+  return req.ip ||
          req.socket?.remoteAddress ||
-         req.ip ||
          '';
 }
 

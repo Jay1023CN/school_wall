@@ -98,7 +98,7 @@ async function sendFollowPostNotify(openid, posterNickname, postTitle, postId) {
     keyword3: { value: new Date().toLocaleString('zh-CN'), color: '#B8A9D4' },
     remark: { value: '点击查看TA的新帖子', color: '#C084FC' }
   };
-  var url = `http://localhost:3000/post/${postId}`;
+  var url = `https://wall.jay23.cn/post/${postId}`;
   return sendTemplateMessage(openid, templateId, data, url);
 }
 
@@ -114,7 +114,7 @@ async function sendCommentNotify(openid, commenterNickname, postTitle, postId) {
     keyword3: { value: new Date().toLocaleString('zh-CN'), color: '#B8A9D4' },
     remark: { value: '点击查看评论内容', color: '#C084FC' }
   };
-  var url = `http://localhost:3000/post/${postId}`;
+  var url = `https://wall.jay23.cn/post/${postId}`;
   return sendTemplateMessage(openid, templateId, data, url);
 }
 
@@ -130,7 +130,7 @@ async function sendSongPlayedNotify(openid, songName, artist) {
     keyword3: { value: new Date().toLocaleString('zh-CN'), color: '#B8A9D4' },
     remark: { value: '感谢你的参与，继续加油点歌哦~', color: '#C084FC' }
   };
-  var url = 'http://localhost:3000/radio';
+  var url = 'https://wall.jay23.cn/radio';
   return sendTemplateMessage(openid, templateId, data, url);
 }
 

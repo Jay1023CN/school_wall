@@ -5,11 +5,10 @@
  */
 
 const express = require('express');
-const { createIntervalTask } = require('../services/task-lifecycle');
-const crypto = require('crypto');
 const router = express.Router();
 const { pool } = require('../config/database');
 const mpDraftService = require('../services/mp-draft');
+const { createMpSyncJobs, ensureMpSyncSchema } = require('../services/mp-sync-jobs');
 const { generateCoverPrompt } = require('../services/cover-prompt');
 const { escapeHtml } = require('../services/html-utils');
 const { auth, isStaff, superAdminOnly, requirePermission } = require('../middleware/auth');
@@ -68,7 +67,7 @@ async function getActiveUsers(period, userIds, limit) {
 
 function renderWechatVideoCard(post) {
   if (!post || !post.video_url) return '';
-  const postUrl = `http://localhost:3000/post/${encodeURIComponent(post.id)}`;
+  const postUrl = `https://wall.jay23.cn/post/${encodeURIComponent(post.id)}`;
   return '<table width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0;"><tr><td style="background:#F3F0FF;padding:16px;text-align:center;border:1px solid #E7DEFF;">' +
     '<div style="font-size:22px;margin-bottom:6px;">🎬</div>' +
     '<div style="font-size:15px;font-weight:bold;color:#6554C0;margin-bottom:6px;">本帖包含视频</div>' +
@@ -321,7 +320,8 @@ router.get('/hot-posts', async (req, res) => {
       SELECT 
         p.id, p.title, p.content, p.created_at, p.likes_count,
         p.views as view_count,
-        u.username as author,
+        CASE WHEN p.is_anonymous = 1 THEN '匿名用户' ELSE COALESCE(u.nickname, u.username, '同学') END AS author,
+        p.is_anonymous,
         COUNT(DISTINCT c.id) as comment_count,
         p.images, p.video_url, p.video_poster
       FROM posts p
@@ -377,7 +377,8 @@ router.get('/today-history-posts', async (req, res) => {
       SELECT 
         p.id, p.title, p.content, p.created_at, p.likes_count,
         p.views as view_count,
-        u.username as author,
+        CASE WHEN p.is_anonymous = 1 THEN '匿名用户' ELSE COALESCE(u.nickname, u.username, '同学') END AS author,
+        p.is_anonymous,
         YEAR(p.created_at) as post_year,
         COUNT(DISTINCT c.id) as comment_count,
         p.images, p.video_url, p.video_poster
@@ -431,7 +432,7 @@ router.get('/extra-info', async (req, res) => {
  * 上传帖子中的图片到微信CDN
  * 微信外部图片会被屏蔽，必须换成微信自己的CDN链接
  */
-async function uploadImagesToWeixin(htmlContent) {
+async function uploadImagesToWeixin(htmlContent, beforeExternal) {
   // 提取所有img标签的src
   var imgRegex = /<img[^>]+src=["']([^"']+)["']/g;
   var match;
@@ -449,10 +450,22 @@ async function uploadImagesToWeixin(htmlContent) {
   if (tasks.length === 0) return { content: htmlContent, total: 0, uploaded: 0, failed: 0 };
 
   // 并行上传并汇总错误；存在失败时不提交残缺草稿。
-  var uploadResults = await Promise.allSettled(tasks.map(function(task) {
-    return mpDraftService.uploadMpImage(task.upload).then(function(url) {
-      return { original: task.original, url: url };
-    });
+  var uploadResults = new Array(tasks.length);
+  var nextTask = 0;
+  var workerCount = Math.min(3, tasks.length);
+  await Promise.all(Array.from({ length: workerCount }, async function() {
+    while (true) {
+      var index = nextTask++;
+      if (index >= tasks.length) return;
+      var task = tasks[index];
+      try {
+        if (typeof beforeExternal === 'function') await beforeExternal();
+        var url = await mpDraftService.uploadMpImage(task.upload);
+        uploadResults[index] = { status: 'fulfilled', value: { original: task.original, url: url } };
+      } catch (reason) {
+        uploadResults[index] = { status: 'rejected', reason: reason };
+      }
+    }
   }));
   var uploadedCount = 0;
   var failures = [];
@@ -475,14 +488,14 @@ async function uploadImagesToWeixin(htmlContent) {
  * 统一准备公众号草稿正文：先处理视频永久素材，再处理正文图片 CDN，
  * 保证手动同步和“一键发布”不会走两套不同的媒体语义。
  */
-async function prepareArticleForWeixin(article, onVideoProgress) {
+async function prepareArticleForWeixin(article, onVideoProgress, beforeExternal) {
   // 同一份 article 先按服务端规则标准化，再按既有顺序处理视频永久素材和正文图片。
   var articleCopy = mpDraftService.normalizeDraftArticle(JSON.parse(JSON.stringify(article)));
-  var videoUpload = await uploadVideosToWeixin(articleCopy.content || '', onVideoProgress);
+  var videoUpload = await uploadVideosToWeixin(articleCopy.content || '', onVideoProgress, beforeExternal);
   articleCopy.content = videoUpload.content;
 
   // 视频替换后会新增封面图片，必须在这一步统一上传到微信 CDN。
-  var imageUpload = await uploadImagesToWeixin(articleCopy.content);
+  var imageUpload = await uploadImagesToWeixin(articleCopy.content, beforeExternal);
   articleCopy.content = imageUpload.content;
   articleCopy.text_stats = mpDraftService.getArticleTextStats(articleCopy);
 
@@ -497,7 +510,7 @@ async function prepareArticleForWeixin(article, onVideoProgress) {
   };
 }
 
-const PUBLIC_WALL_ORIGIN = (process.env.PUBLIC_WALL_ORIGIN || 'http://localhost:3000').replace(/\/$/, '');
+const PUBLIC_WALL_ORIGIN = (process.env.PUBLIC_WALL_ORIGIN || 'https://wall.jay23.cn').replace(/\/$/, '');
 
 function getPostVideoUrl(value) {
   var pathname = getControlledPostVideoPath(value);
@@ -540,7 +553,7 @@ function getPostPosterUrl(value) {
  * 公众号正文不依赖外链 video 标签：将受控的 MP4/WebM/OGV 交给服务层处理，再替换成封面、站内入口和明确状态。
  * 仅允许校墙 uploads 路径，避免同步接口被当成任意 URL 下载器。
  */
-async function uploadVideosToWeixin(htmlContent, onProgress) {
+async function uploadVideosToWeixin(htmlContent, onProgress, beforeExternal) {
   var videoRegex = /<video\b([^>]*)>[\s\S]*?<\/video>|<div\b([^>]*data-mp-video-placeholder=["']1["'][^>]*)>[\s\S]*?<\/div>/gi;
   var matches = [];
   var match;
@@ -566,6 +579,7 @@ async function uploadVideosToWeixin(htmlContent, onProgress) {
     try {
       if (!source) throw new Error('视频地址不是校墙受控上传路径');
       // 传相对的受控路径，让服务层按实际扩展名选择直传或服务器临时转码。
+      if (typeof beforeExternal === 'function') await beforeExternal();
       await mpDraftService.uploadPermanentVideo(source, {
         title: '校墙投稿视频',
         introduction: '来自校墙的投稿视频，正文保留站内观看入口'
@@ -585,7 +599,7 @@ async function uploadVideosToWeixin(htmlContent, onProgress) {
     result.items.push(item);
     output += htmlContent.substring(cursor, current.index) + replacement;
     cursor = current.index + current[0].length;
-    if (typeof onProgress === 'function') onProgress(result);
+    if (typeof onProgress === 'function') await onProgress(result);
   }
   output += htmlContent.substring(cursor);
   return { content: output, result: result };
@@ -727,7 +741,7 @@ function generateCardHTML(posts, weather, hitokoto, dateInfo, stats, categories,
 
   // ===== 头部 =====
   html += '<table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:linear-gradient(135deg,#FFF0F5,#F8F0FF);padding:22px 16px 18px;text-align:center;">';
-  html += '<div style="color:#A78BFA;font-size:13px;margin-bottom:6px;letter-spacing:1px;">示例校园校园墙 · 校园来信</div>';
+  html += '<div style="color:#A78BFA;font-size:13px;margin-bottom:6px;letter-spacing:1px;">嘉二校园墙 · 校园来信</div>';
   html += '<div style="color:#FF69B4;font-size:22px;font-weight:bold;letter-spacing:0.5px;line-height:1.45;">' + safeArticleTitle + '</div>';
   html += '<div style="color:#999;font-size:12px;margin-top:8px;">' + mpEscape(today) + ' ' + mpEscape(week) + ' · 把今天的校园日常，写给你</div>';
   html += '<div style="width:40px;height:3px;background:linear-gradient(90deg,#FFB6C1,#A78BFA);margin:14px auto 0;"></div>';
@@ -790,20 +804,21 @@ function generateCardHTML(posts, weather, hitokoto, dateInfo, stats, categories,
     }
     var gaokaoDiff = Math.ceil((gaokaoDate - new Date()) / (1000 * 60 * 60 * 24));
     var gaokaoPercent = Math.round((365 - gaokaoDiff) / 365 * 100);
-    html += '<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;"><tr><td style="background:linear-gradient(135deg,#FFF8E1,#FFE4B5);padding:16px;">';
-    html += '<table width="100%" cellpadding="0" cellspacing="0"><tr>';
-    html += '<td style="text-align:center;padding:4px;border-right:1px dashed #E8D5B5;">';
-    html += '<div style="font-size:11px;color:#888;margin-bottom:4px;">📚 距离高考</div>';
-    html += '<div style="font-size:24px;font-weight:bold;color:#FF8C00;">' + gaokaoDiff + '</div>';
+    html += '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100% !important;max-width:100%;table-layout:fixed;border-collapse:collapse;margin-top:16px;"><tr><td style="padding:0 16px;">';
+    html += '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100% !important;max-width:100%;table-layout:fixed;border-collapse:collapse;background:linear-gradient(135deg,#FFF8E1,#FFE4B5);border-radius:16px;overflow:hidden;"><tr><td style="padding:16px;box-sizing:border-box;max-width:100%;overflow:hidden;">';
+    html += '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100% !important;max-width:100%;table-layout:fixed;border-collapse:collapse;"><tr>';
+    html += '<td width="48%" style="width:48% !important;max-width:48%;box-sizing:border-box;text-align:center;padding:4px 2px;overflow:hidden;word-break:break-word;">';
+    html += '<div style="font-size:11px;color:#888;margin-bottom:4px;line-height:1.4;">📚 距离高考</div>';
+    html += '<div style="font-size:24px;font-weight:bold;color:#FF8C00;line-height:1.2;white-space:nowrap;">' + gaokaoDiff + '</div>';
     html += '<div style="font-size:12px;color:#666;">天</div>';
     html += '</td>';
-    html += '<td style="text-align:center;padding:4px;">';
-    html += '<div style="font-size:11px;color:#888;margin-bottom:4px;">⏳ 进度</div>';
-    html += '<div style="font-size:20px;font-weight:bold;color:#FF8C00;">' + gaokaoPercent + '%</div>';
+    html += '<td width="4%" style="width:4% !important;padding:0;font-size:0;line-height:0;">&nbsp;</td>';
+    html += '<td width="48%" style="width:48% !important;max-width:48%;box-sizing:border-box;text-align:center;padding:4px 2px;overflow:hidden;word-break:break-word;">';
+    html += '<div style="font-size:11px;color:#888;margin-bottom:4px;line-height:1.4;">⏳ 进度</div>';
+    html += '<div style="font-size:20px;font-weight:bold;color:#FF8C00;line-height:1.4;white-space:nowrap;">' + gaokaoPercent + '%</div>';
     html += '<div style="font-size:12px;color:#666;">已完成</div>';
     html += '</td>';
-    html += '</tr></table>';
-    html += '</td></tr></table>';
+    html += '</tr></table></td></tr></table></td></tr></table>';
   }
 
   // ===== 数据统计 =====
@@ -955,18 +970,18 @@ function generateCardHTML(posts, weather, hitokoto, dateInfo, stats, categories,
 
   // ===== 尾部 =====
   html += '<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;"><tr><td style="background:linear-gradient(135deg,#FFF0F5,#FFE4E1);padding:24px 20px;text-align:center;border-radius:16px;">';
-  html += '<div style="font-size:18px;color:#FF69B4;font-weight:bold;margin-bottom:6px;">🌸 示例校园校园墙</div>';
+  html += '<div style="font-size:18px;color:#FF69B4;font-weight:bold;margin-bottom:6px;">🌸 嘉二校园墙</div>';
   html += '<div style="font-size:13px;color:#DDA0DD;margin-bottom:16px;">同学正在发生的事，等你来聊</div>';
   html += '<table align="center" style="margin:0 auto;"><tr><td style="background:linear-gradient(135deg,#FF69B4,#FFB6C1);padding:4px;border-radius:16px;">';
   html += '<table style="width:100%;background:#fff;border-radius:12px;"><tr><td style="padding:12px;">';
-  html += '<img src="http://localhost:3000/images/gzh.jpg" style="width:200px;display:block;border-radius:6px;margin:0 auto;height:auto;" alt="校园墙二维码">';
+  html += '<img src="https://wall.jay23.cn/images/gzh.jpg" style="width:200px;display:block;border-radius:6px;margin:0 auto;height:auto;" alt="校园墙二维码">';
   html += '</td></tr></table>';
   html += '</td></tr></table>';
   html += '<p style="color:#bbb;font-size:12px;margin:14px 0 4px 0;letter-spacing:1px;">📱 微信扫一扫 · 获取更多精彩</p>';
-  html += '<p style="color:#FF69B4;font-size:13px;font-weight:bold;word-break:break-all;letter-spacing:0.5px;">http://localhost:3000</p>';
+  html += '<p style="color:#FF69B4;font-size:13px;font-weight:bold;word-break:break-all;letter-spacing:0.5px;">https://wall.jay23.cn</p>';
   html += '<div style="width:40px;height:2px;background:#FFB6C1;margin:12px auto 0;border-radius:2px;"></div>';
   html += '</td></tr></table>';
-  html += '<p style="text-align:center;color:#ddd;font-size:12px;margin-top:18px;">❀ ' + dateInfo.year + ' 示例校园校园墙 ❀ ❀</p>';
+  html += '<p style="text-align:center;color:#ddd;font-size:12px;margin-top:18px;">❀ ' + dateInfo.year + ' 嘉二校园墙 ❀ ❀</p>';
   html += '</div>';
 
   return html;
@@ -995,7 +1010,8 @@ router.post('/generate-content', async (req, res) => {
         SELECT 
           p.id, p.title, p.content, p.created_at, p.likes_count,
           p.views as view_count,
-          u.username as author,
+          CASE WHEN p.is_anonymous = 1 THEN '匿名用户' ELSE COALESCE(u.nickname, u.username, '同学') END AS author,
+          p.is_anonymous,
           COUNT(DISTINCT c.id) as comment_count,
           p.images, p.video_url, p.video_poster
         FROM posts p
@@ -1030,7 +1046,9 @@ router.post('/generate-content', async (req, res) => {
         if (postIds.length === 0) return {};
         const idsStr = postIds.join(',');
         const [rows] = await pool.execute(`
-          SELECT c.post_id, c.content, c.created_at, u.username as author
+          SELECT c.post_id, c.content, c.created_at,
+            CASE WHEN c.is_anonymous = 1 THEN '匿名用户' ELSE COALESCE(u.nickname, u.username, '同学') END AS author,
+            c.is_anonymous
           FROM comments c
           LEFT JOIN users u ON c.user_id = u.id
           WHERE FIND_IN_SET(c.post_id, ?)
@@ -1078,10 +1096,10 @@ router.post('/generate-content', async (req, res) => {
       articles.push(mpDraftService.normalizeDraftArticle({
         title: titleInfo.title,
         title_meta: titleInfo.meta,
-        author: '示例校园校园墙',
+        author: '嘉二校园墙',
         digest: titleInfo.digest,
         content: contentHtml,
-        content_source_url: 'http://localhost:3000',
+        content_source_url: 'https://wall.jay23.cn',
         show_cover_pic: 1,
         need_open_comment: 1,
         only_fans_can_comment: 0
@@ -1106,7 +1124,7 @@ router.post('/generate-content', async (req, res) => {
         var readingCard = generateTextStatsHTML(postReadMin, 1);
         const contentHtml = `
           <section style="padding: 20px; font-family: -apple-system, sans-serif;">
-            <div style="color:#A78BFA;font-size:12px;letter-spacing:1px;margin-bottom:6px;">示例校园校园墙 · 想和你说</div>
+            <div style="color:#A78BFA;font-size:12px;letter-spacing:1px;margin-bottom:6px;">嘉二校园墙 · 想和你说</div>
             <h2 style="color: #667eea; font-size: 22px;line-height:1.45;">${mpEscape(titleInfo.title)}</h2>
             ${coverImg}
             ${videoHtml}
@@ -1126,7 +1144,7 @@ router.post('/generate-content', async (req, res) => {
           author: post.author || '匿名',
           digest: titleInfo.digest,
           content: contentHtml,
-          content_source_url: `http://localhost:3000/post/${post.id}`,
+          content_source_url: `https://wall.jay23.cn/post/${post.id}`,
           show_cover_pic: 1,
           need_open_comment: 1,
           only_fans_can_comment: 0
@@ -1259,7 +1277,7 @@ router.get('/daily-songs', superAdminOnly, async (req, res) => {
 });
 
 /**
- * 本周待播放点歌单。只读取已审核、排期仍开放的点歌；与每日推歌发布状态完全独立。
+ * 本周待播放点歌单。读取已审核且属于目标周的点歌；审核后调整时段开关不能抹掉已确认的排期。
  * GET /api/mp/weekly-song-schedule
  */
 router.get('/weekly-song-schedule', superAdminOnly, async (req, res) => {
@@ -1282,8 +1300,6 @@ router.get('/weekly-song-schedule', superAdminOnly, async (req, res) => {
       JOIN time_slots ts ON sd.slot_id = ts.id
       LEFT JOIN users u ON sr.user_id = u.id
       WHERE sr.status = 'approved' AND sr.deleted_at IS NULL
-        AND sd.is_active = 1 AND ts.is_active = 1
-        AND (ts.effective_start_date IS NULL OR sd.play_date >= ts.effective_start_date)
         AND sd.play_date >= ? AND sd.play_date < ?
       ORDER BY sd.play_date, ts.start_time, COALESCE(sr.play_order, 2147483647), sr.created_at, sr.id
     `, [range.scheduleStart, range.weekEnd]);
@@ -1328,7 +1344,8 @@ router.post('/publish-daily', requirePermission('songs:review'), async (req, res
       SELECT 
         p.id, p.title, p.content, p.created_at, p.likes_count,
         p.views as view_count,
-        u.username as author,
+        CASE WHEN p.is_anonymous = 1 THEN '匿名用户' ELSE COALESCE(u.nickname, u.username, '同学') END AS author,
+        p.is_anonymous,
         COUNT(DISTINCT c.id) as comment_count,
         p.images, p.video_url, p.video_poster
       FROM posts p
@@ -1373,10 +1390,10 @@ router.post('/publish-daily', requirePermission('songs:review'), async (req, res
     const articles = [mpDraftService.normalizeDraftArticle({
       title: titleInfo.title,
       title_meta: titleInfo.meta,
-      author: '示例校园校园墙',
+      author: '嘉二校园墙',
       digest: titleInfo.digest,
       content: contentHtml,
-      content_source_url: 'http://localhost:3000',
+      content_source_url: 'https://wall.jay23.cn',
       show_cover_pic: 1,
       need_open_comment: 1,
       only_fans_can_comment: 0
@@ -1480,179 +1497,149 @@ router.delete('/draft/:mediaId', async (req, res) => {
 });
 
 // ===== 同步草稿到公众号 =====
-// 后台同步任务池（避免 Cloudflare 100s 超时）
-var pendingSyncs = {};
+let mpSyncJobsInstance = null;
+function getMpSyncJobs() {
+  if (!mpSyncJobsInstance) mpSyncJobsInstance = createMpSyncJobs({ db: pool, processor: processMpSyncJob, concurrency: 2, queueLimit: 100, leaseMs: 240000 });
+  return mpSyncJobsInstance;
+}
 
-// 同步状态维护定时器由运行入口显式管理。
-const activeSyncTasks = new Set();
-const syncCleanupTask = createIntervalTask(function() {
-  var now = Date.now();
-  for (var k in pendingSyncs) {
-    if (pendingSyncs[k].createdAt && now - pendingSyncs[k].createdAt > 10 * 60 * 1000) {
-      delete pendingSyncs[k];
+async function processMpSyncJob(input) {
+  const job = input.job;
+  const context = input.context;
+  const payload = job.payload || {};
+  const dailySongIds = Array.isArray(payload.dailySongIds) ? payload.dailySongIds : [];
+  let preparedArticle = payload.preparedArticle || null;
+  let progress = job.progress || {};
+  let result = job.result || {};
+
+  // 草稿已确认创建时，只补本地歌曲状态，绝不再次调用微信 draft/add。
+  if (job.status !== 'draft_created') {
+    if (!preparedArticle) {
+      const prepared = await prepareArticleForWeixin(payload.article, async video => {
+        progress = Object.assign({}, progress, {
+          video: video,
+          msg: '视频素材上传中（成功 ' + video.success + '/' + video.total + '，失败 ' + video.failed + '）'
+        });
+        await context.checkpoint({ progress });
+      }, context.assertWorkerLock);
+      preparedArticle = prepared.article;
+      progress = Object.assign({}, progress, { image: prepared.image, video: prepared.video, msg: '素材处理完成，正在创建公众号草稿' });
+      await context.checkpoint({
+        payload: { preparedArticle: preparedArticle, preparedImage: prepared.image, preparedVideo: prepared.video },
+        progress: progress
+      });
+    }
+
+    // 此持久化边界在外部副作用之前。之后若超时/重启且未记录 media_id，必须人工核对。
+    await context.markExternalStarted();
+    const mediaId = await mpDraftService.createDraft([preparedArticle]);
+    result = {
+      media_id: mediaId,
+      image: payload.preparedImage || progress.image || { total: 0, success: 0, failed: 0 },
+      video: payload.preparedVideo || progress.video || { total: 0, success: 0, failed: 0, items: [] },
+      text_stats: preparedArticle.text_stats || null,
+      sync_status: (payload.preparedVideo && payload.preparedVideo.failed > 0) ? 'done_with_video_warning' : 'done'
+    };
+    await context.markDraftCreated(mediaId, result);
+  }
+
+  if (dailySongIds.length) {
+    try {
+      const markResult = await markDailySongsPublished(pool, dailySongIds);
+      if (!markResult || markResult.affected !== dailySongIds.length) {
+        throw createDailySongMarkConflict(dailySongIds.length, markResult && markResult.affected || 0);
+      }
+      result = Object.assign({}, result, { mark_result: markResult });
+    } catch (error) {
+      error.draftCreated = true;
+      error.mediaId = result.media_id || job.result.media_id;
+      error.markResult = error.markResult || null;
+      throw error;
     }
   }
-}, 5 * 60 * 1000);
 
+  const video = result.video || {};
+  const image = result.image || {};
+  result.sync_status = video.failed > 0 ? 'done_with_video_warning' : 'done';
+  const videoFailureDetails = formatVideoFailureDetails(video);
+  const videoMessage = video.total > 0
+    ? '，视频成功 ' + video.success + '/' + video.total + (video.failed > 0 ? '，失败 ' + video.failed + '（正文已保留封面和观看入口）' : '')
+    : '';
+  result.msg = video.failed > 0
+    ? '草稿已创建；视频素材处理失败（' + videoFailureDetails + '），正文已保留封面和观看入口；每日推歌已按草稿标记，请勿重复同步'
+    : '同步成功（图片 ' + (image.success || 0) + '/' + (image.total || 0) + videoMessage + '）';
+  return result;
+}
 
 /**
  * 同步草稿到公众号（图片上传到微信CDN，视频上传为永久 MP4 素材）
  * POST /api/mp/sync-draft
  */
 router.post('/sync-draft', requirePermission('songs:review'), async (req, res) => {
-  var { article, dailySongIds } = req.body;
-  if (!article || typeof article !== 'object') {
-    return res.json({ code: 400, message: '请先生成图文内容' });
-  }
-  if (!article.title || !String(article.title).trim()) {
-    return res.json({ code: 400, message: '文章标题不能为空' });
-  }
-  if (!article.content || !String(article.content).trim()) {
-    return res.json({ code: 400, message: '文章正文不能为空' });
-  }
-
+  const { article, dailySongIds } = req.body || {};
+  if (!article || typeof article !== 'object') return res.json({ code: 400, message: '请先生成图文内容' });
+  if (!article.title || !String(article.title).trim()) return res.json({ code: 400, message: '文章标题不能为空' });
+  if (!article.content || !String(article.content).trim()) return res.json({ code: 400, message: '文章正文不能为空' });
   const normalizedSongIds = normalizeDailySongIds(dailySongIds);
-  if (!normalizedSongIds.ok) {
-    return res.status(400).json({ code: 400, message: '每日推歌参数无效' });
-  }
+  if (!normalizedSongIds.ok) return res.status(400).json({ code: 400, message: '每日推歌参数无效' });
   if (normalizedSongIds.ids.length > 0 && (!req.user || req.user.role !== 'super_admin')) {
     return res.status(403).json({ code: 403, message: '仅超级管理员可同步每日推歌' });
   }
+  if (typeof article.content !== 'string') return res.json({ code: 400, message: '文章正文格式无效' });
+  const articleBytes = Buffer.byteLength(article.content, 'utf8');
+  if (articleBytes > 5 * 1024 * 1024) {
+    return res.json({ code: 413, message: '文章内容超过 5MB,请减少帖子数或图片数(' + (articleBytes / 1024 / 1024).toFixed(2) + 'MB)' });
+  }
 
-  let syncedDailySongs;
   try {
-    syncedDailySongs = await getSyncableDailySongs(pool, normalizedSongIds.ids, article);
+    // 先返回该管理员现有任务，避免部分完成每日推歌标记后，重提请求被歌曲状态校验挡住。
+    const active = await getMpSyncJobs().getActive(req.user.id);
+    if (active) {
+      if (active.sync_status === 'needs_review' || active.sync_status === 'draft_created_mark_failed') {
+        return res.status(409).json({ code: 409, data: active, message: active.msg });
+      }
+      return res.status(409).json({
+        code: 409,
+        message: '你已有一个公众号同步任务正在处理，请等待完成后再提交',
+        data: { sync_id: active.sync_id, processing: true, status: active.status }
+      });
+    }
+    await getSyncableDailySongs(pool, normalizedSongIds.ids, article);
+    const imageTags = article.content.match(/<img[^>]+src=["'][^"']+["'][^>]*>/g) || [];
+    const imageCount = imageTags.filter(tag => {
+      const match = tag.match(/src=["']([^"']+)["']/);
+      return match && match[1].indexOf('mmbiz.qpic.cn') < 0 && match[1].indexOf('mmbiz.qlogo.cn') < 0 && !match[1].startsWith('data:');
+    }).length;
+    const videoCount = (article.content.match(/<video\b[^>]*>[\s\S]*?<\/video>|<div\b[^>]*data-mp-video-placeholder=["']1["'][^>]*>[\s\S]*?<\/div>/gi) || []).length;
+    const submission = await getMpSyncJobs().submit(req.user.id, {
+      article: article,
+      dailySongIds: normalizedSongIds.ids,
+      progress: {
+        msg: '任务排队中',
+        image: { total: imageCount, success: 0, failed: 0 },
+        video: { total: videoCount, success: 0, failed: 0, items: [] }
+      }
+    });
+    if (submission.full) return res.status(503).json({ code: 503, message: '公众号同步队列已满，请稍后重试' });
+    if (submission.conflict) {
+      const existing = await getMpSyncJobs().getStatus(req.user.id, submission.id);
+      if (existing && existing.sync_status === 'needs_review') {
+        return res.status(409).json({ code: 409, data: existing, message: existing.msg });
+      }
+      if (existing && existing.sync_status === 'draft_created_mark_failed') {
+        return res.status(409).json({ code: 409, data: existing, message: existing.msg });
+      }
+      return res.json({ code: 409, message: '你已有一个公众号同步任务正在处理，请等待完成后再提交', data: { sync_id: submission.id, processing: true } });
+    }
+    res.json({
+      code: 200,
+      data: { sync_id: submission.id, processing: true, img_count: imageCount, video_count: videoCount },
+      message: '同步任务已提交(' + submission.id + ')，正在后台处理...'
+    });
   } catch (err) {
     const status = err.code === 'DAILY_SONG_NOT_SYNCABLE' || err.code === 'DAILY_SONG_NOT_IN_ARTICLE' ? 409 : 500;
-    return res.status(status).json({ code: status, message: err.message || '每日推歌校验失败' });
+    res.status(status).json({ code: status, message: err.message || '同步任务提交失败' });
   }
-
-  if (typeof article.content !== 'string') {
-    return res.json({ code: 400, message: '文章正文格式无效' });
-  }
-
-  // 内容大小校验必须按 UTF-8 字节数计算，避免中文按 JS UTF-16 长度误判。
-  var articleBytes = Buffer.byteLength(article.content, 'utf8');
-  if (articleBytes > 5 * 1024 * 1024) {
-    return res.json({ code: 413, message: '文章内容超过 5MB,请减少帖子数或图片数(' + (articleBytes/1024/1024).toFixed(2) + 'MB)' });
-  }
-
-  var imgTags = String(article.content).match(/<img[^>]+src=["'][^"']+["'][^>]*>/g) || [];
-  var needUpload = [];
-  for (var ti = 0; ti < imgTags.length; ti++) {
-    var m = imgTags[ti].match(/src=["']([^"']+)["']/);
-    if (m && m[1].indexOf('mmbiz.qpic.cn') < 0 && m[1].indexOf('mmbiz.qlogo.cn') < 0 && !m[1].startsWith('data:')) {
-      needUpload.push(m[1].substring(0, 80));
-    }
-  }
-  var videoCount = (article.content.match(/<video\b[^>]*>[\s\S]*?<\/video>|<div\b[^>]*data-mp-video-placeholder=["']1["'][^>]*>[\s\S]*?<\/div>/gi) || []).length;
-  // 先返回成功，后台处理同步（避免 Cloudflare 100s 超时）
-  var ownerId = req.user.id;
-  var activeSyncId = Object.keys(pendingSyncs).find(function(id) {
-    return pendingSyncs[id].ownerId === ownerId && pendingSyncs[id].status === 'processing';
-  });
-  if (activeSyncId) {
-    return res.json({ code: 409, message: '你已有一个公众号同步任务正在处理，请等待完成后再提交', data: { sync_id: activeSyncId, processing: true } });
-  }
-  var syncId = 'sync_' + crypto.randomBytes(16).toString('hex');
-  var createdAt = Date.now();
-  pendingSyncs[syncId] = {
-    status: 'processing',
-    msg: '正在处理公众号素材...',
-    createdAt: createdAt,
-    ownerId: ownerId,
-    image: { total: needUpload.length, success: 0, failed: 0 },
-    video: { total: videoCount, success: 0, failed: 0, items: [] },
-    daily_song_count: syncedDailySongs.length,
-    daily_song_ids: normalizedSongIds.ids
-  };
-
-  // 立即回复前端，不给 524 机会
-  res.json({
-    code: 200,
-    data: { sync_id: syncId, processing: true, img_count: needUpload.length, video_count: videoCount },
-    message: '同步任务已提交(' + syncId + ')，正在后台处理...'
-  });
-
-  // 后台异步处理；任务生命周期在退出前等待已提交任务。
-  const syncTask = (async function() {
-    try {
-      var prepared = await prepareArticleForWeixin(article, function(progress) {
-        if (!pendingSyncs[syncId]) return;
-        pendingSyncs[syncId].video = progress;
-        pendingSyncs[syncId].msg = '视频素材上传中（成功 ' + progress.success + '/' + progress.total + '，失败 ' + progress.failed + '）';
-      });
-      var articleCopy = prepared.article;
-      if (pendingSyncs[syncId]) {
-        pendingSyncs[syncId].video = prepared.video;
-        pendingSyncs[syncId].image = prepared.image;
-      }
-
-      var video = prepared.video;
-      var videoFailureDetails = formatVideoFailureDetails(video);
-      var hasVideoFailures = Boolean(video && video.failed > 0);
-      var videoMessage = video.total > 0
-        ? '，视频成功 ' + video.success + '/' + video.total + (video.failed > 0 ? '，失败 ' + video.failed + '（正文已保留封面和观看入口）' : '')
-        : '';
-      var currentState = pendingSyncs[syncId] || {};
-      // 仅在本次草稿真正创建成功后标记实际随文同步的歌曲；预览和异常路径不会写状态。
-      var mediaId = await finalizeDailySongSync(
-        draftArticles => mpDraftService.createDraft(draftArticles),
-        ids => markDailySongsPublished(pool, ids),
-        [articleCopy],
-        normalizedSongIds.ids
-      );
-      pendingSyncs[syncId] = {
-        // 草稿创建成功就是同步终态；视频失败保留为可见警告，避免歌曲已经标记
-        // 后前端显示普通失败并再次创建重复草稿。
-        status: 'done',
-        sync_status: hasVideoFailures ? 'done_with_video_warning' : 'done',
-        msg: hasVideoFailures
-          ? '草稿已创建；视频素材处理失败（' + videoFailureDetails + '），正文已保留封面和观看入口；每日推歌已按草稿标记，请勿重复同步'
-          : '同步成功（图片 ' + prepared.image.success + '/' + prepared.image.total + videoMessage + '）',
-        media_id: mediaId,
-        image: prepared.image,
-        video: video,
-        failure_reason: videoFailureDetails || null,
-        text_stats: articleCopy.text_stats,
-        createdAt: currentState.createdAt || createdAt,
-        ownerId: ownerId,
-        daily_song_count: syncedDailySongs.length,
-        daily_song_ids: normalizedSongIds.ids
-      };
-    } catch (err) {
-      console.error('[MP同步] 后台失败:', err.message);
-      if (err && err.draftCreated) {
-        const currentState = pendingSyncs[syncId] || {};
-        pendingSyncs[syncId] = {
-          // 草稿已经存在，必须让前端看到终态并阻止用户按普通失败重试。
-          status: 'done',
-          sync_status: 'draft_created_mark_failed',
-          msg: formatDraftCreatedMarkFailure(err),
-          media_id: err.mediaId,
-          failure_reason: err.message,
-          image: currentState.image,
-          video: currentState.video,
-          createdAt: currentState.createdAt || createdAt,
-          ownerId: ownerId,
-          daily_song_count: syncedDailySongs.length,
-          daily_song_ids: normalizedSongIds.ids,
-          mark_result: err.markResult || null
-        };
-        return;
-      }
-      pendingSyncs[syncId] = {
-        status: 'fail',
-        msg: err.message,
-        image: pendingSyncs[syncId] && pendingSyncs[syncId].image,
-        video: pendingSyncs[syncId] && pendingSyncs[syncId].video,
-        createdAt: createdAt,
-        ownerId: ownerId
-      };
-    }
-  })();
-  activeSyncTasks.add(syncTask);
-  syncTask.then(() => activeSyncTasks.delete(syncTask), () => activeSyncTasks.delete(syncTask));
 });
 
 /**
@@ -1660,14 +1647,44 @@ router.post('/sync-draft', requirePermission('songs:review'), async (req, res) =
  * GET /api/mp/sync-status?sync_id=xxx
  */
 router.get('/sync-status', async (req, res) => {
-  var syncId = req.query.sync_id;
-  if (!syncId || !pendingSyncs[syncId] || pendingSyncs[syncId].ownerId !== req.user.id) {
-    return res.json({ code: 404, message: '未找到该同步任务' });
+  try {
+    const syncId = req.query.sync_id;
+    const status = syncId ? await getMpSyncJobs().getStatus(req.user.id, syncId) : null;
+    if (!status) return res.json({ code: 404, message: '未找到该同步任务' });
+    res.json({ code: 200, data: status });
+  } catch (err) {
+    console.error('[MP同步] 查询任务状态失败:', err.message);
+    res.status(500).json({ code: 500, message: '状态查询失败，请稍后重试' });
   }
-  res.json({ code: 200, data: pendingSyncs[syncId] });
 });
 
-// 仅供离线状态机测试使用；不暴露为 HTTP 接口。
+// 外部 draft/add 结果未知时必须由管理员人工核对公众号草稿箱后解除阻塞。
+// decision=created 录入已核实的 media_id 并继续本地补标记；not_created 只释放锁，不会自动重发。
+router.post('/sync-review', requirePermission('songs:review'), async (req, res) => {
+  const body = req.body || {};
+  if (body.decision === 'not_created' && body.confirm_no_draft !== true) {
+    return res.status(400).json({ code: 400, message: '请先核对公众号草稿箱，并明确确认没有创建草稿' });
+  }
+  try {
+    const result = await getMpSyncJobs().resolveUnknown(
+      req.user.id,
+      String(body.sync_id || ''),
+      body.decision,
+      body.media_id
+    );
+    if (!result.found) return res.status(404).json({ code: 404, message: '未找到需要人工核对的同步任务' });
+    return res.json({
+      code: 200,
+      data: result,
+      message: result.status === 'draft_created'
+        ? '已记录公众号草稿，将继续更新每日推歌状态，不会重新创建草稿'
+        : '已记录人工确认结果；系统没有重发草稿'
+    });
+  } catch (err) {
+    return res.status(400).json({ code: 400, message: err.message || '人工核对结果提交失败' });
+  }
+});
+
 router._dailySongState = {
   DAILY_SONG_REUSE_DAYS,
   normalizeDailySongIds,
@@ -1678,6 +1695,9 @@ router._dailySongState = {
   formatDraftCreatedMarkFailure
 };
 
-router.startSyncCleanup = syncCleanupTask.start;
-router.drainBackgroundTasks = () => Promise.allSettled([...activeSyncTasks]);
+router.ensureMpSyncSchema = ensureMpSyncSchema;
+router.startSyncJobs = () => getMpSyncJobs().start();
+router.stopSyncJobs = () => mpSyncJobsInstance ? mpSyncJobsInstance.stop() : Promise.resolve();
+router.drainBackgroundTasks = () => mpSyncJobsInstance ? mpSyncJobsInstance.drain() : Promise.resolve();
+router._getMpSyncJobs = getMpSyncJobs;
 module.exports = router;

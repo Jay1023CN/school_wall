@@ -6,10 +6,16 @@ const path = require('path');
 
 const routePath = path.join(__dirname, '..', 'routes', 'mp-draft.js');
 const source = fs.readFileSync(routePath, 'utf8');
+const weeklyScheduleStart = source.indexOf("router.get('/weekly-song-schedule'");
+const weeklyScheduleEnd = source.indexOf('\n/**\n * 一键生成并发布今日精选', weeklyScheduleStart);
+const weeklyScheduleSource = source.slice(weeklyScheduleStart, weeklyScheduleEnd);
 const clientPath = path.join(__dirname, '..', 'frontend', 'admin', 'mp-draft.html');
-const clientSource = fs.readFileSync(clientPath, 'utf8');
+const clientSource = `${fs.readFileSync(clientPath, 'utf8')}\n${fs.readFileSync(path.join(__dirname, '..', 'frontend', 'admin', 'js', 'mp-draft.js'), 'utf8')}\n${fs.readFileSync(path.join(__dirname, '..', 'frontend', 'admin', 'css', 'mp-draft-inline.css'), 'utf8')}\n${fs.readFileSync(path.join(__dirname, '..', 'frontend', 'admin', 'css', 'mp-draft.css'), 'utf8')}`;
 const weatherServicePath = path.join(__dirname, '..', 'services', 'mp-draft.js');
 const weatherServiceSource = fs.readFileSync(weatherServicePath, 'utf8');
+const weeklyBuilderStart = clientSource.indexOf('function buildWeeklySongScheduleHtml(data)');
+const weeklyBuilderEnd = clientSource.indexOf('\n        async function generateWeeklySongSchedule', weeklyBuilderStart);
+const weeklyBuilder = clientSource.slice(weeklyBuilderStart, weeklyBuilderEnd);
 // 微信客户端不稳定支持 flex；天气卡固定为 48% + 4% 间距 + 48%，避免列宽与 padding 叠加。
 assert.ok(source.includes('table-layout:fixed;border-collapse:collapse'), '天气表格必须使用固定布局');
 assert.ok(source.includes('width="48%" style="width:48% !important;vertical-align:top;text-align:center;padding:0;overflow:hidden;"'), '服务端天气两列必须无单元格内边距并保留固定宽度');
@@ -22,6 +28,12 @@ assert.ok(clientSource.includes('width="48%" style="width:48% !important;vertica
 assert.ok(clientSource.includes('function buildWechatTextStatsHtml(readMinutes, postCount)'), '客户端统计栏必须集中使用微信兼容布局生成器');
 assert.ok((clientSource.match(/buildWechatTextStatsHtml\(readMinutes, postData\.length\)/g) || []).length >= 2, '客户端预览和实际同步正文的统计栏都必须复用同一套布局');
 assert.ok(clientSource.includes('width="31.33%"') && clientSource.includes('width="3%" style="width:3% !important;padding:0;font-size:0;line-height:0;"'), '统计栏三列必须使用独立间隔列，避免 iOS 微信叠加 padding 撑宽');
+const gaokaoSource = source.slice(source.indexOf('// ===== 高考倒计时卡片 ====='), source.indexOf('// ===== 数据统计 ====='));
+const gaokaoClient = clientSource.slice(clientSource.indexOf('function buildWechatGaokaoCountdownHtml()'), clientSource.indexOf('function buildWechatWeeklyStarHtml'));
+for (const [label, builder] of [['服务端', gaokaoSource], ['后台预览与同步', gaokaoClient]]) {
+  assert.ok(builder.includes('max-width:100%;table-layout:fixed;border-collapse:collapse'), `${label}高考倒计时外框必须锁在手机宽度内`);
+  assert.ok(builder.includes('width="48%"') && builder.includes('width="4%"') && (builder.match(/width="48%"/g) || []).length >= 2, `${label}高考倒计时必须使用 48% + 4% 间距 + 48% 固定列，避免微信端单元格边距撑宽`);
+}
 assert.ok(clientSource.includes('function buildWechatWeatherMetaHtml(value, icon, previewTheme)'), '天气信息行必须使用统一的空值处理，不能显示暂无占位文案');
 assert.ok(!clientSource.includes('风况暂无') && !clientSource.includes('湿度暂无') && !source.includes('风况暂无') && !source.includes('湿度暂无'), '天气卡片不得显示风况暂无或湿度暂无');
 assert.ok(clientSource.includes('function buildWechatWeeklyStarHtml(weeklyStar)'), '客户端每周之星必须集中使用微信兼容卡片生成器');
@@ -40,13 +52,20 @@ assert.ok(source.includes('mpDraftService.normalizeDraftArticle(JSON.parse(JSON.
 assert.ok(!source.includes('校园故事站'), '旧栏目名不得继续出现在公众号模板');
 assert.ok(source.includes('一首歌的时间'), '推歌栏目名应与当前栏目命名一致');
 assert.ok(source.includes("router.get('/weekly-song-schedule'"), '本周点歌单必须提供独立排期接口');
-assert.ok(source.includes("sr.status = 'approved' AND sr.deleted_at IS NULL"), '本周点歌单只能读取已审核且未删除的点歌');
-assert.ok(source.includes('sd.is_active = 1 AND ts.is_active = 1'), '本周点歌单必须排除已关闭的播放时段');
+assert.ok(weeklyScheduleSource.includes("sr.status = 'approved' AND sr.deleted_at IS NULL"), '本周点歌单只能读取已审核且未删除的点歌');
+assert.ok(weeklyScheduleSource.includes('AND sd.play_date >= ? AND sd.play_date < ?'), '本周点歌单必须按目标自然周日期筛选');
+assert.ok(!weeklyScheduleSource.includes('sd.is_active = 1') && !weeklyScheduleSource.includes('ts.is_active = 1'), '审核后关闭时段不能让已通过的点歌从周表漏掉');
+assert.ok(!weeklyScheduleSource.includes('ts.effective_start_date'), '审核后调整时段生效日期不能让已通过的点歌从周表漏掉');
 assert.ok(clientSource.includes('function generateWeeklySongSchedule('), '后台必须可以生成独立本周/下周点歌单');
 assert.ok(clientSource.includes("generatedDailySongIds = [];"), '同步本周点歌单不能误改每日推歌发布状态');
 assert.ok(clientSource.includes('本周点歌播放表'), '本周点歌单必须使用独立的用户可见标题');
-assert.ok(clientSource.includes('table-layout:fixed;background:#ffffff;border:1px solid #d6e4ec'), '本周点歌单的歌曲行必须使用公众号兼容表格布局');
+assert.ok(clientSource.includes('style="width:100%;border-collapse:collapse;background:#ffffff;border:1px solid #dce8ef'), '本周点歌单的歌曲行必须使用公众号兼容表格布局');
+assert.ok(weeklyBuilder.includes('width:100%;max-width:100%;box-sizing:border-box') && weeklyBuilder.includes('width="49"') && weeklyBuilder.includes('table-layout:fixed'), '点歌单顶部装饰和外框必须约束在手机视口内');
+assert.ok(weeklyBuilder.includes('src="/images/gzh.jpg?v=2026092802"') && !weeklyBuilder.includes('src="https://wall.jay23.cn/images/gzh.jpg"'), '点歌单二维码必须使用带版本的站内资源，避免依赖公网图片下载和旧缓存');
+assert.ok(source.includes('tasks.push({ original: originalSrc, upload: originalSrc })') && weatherServiceSource.includes("imageUrl.startsWith('/')") && weatherServiceSource.includes('resolvePublicFile(imageUrl)'), '站内二维码同步时必须由服务端读取本地图片并上传微信素材');
 assert.ok(clientSource.includes('function shouldSelectDailySongByDefault(song)'), '每日推歌候选必须集中定义默认勾选规则');
+assert.ok(clientSource.includes("var SONG_TPL_KEYS = ['magazine','quote','letter','vinyl','player','postcard','cinema','record'];"), '随机推歌卡片只使用版式稳定的模板');
+assert.ok(clientSource.includes("var allTplKeys = ['magazine','quote','letter','vinyl','player','postcard','cinema','record'];"), '公众号正文随机模板须与预览中的稳定模板保持一致');
 assert.ok(clientSource.includes("song.status !== 'published'"), '已发布但可复用的歌曲默认不得勾选');
 assert.ok(clientSource.includes('song._selected = false;'), '同步后本地候选必须立即取消已发布歌曲的勾选');
 assert.ok(clientSource.includes('候选曲目已经在“今日推歌选择”工作区内'), '候选曲列表不得再渲染嵌套卡片容器');
@@ -63,5 +82,11 @@ assert.ok(source.includes("router.post('/cover-prompt', requirePermission('songs
 assert.ok(source.indexOf("router.post('/cover-prompt'") > source.indexOf('router.use(auth, isStaff, superAdminOnly);'), '封面提示词接口必须在统一鉴权后注册，令牌才能写入 req.user');
 assert.ok(clientSource.includes('window.switchTab = switchTab;'), '内联页签按钮必须能从 window 找到 switchTab');
 assert.ok(clientSource.includes('window.openDailySongTab = openDailySongTab;'), '内联每日推歌入口必须能从 window 找到 openDailySongTab');
+assert.ok(clientSource.includes('max-height: min(460px, calc(100vh - 180px));') && clientSource.includes('overflow-y: auto;'), '扩展版式菜单后必须限制高度并允许滚动，避免手机端越界');
+assert.ok(clientSource.includes('max-height: min(460px, calc(100dvh - 180px));'), '版式菜单必须跟随手机浏览器动态视口高度');
+assert.ok(clientSource.includes('body.admin-mp-page input,') && clientSource.includes('font-size: 16px !important;'), '手机端公众号表单必须避免 iOS 聚焦时自动放大');
+assert.ok(clientSource.includes('[data-theme="dark"] body.admin-mp-page .preview-theme-menu') && clientSource.includes('[data-theme="dark"] body.admin-mp-page #dailySongSelector'), '公众号版式菜单和推歌选择区必须适配深色模式');
+assert.ok((clientSource.match(/min-height: 44px;/g) || []).length >= 3, '手机端关键返回、版式和预览操作必须提供足够触控高度');
+assert.ok(/\/admin\/js\/mp-draft\.js\?v=\d+/.test(clientSource) && /\/admin\/js\/mp-draft-utils\.js\?v=\d+/.test(clientSource), '公众号后台静态资源必须带发布版本，避免浏览器继续使用旧脚本');
 
 console.log('[mp-draft-layout] 通过：天气横排、正文标题一致性和栏目替换静态检查均符合预期');

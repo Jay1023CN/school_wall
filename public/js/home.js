@@ -1,9 +1,13 @@
 /**
- * 示例校园墙 - 首页模块 (home.js)
+ * 嘉二の墙墙 - 首页模块 (home.js)
  * 功能：帖子列表加载、分类筛选、排序切换、点赞/收藏、分页加载
  * 后端返回字段：author_name, author_avatar, author_id, likes_count, comments_count,
  *               images(JSON字符串需parse), is_anonymous, is_liked, is_favorited, time_ago
  */
+
+function renderBookmarkIcon(active) {
+  return '<svg class="ui-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z"' + (active ? ' fill="currentColor"' : '') + '></path></svg>';
+}
 
 var emptyStateEl = null;
 var currentPage = 1;
@@ -461,7 +465,7 @@ function renderPostCard(post) {
         '<span class="action-count">' + viewsCount + '</span>' +
       '</button>' +
       '<button type="button" class="action-btn ' + (post.is_favorited ? 'favorited' : '') + '" aria-label="' + (post.is_favorited ? '取消收藏' : '收藏') + '" aria-pressed="' + (post.is_favorited ? 'true' : 'false') + '" title="' + (post.is_favorited ? '取消收藏' : '收藏') + '" onclick="event.stopPropagation();toggleFavorite(' + safePostId + ',this)">' +
-        '<span class="action-icon" aria-hidden="true">' + (post.is_favorited ? '⭐' : '☆') + '</span>' +
+        '<span class="action-icon" aria-hidden="true">' + renderBookmarkIcon(!!post.is_favorited) + '</span>' +
       '</button>' +
     '</div>' +
   '</article>';
@@ -469,6 +473,7 @@ function renderPostCard(post) {
 
 // 打开帖子详情
 function openPostDetail(postId) {
+  saveHomeState();
   window.location.href = '/post/' + postId;
 }
 
@@ -580,10 +585,10 @@ async function toggleFavorite(postId, btn) {
 
   var data = await authFetch('/api/posts/' + postId + '/favorite', { method: 'POST' });
   if (data.code === 200) {
-    var icon = btn.querySelector('.action-icon');
+    var icon = btn.querySelector('.action-icon, .profile-action-icon');
     if (data.data.favorited) {
       btn.classList.add('favorited');
-      icon.textContent = '⭐';
+      if (icon) icon.innerHTML = renderBookmarkIcon(true);
       // 添加收藏动画
       btn.classList.add('favorite-animate');
       setTimeout(function() {
@@ -591,7 +596,7 @@ async function toggleFavorite(postId, btn) {
       }, 500);
     } else {
       btn.classList.remove('favorited');
-      icon.textContent = '☆';
+      if (icon) icon.innerHTML = renderBookmarkIcon(false);
     }
   } else {
     showToast(data.message || '操作失败', 'error');
@@ -599,39 +604,50 @@ async function toggleFavorite(postId, btn) {
 }
 
 // ============================================
-// 首页加载点歌播放列表（非阻塞，不会卡住主页面）
+// 首页加载点歌播放列表（非阻塞，单行紧凑空歌单）
 // ============================================
 async function loadHomePlaylist() {
+  var section = document.getElementById('homePlaylistSection');
   var container = document.getElementById('homePlaylist');
-  if (!container) {
-    return;
+  if (!container) return;
+
+  function renderInlineEmpty() {
+    if (section) section.classList.add('is-empty');
+    container.innerHTML = '<div class="playlist-empty-inline">' +
+      '<div class="empty-inline-left">' +
+        '<span class="empty-inline-icon">🎵</span>' +
+        '<span class="empty-inline-text">今日歌单 · 暂无播放曲目，去点一首吧~</span>' +
+      '</div>' +
+      '<a href="/radio" class="empty-inline-action">去点歌 ›</a>' +
+    '</div>';
   }
 
   try {
-    container.innerHTML = '<div class="playlist-empty">暂无播放曲目</div>';
-    
+    // 初始或加载中保持单行精简，避免高度骤变
+    renderInlineEmpty();
+
     var response = await fetch('/api/songs/list', {
       method: 'GET',
       cache: 'no-store',
       headers: { 'Accept': 'application/json' }
     });
-    
+
     if (!response.ok) {
-      container.innerHTML = '<div class="playlist-empty">暂无播放曲目</div>';
+      renderInlineEmpty();
       return;
     }
-    
+
     var rawText = await response.text();
     var data;
     try {
       data = JSON.parse(rawText);
     } catch (e) {
-      container.innerHTML = '<div class="playlist-empty">暂无播放曲目</div>';
+      renderInlineEmpty();
       return;
     }
 
     if (!data || data.code !== 200) {
-      container.innerHTML = '<div class="playlist-empty">暂无播放曲目</div>';
+      renderInlineEmpty();
       return;
     }
 
@@ -639,32 +655,32 @@ async function loadHomePlaylist() {
     var songs = Array.isArray(data.data) ? data.data.filter(function(song) {
       return song && !song.deleted_at;
     }) : [];
-    
-    if (!songs || !Array.isArray(songs) || songs.length === 0) {
-      container.innerHTML = '<div class="playlist-empty">暂无播放曲目，快去点一首吧~ 🎵</div>';
+
+    // 过滤出未播放的歌曲
+    var validSongs = songs.filter(function(s) { return s.status !== 'played'; });
+
+    if (!validSongs || validSongs.length === 0) {
+      renderInlineEmpty();
       return;
     }
-    
+
+    // 存在歌曲时，恢复正常歌单卡片并展开
+    if (section) section.classList.remove('is-empty');
+
     // 获取当前中国时间
     var now = new Date();
     var chinaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
     var currentTime = chinaTime.toISOString().slice(11, 19);
-    
+
     var html = '';
-    songs.forEach(function(song, index) {
+    validSongs.forEach(function(song, index) {
       var isPlaying = false;
       if (song.status === 'approved' && song.start_time && song.end_time) {
         isPlaying = currentTime >= song.start_time && currentTime <= song.end_time;
       }
 
-      // 隐藏已播放的歌曲
-      if (song.status === 'played') return;
-
       var statusText, statusClass;
-      if (song.status === 'played') {
-        statusText = '已播放';
-        statusClass = 'played';
-      } else if (song.status === 'approved') {
+      if (song.status === 'approved') {
         if (isPlaying) {
           statusText = '播放中';
           statusClass = 'playing';
@@ -679,12 +695,12 @@ async function loadHomePlaylist() {
         statusText = '排队中';
         statusClass = 'waiting';
       }
-      
+
       var artistInfo = song.artist ? ' - ' + escapeHtml(song.artist) : '';
       var timeStr = song.slot_name || '';
       var dateStr = song.play_date || '';
       var authorStr = song.is_anonymous ? '匿名用户' : (song.author_name || '用户');
-      
+
       html += '<div class="playlist-item ' + statusClass + '">' +
         '<span class="song-index">' + (index + 1) + '</span>' +
         '<div class="song-info">' +
@@ -694,10 +710,10 @@ async function loadHomePlaylist() {
         '<span class="song-status">' + statusText + '</span>' +
       '</div>';
     });
-    
+
     container.innerHTML = html;
   } catch (err) {
-    container.innerHTML = '<div class="playlist-empty">暂无播放曲目</div>';
+    renderInlineEmpty();
   }
 }
 
@@ -781,6 +797,42 @@ function initHomeWheelScroll() {
   // scroller.style.scrollBehavior = 'auto'，避免自定义位移造成双滚动。
 }
 
+
+// ============================================
+// 首页浏览状态持久化（保留搜索关键词与浏览滚动位置）
+// ============================================
+var HOME_STATE_KEY = 'campus_wall_home_state';
+
+function saveHomeState() {
+  try {
+    var searchInputEl = document.getElementById('searchInput');
+    var kw = searchInputEl ? searchInputEl.value.trim() : (currentKeyword || '');
+    var state = {
+      keyword: kw,
+      category: currentCategory || '全部',
+      sort: currentSort || 'latest',
+      scrollY: window.scrollY || window.pageYOffset || 0,
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem(HOME_STATE_KEY, JSON.stringify(state));
+  } catch (e) {}
+}
+
+function getSavedHomeState() {
+  try {
+    var raw = sessionStorage.getItem(HOME_STATE_KEY);
+    if (!raw) return null;
+    var state = JSON.parse(raw);
+    if (state && (Date.now() - state.timestamp < 3600000)) {
+      return state;
+    }
+  } catch (e) {}
+  return null;
+}
+
+window.addEventListener('pagehide', saveHomeState);
+window.addEventListener('beforeunload', saveHomeState);
+
 // 页面初始化
 document.addEventListener('DOMContentLoaded', function() {
   // 初始化 emptyState 元素引用
@@ -789,12 +841,66 @@ document.addEventListener('DOMContentLoaded', function() {
   updateNavbar();
   initHomeWheelScroll();
 
-  // 先滚动到顶部，再加载第一页帖子
-  window.scrollTo(0, 0);
+  var savedState = getSavedHomeState();
+  var shouldRestoreScroll = false;
+  var targetScrollY = 0;
+
+  var searchInput = document.getElementById('searchInput');
+  var searchClear = document.getElementById('searchClear');
+
+  if (savedState) {
+    // 恢复搜索词
+    if (savedState.keyword) {
+      currentKeyword = savedState.keyword;
+      if (searchInput) searchInput.value = savedState.keyword;
+      if (searchClear) searchClear.classList.add('show');
+    }
+    // 恢复分类
+    if (savedState.category && savedState.category !== '全部') {
+      currentCategory = savedState.category;
+      var catTag = document.querySelector('.filter-tag[data-category="' + savedState.category + '"]');
+      if (catTag) {
+        var allTags = document.querySelectorAll('.filter-tag');
+        for (var i = 0; i < allTags.length; i++) {
+          allTags[i].classList.remove('active');
+          allTags[i].setAttribute('aria-pressed', 'false');
+        }
+        catTag.classList.add('active');
+        catTag.setAttribute('aria-pressed', 'true');
+      }
+    }
+    // 恢复排序
+    if (savedState.sort && savedState.sort !== 'latest') {
+      currentSort = savedState.sort;
+      var sortBtn = document.querySelector('.sort-btn[data-sort="' + savedState.sort + '"]');
+      if (sortBtn) {
+        var allBtns = document.querySelectorAll('.sort-btn');
+        for (var j = 0; j < allBtns.length; j++) {
+          allBtns[j].classList.remove('active');
+        }
+        sortBtn.classList.add('active');
+      }
+    }
+    // 恢复滚动标记
+    if (savedState.scrollY && savedState.scrollY > 0) {
+      shouldRestoreScroll = true;
+      targetScrollY = savedState.scrollY;
+    }
+  }
+
+  if (!shouldRestoreScroll) {
+    window.scrollTo(0, 0);
+  }
   pageInitialized = true;
   totalLoaded = 0;
   hasMore = true;
-  loadPosts(false);
+  loadPosts(false).then(function() {
+    if (shouldRestoreScroll && targetScrollY > 0) {
+      window.setTimeout(function() {
+        window.scrollTo({ top: targetScrollY, behavior: 'instant' });
+      }, 80);
+    }
+  });
 
   // ===== 移动端下拉刷新 =====
   initPullToRefresh();
@@ -820,12 +926,11 @@ document.addEventListener('DOMContentLoaded', function() {
       tag.classList.add('active');
       tag.setAttribute('aria-pressed', 'true');
 
-      // 更新当前分类并重新加载，同时滚动到顶部
+      // 更新当前分类并在当前位置刷新列表，避免移动端点击分类后跳回页面顶部
       currentCategory = tag.getAttribute('data-category') || tag.textContent.trim();
       totalLoaded = 0;
       hasMore = true;
       loadPosts(false);
-      window.scrollTo({ top: 0, behavior: getMotionSafeScrollBehavior() });
     });
   }
 
@@ -845,12 +950,11 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       btn.classList.add('active');
 
-      // 更新排序方式并重新加载，同时滚动到顶部
+      // 更新排序方式并在当前位置刷新列表，避免移动端切换排序后跳回顶部
       currentSort = btn.getAttribute('data-sort') || 'latest';
       totalLoaded = 0;
       hasMore = true;
       loadPosts(false);
-      window.scrollTo({ top: 0, behavior: getMotionSafeScrollBehavior() });
     });
   }
 
@@ -966,6 +1070,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (searchInput) searchInput.value = '';
       searchClear.classList.remove('show');
       currentKeyword = '';
+      saveHomeState();
       totalLoaded = 0;
       hasMore = true;
       loadPosts(false);
@@ -1125,7 +1230,13 @@ function initPullToRefresh() {
       var streakHtml = data.checked_in
         ? '<div class="checkin-status-row"><span class="checkin-streak">连续 <strong>' + data.streak + '</strong> 天</span><span class="checkin-done">已签到</span></div>'
         : '<div class="checkin-action-row"><span class="checkin-streak">连续 <strong>' + data.streak + '</strong> 天</span><button class="btn-checkin" onclick="doCheckin()">签到</button></div>';
-      body.innerHTML = streakHtml;
+      var goalHtml = data.streak_goal
+        ? '<div class="checkin-encouragement">' + escapeHtml(data.streak_goal.message) + '</div>'
+        : '';
+      var titleHtml = data.next_checkin_title
+        ? '<div class="checkin-title-goal">' + escapeHtml(data.next_checkin_title.message) + '</div>'
+        : '';
+      body.innerHTML = streakHtml + goalHtml + titleHtml;
     }).catch(function() {
       renderCheckinError('网络不稳定，请稍后重试');
     });

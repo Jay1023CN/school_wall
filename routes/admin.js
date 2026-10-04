@@ -10,11 +10,14 @@ const mpDraftService = require('../services/mp-draft');
 const aiService = require('../services/ai');
 const { generateCoverPrompt } = require('../services/cover-prompt');
 const { getPagination } = require('../services/pagination');
-const { adjustUserPoints, awardTitle } = require('../services/gamification');
+const { applyPointDelta, adjustUserPoints, awardTitle } = require('../services/gamification');
 const { getReleaseNotes } = require('../services/release-notes');
 const { getChinaDate, getChinaJsDayOfWeek } = require('../services/date');
 const { withTimeout, getErrorDetail } = require('../services/async-utils');
 const JWT_SECRET = require('../config/jwt-secret');
+const { transitionSongStatus } = require('../services/song-state-transitions');
+const { runWriteTransaction } = require('../services/write-transaction');
+const { rollbackOrDiscard, releaseConnection } = require('../services/database-transaction');
 const {
   normalizeDateOnly,
   slotDateValue,
@@ -25,6 +28,7 @@ const {
 } = require('../services/song-scheduling');
 const siteRouter = require('./site');
 const router = express.Router();
+const dailySongsRouter = require('./admin/daily-songs');
 const slotsRouter = require('./admin/slots');
 const { getIpRegion } = require('../services/ip-lookup');
 const DEPLOY_STATUS_FILE = path.resolve(
@@ -33,7 +37,7 @@ const DEPLOY_STATUS_FILE = path.resolve(
 const APP_VERSION = require('../package.json').version;
 const TEST_EMAIL_TIMEOUT_MS = 20000;
 
-const SITE_URL = 'http://localhost:3000';
+const SITE_URL = 'https://wall.jay23.cn';
 const DEFAULT_SONG_REJECT_REASONS = [
   '当前播放时段名额已满，请选择其他时段再点歌。',
   '本周暂未开放点歌，请下周再来。',
@@ -59,6 +63,7 @@ function normalizeSongRejectReasons(value) {
 
 // 所有管理路由都需要登录 + 是管理后台用户
 router.use(auth, isStaff);
+router.use('/daily-songs', dailySongsRouter);
 router.use('/slots', slotsRouter);
 
 // 点歌审核员在“点歌管理”内维护打回理由，不必也不应获得系统设置权限。
@@ -799,19 +804,15 @@ router.put('/songs/:id/reschedule', requirePermission('songs:review'), async (re
   if (requestedPlayDate && requestedSlotDateId) return res.json({ code: 400, message: '播放日期请使用自定义日期或已有日期之一' });
 
   try {
-    const connection = await pool.getConnection();
     let slotDate;
-    try {
-      await connection.beginTransaction();
+    const writeResult = await runWriteTransaction(pool, req, 'songs:reschedule', async connection => {
       slotDate = await rescheduleApprovedSong(connection, req.params.id, requestedSlotDateId, requestedPlayDate, requestedSlotId, allowOverbook);
-      await connection.commit();
-    } catch (err) {
-      try { await connection.rollback(); } catch (_) {}
-      if (err && err.isSongReviewValidationError) return res.json({ code: 400, message: err.message });
-      throw err;
-    } finally {
-      connection.release();
-    }
+      return { status: 200, body: { code: 200, message: slotDate.unchanged ? '播放时间未变化' : '播放时间已调整，通知将在后台发送', data: {
+        slot_date_id: slotDate.id, slot_id: slotDate.slot_id, play_date: slotDateValue(slotDate.play_date),
+        slot_name: slotDate.slot_name, start_time: slotDate.start_time, end_time: slotDate.end_time
+      } } };
+    });
+    if (writeResult.replayed || writeResult.status >= 400 || slotDate.unchanged) return res.status(writeResult.status).json(writeResult.body);
 
     // 复用现有“通过”邮件模板，但携带更新后的完整播放日期和时段。
     setImmediate(async () => {
@@ -842,19 +843,9 @@ router.put('/songs/:id/reschedule', requirePermission('songs:review'), async (re
       }
     });
 
-    res.json({
-      code: 200,
-      message: '播放时间已调整，并已通知点歌用户',
-      data: {
-        slot_date_id: slotDate.id,
-        slot_id: slotDate.slot_id,
-        play_date: slotDateValue(slotDate.play_date),
-        slot_name: slotDate.slot_name,
-        start_time: slotDate.start_time,
-        end_time: slotDate.end_time
-      }
-    });
+    res.status(writeResult.status).json(writeResult.body);
   } catch (err) {
+    if (err && err.isSongReviewValidationError) return res.status(400).json({ code: 400, message: err.message });
     console.error('[Songs] 调整已通过点歌播放时间失败:', getErrorDetail(err));
     res.json({ code: 500, message: '调整播放时间失败，请稍后重试' });
   }
@@ -900,22 +891,25 @@ router.put('/songs/:id/status', requirePermission('songs:review'), async (req, r
         await connection.commit();
         statusResult = { affectedRows: 1 };
       } catch (err) {
-        try { await connection.rollback(); } catch (_) {}
-        if (err && err.isSongReviewValidationError) {
+        const rolledBack = await rollbackOrDiscard(connection, err);
+        if (rolledBack && err && err.isSongReviewValidationError) {
           return res.json({ code: 400, message: err.message });
         }
         throw err;
       } finally {
-        connection.release();
+        releaseConnection(connection);
       }
     } else {
-      [statusResult] = await pool.execute(
-        'UPDATE song_requests SET status = ?, reject_reason = ? WHERE id = ? AND deleted_at IS NULL',
-      [status, rejectReason, req.params.id]
-      );
-      if (play_order !== undefined) {
-        await pool.execute('UPDATE song_requests SET play_order = ? WHERE id = ? AND deleted_at IS NULL', [play_order, req.params.id]);
-      }
+      const connection = await pool.getConnection();
+      try {
+        await connection.beginTransaction();
+        statusResult = await transitionSongStatus(connection, req.params.id, status, rejectReason, play_order, req.body.expected_status);
+        await connection.commit();
+      } catch (error) {
+        const rolledBack = await rollbackOrDiscard(connection, error);
+        if (rolledBack && error.isSongReviewValidationError) return res.status(error.statusCode || 400).json({ code: error.statusCode || 400, message: error.message });
+        throw error;
+      } finally { releaseConnection(connection); }
     }
     if (!statusResult || statusResult.affectedRows === 0) return res.json({ code: 404, message: '点歌记录不存在或已在回收站' });
 
@@ -970,7 +964,7 @@ router.put('/songs/batch-status', requirePermission('songs:review'), async (req,
   try {
     const { ids, status } = req.body;
     const rejectReason = status === 'rejected' ? String(req.body.reason || '').trim().slice(0, 500) : null;
-    if (!Array.isArray(ids) || ids.length === 0 || !['approved', 'rejected', 'pending'].includes(status)) {
+    if (!Array.isArray(ids) || ids.length === 0 || ids.length > 500 || !['approved', 'rejected', 'pending'].includes(status)) {
       return res.json({ code: 400, message: '无效参数' });
     }
     if (status === 'rejected' && !rejectReason) {
@@ -990,10 +984,14 @@ router.put('/songs/batch-status', requirePermission('songs:review'), async (req,
           await connection.commit();
           approvedIds.push(songId);
         } catch (err) {
-          try { await connection.rollback(); } catch (_) {}
-          failedMessages.push(err && err.isSongReviewValidationError ? err.message : '服务器错误');
+          const rolledBack = await rollbackOrDiscard(connection, err);
+          if (rolledBack && err && err.isSongReviewValidationError) {
+            failedMessages.push(err.message);
+          } else {
+            throw err;
+          }
         } finally {
-          connection.release();
+          releaseConnection(connection);
         }
       }
       if (approvedIds.length === 0) {
@@ -1033,21 +1031,40 @@ router.put('/songs/batch-status', requirePermission('songs:review'), async (req,
           : `已批量通过 ${approvedIds.length} 条`
       });
     }
-    const placeholders = ids.map(() => '?').join(',');
+    const reviewIds = [...new Set(ids.map(Number))].filter(id => Number.isSafeInteger(id) && id > 0).sort((a, b) => a - b);
+    if (!reviewIds.length || reviewIds.length > 500) return res.status(400).json({ code: 400, message: '每次最多审核500条有效点歌' });
+    const connection = await pool.getConnection();
     let songsToNotify = [];
-    if (status === 'approved' || status === 'rejected') {
-      const [rows] = await pool.execute(`
-        SELECT sr.song_name, sr.artist, sr.user_id, u.email, u.nickname, u.username, ts.name AS slot_name,
-               ts.start_time, ts.end_time, DATE_FORMAT(sd.play_date, '%Y-%m-%d') AS play_date
-        FROM song_requests sr
-        LEFT JOIN time_slots ts ON sr.slot_id = ts.id
-        LEFT JOIN slot_dates sd ON sr.slot_date_id = sd.id
-        LEFT JOIN users u ON sr.user_id = u.id
-        WHERE sr.id IN (${placeholders}) AND sr.deleted_at IS NULL
-      `, ids);
-      songsToNotify = rows;
-    }
-    await pool.execute(`UPDATE song_requests SET status = ?, reject_reason = ? WHERE id IN (${placeholders}) AND deleted_at IS NULL`, [status, rejectReason, ...ids]);
+    const changedIds = [];
+    try {
+      await connection.beginTransaction();
+      for (const songId of reviewIds) {
+        try {
+          await transitionSongStatus(connection, songId, status, rejectReason, undefined, req.body.expected_statuses && req.body.expected_statuses[songId]);
+          changedIds.push(songId);
+        } catch (error) {
+          if (!error.isSongReviewValidationError) throw error;
+        }
+      }
+      if (status === 'rejected' && changedIds.length) {
+        const placeholders = changedIds.map(() => '?').join(',');
+        const [rows] = await connection.execute(`
+          SELECT sr.song_name, sr.artist, sr.user_id, u.email, u.nickname, u.username, ts.name AS slot_name,
+                 ts.start_time, ts.end_time, DATE_FORMAT(sd.play_date, '%Y-%m-%d') AS play_date
+          FROM song_requests sr
+          LEFT JOIN time_slots ts ON sr.slot_id = ts.id
+          LEFT JOIN slot_dates sd ON sr.slot_date_id = sd.id
+          LEFT JOIN users u ON sr.user_id = u.id
+          WHERE sr.id IN (${placeholders}) AND sr.deleted_at IS NULL
+        `, changedIds);
+        songsToNotify = rows;
+      }
+      await connection.commit();
+    } catch (error) {
+      await rollbackOrDiscard(connection, error);
+      throw error;
+    } finally { releaseConnection(connection); }
+    if (!changedIds.length) return res.status(409).json({ code: 409, message: '所选点歌状态已变化，请刷新后重试' });
     if (songsToNotify.length > 0) {
       setImmediate(async () => {
         for (const song of songsToNotify) {
@@ -1075,7 +1092,7 @@ router.put('/songs/batch-status', requirePermission('songs:review'), async (req,
         }
       });
     }
-    res.json({ code: 200, message: `已批量${status === 'approved' ? '通过' : status === 'rejected' ? '拒绝' : '设为待审核'} ${ids.length} 条` });
+    res.json({ code: 200, message: `已批量${status === 'approved' ? '通过' : status === 'rejected' ? '拒绝' : '设为待审核'} ${changedIds.length} 条` });
   } catch (err) {
     res.json({ code: 500, message: '服务器错误' });
   }
@@ -1153,233 +1170,7 @@ router.put('/trash/songs/:id/restore', requirePermission('songs:delete'), async 
   }
 });
 
-// ===== 每日推歌管理 =====
-router.get('/daily-songs', superAdminOnly, requirePermission('songs:review'), async (req, res) => {
-  try {
-    const { page, limit, offset } = getPagination(req.query, { defaultLimit: 20, maxLimit: 100 });
-    const { status, keyword } = req.query;
-    const candidate = req.query.candidate === '1' || req.query.candidate === 'true';
-    const candidateState = req.query.candidate_state === 'hidden' ? 'hidden' : 'active';
-
-    var sql = 'SELECT * FROM daily_song_recs WHERE 1=1';
-    var params = [];
-
-    if (candidateState === 'hidden') {
-      // “移出候选”只改变候选可见性，不能篡改已同步状态或发布时间。
-      sql += ' AND candidate_hidden_at IS NOT NULL';
-    } else if (candidate) {
-      // 选稿器：未发布的歌始终可见；已同步的歌仅保留三天供调整后复用。
-      // 兼容旧记录只写入 published 状态而缺少 published_at 的情况。
-      sql += ' AND candidate_hidden_at IS NULL AND (status = "pending" OR (status = "published" AND COALESCE(published_at, created_at) >= DATE_SUB(NOW(), INTERVAL 3 DAY)))';
-    }
-
-    if (status) {
-      sql += ' AND status = ?';
-      params.push(status);
-    }
-
-    if (keyword) {
-      sql += ' AND (song_name LIKE ? OR artist LIKE ? OR submitter LIKE ?)';
-      params.push('%' + keyword + '%', '%' + keyword + '%', '%' + keyword + '%');
-    }
-
-    const [countResult] = await pool.execute(sql.replace('SELECT *', 'SELECT COUNT(*) as total'), params);
-    const total = countResult[0]?.total || 0;
-
-    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
-
-    const [songs] = await pool.execute(sql, params);
-
-    res.json({
-      code: 200,
-      data: {
-        songs,
-        page: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        total
-      }
-    });
-  } catch (err) {
-    res.json({ code: 500, message: '查询失败，请稍后重试' });
-  }
-});
-
-// 手动添加推歌
-router.post('/daily-songs', superAdminOnly, requirePermission('songs:review'), async (req, res) => {
-  try {
-    const songName = String(req.body?.song_name || '').trim();
-    const artist = String(req.body?.artist || '').trim();
-    const toWhom = String(req.body?.to_whom || '').trim();
-    const message = String(req.body?.message || '').trim();
-    if (!songName) {
-      return res.json({ code: 400, message: '请填写歌曲名' });
-    }
-    if (!artist) {
-      return res.json({ code: 400, message: '请填写歌手' });
-    }
-    await pool.execute(
-      'INSERT INTO daily_song_recs (song_name, artist, to_whom, message, source, submitter, status, created_at) VALUES (?, ?, ?, ?, "manual", "管理员", "pending", NOW())',
-      [songName, artist, toWhom, message]
-    );
-    res.json({ code: 200, message: '添加成功' });
-  } catch (err) {
-    res.json({ code: 500, message: '添加失败，请稍后重试' });
-  }
-});
-
-router.post('/daily-songs/:id/publish', superAdminOnly, requirePermission('songs:review'), async (req, res) => {
-  // 保留路由以免旧后台直接报 404，但不允许绕过公众号草稿同步伪造已发布状态。
-  res.status(409).json({ code: 409, message: '每日推歌只能在“同步到公众号”成功后自动标为已发布' });
-});
-
-router.post('/daily-songs/:id/unpublish', superAdminOnly, requirePermission('songs:review'), async (req, res) => {
-  // 已同步到公众号的记录保留真实发布时间，不能通过后台回退成“未发布”。
-  res.status(409).json({ code: 409, message: '已发布记录不能手动撤回；三天内仍可在公众号推送页复用' });
-});
-
-// 批量移出 / 恢复公众号候选。它不修改 status 或 published_at，避免把未同步歌曲伪造成已发布。
-router.post('/daily-songs/candidate-visibility', superAdminOnly, requirePermission('songs:review'), async (req, res) => {
-  try {
-    const rawIds = Array.isArray(req.body?.ids) ? req.body.ids : [];
-    const ids = [...new Set(rawIds.map(Number).filter(Number.isSafeInteger))];
-    const hidden = req.body?.hidden === true;
-    if (ids.length === 0 || ids.length > 100) {
-      return res.status(400).json({ code: 400, message: '请选择 1 到 100 首歌曲' });
-    }
-
-    const placeholders = ids.map(() => '?').join(',');
-    const [result] = await pool.execute(
-      `UPDATE daily_song_recs SET candidate_hidden_at = ${hidden ? 'NOW()' : 'NULL'} WHERE id IN (${placeholders})`,
-      ids
-    );
-    res.json({
-      code: 200,
-      message: hidden ? '已移出公众号候选' : '已取消移出标记',
-      data: { updated: result.affectedRows }
-    });
-  } catch (err) {
-    res.status(500).json({ code: 500, message: '更新候选状态失败，请稍后重试' });
-  }
-});
-
-// 批量删除必须一次提交并返回影响数量；前端据此立即移除卡片和更新计数。
-router.delete('/daily-songs', superAdminOnly, requirePermission('songs:delete'), async (req, res) => {
-  try {
-    const rawIds = Array.isArray(req.body?.ids) ? req.body.ids : [];
-    const ids = [...new Set(rawIds.map(Number).filter(Number.isSafeInteger))];
-    if (ids.length === 0 || ids.length > 100) {
-      return res.status(400).json({ code: 400, message: '请选择 1 到 100 首歌曲' });
-    }
-
-    const placeholders = ids.map(() => '?').join(',');
-    const [result] = await pool.execute(`DELETE FROM daily_song_recs WHERE id IN (${placeholders})`, ids);
-    res.json({ code: 200, message: '已删除', data: { deleted: result.affectedRows } });
-  } catch (err) {
-    res.status(500).json({ code: 500, message: '删除失败，请稍后重试' });
-  }
-});
-
-router.delete('/daily-songs/:id', superAdminOnly, requirePermission('songs:delete'), async (req, res) => {
-  try {
-    const [result] = await pool.execute('DELETE FROM daily_song_recs WHERE id = ?', [req.params.id]);
-    res.status(result.affectedRows > 0 ? 200 : 404).json({
-      code: result.affectedRows > 0 ? 200 : 404,
-      message: result.affectedRows > 0 ? '已删除' : '歌曲不存在或已删除'
-    });
-  } catch (err) {
-    res.json({ code: 500, message: '删除失败，请稍后重试' });
-  }
-});
-
-// 推歌编辑器共用的数据清洗与更新逻辑。状态、发布时间和候选可见性由各自流程维护，不能从编辑器篡改。
-function normalizeDailySongField(body, key, maxLength) {
-  if (!Object.prototype.hasOwnProperty.call(body || {}, key)) return { present: false, value: undefined };
-  var value = body[key] === null || body[key] === undefined ? '' : String(body[key]).trim();
-  if (value.length > maxLength) {
-    var labels = { song_name: '歌曲名', artist: '歌手', to_whom: '收件人', message: '祝福语', intro: '介绍词', lyrics: '歌词' };
-    throw { status: 400, message: (labels[key] || key) + '不能超过' + maxLength + '字' };
-  }
-  return { present: true, value: value };
-}
-
-async function updateDailySongFields(id, body) {
-  var payload = body || {};
-  var name = normalizeDailySongField(payload, 'song_name', 200);
-  var artist = normalizeDailySongField(payload, 'artist', 200);
-  var toWhom = normalizeDailySongField(payload, 'to_whom', 100);
-  var message = normalizeDailySongField(payload, 'message', 5000);
-  var intro = normalizeDailySongField(payload, 'intro', 5000);
-  var lyrics = normalizeDailySongField(payload, 'lyrics', 30000);
-  if (name.present && !name.value) throw { status: 400, message: '请填写歌曲名' };
-  if (artist.present && !artist.value) throw { status: 400, message: '请填写歌手' };
-
-  var sets = [];
-  var values = [];
-  [[name, 'song_name'], [artist, 'artist'], [toWhom, 'to_whom'], [message, 'message'], [intro, 'intro'], [lyrics, 'lyrics']].forEach(function(pair) {
-    if (pair[0].present) {
-      var value = pair[0].value;
-      if (pair[1] === 'intro') {
-        // 自动清理模型偶尔返回的 JSON/Markdown 包装，避免把标记直接发到公众号。
-        if (value.startsWith('{')) {
-          try {
-            var parsed = JSON.parse(value);
-            value = parsed.intro || value;
-            if (!lyrics.present && parsed.lyrics) {
-              sets.push('lyrics = ?');
-              values.push(String(parsed.lyrics).trim().slice(0, 30000));
-            }
-          } catch (e) {}
-        }
-        value = value.replace(/^#{1,6}\s+/gm, '').replace(/\*\*/g, '').replace(/^>\s*/gm, '').replace(/【介绍】/g, '').replace(/【歌词】/g, '').trim();
-      }
-      sets.push(pair[1] + ' = ?');
-      values.push(value);
-    }
-  });
-
-  if (Object.prototype.hasOwnProperty.call(payload, 'song_info')) {
-    var songInfo = payload.song_info;
-    if (typeof songInfo === 'string' && songInfo.trim()) {
-      try { songInfo = JSON.parse(songInfo); } catch (e) { throw { status: 400, message: '歌曲信息格式不正确' }; }
-    }
-    if (songInfo !== null && songInfo !== undefined && (typeof songInfo !== 'object' || Array.isArray(songInfo))) {
-      throw { status: 400, message: '歌曲信息格式不正确' };
-    }
-    var encodedInfo = songInfo && Object.keys(songInfo).length ? JSON.stringify(songInfo) : null;
-    sets.push('song_info = ?');
-    values.push(encodedInfo);
-  }
-
-  if (!sets.length) throw { status: 400, message: '没有需要保存的内容' };
-  values.push(id);
-  var result = await pool.execute('UPDATE daily_song_recs SET ' + sets.join(', ') + ' WHERE id = ?', values);
-  return result[0];
-}
-
-// 保存推歌完整可编辑内容（歌曲名、歌手、收件信息、介绍词、歌词和歌曲资料）。
-router.put('/daily-songs/:id', superAdminOnly, requirePermission('songs:review'), async (req, res) => {
-  try {
-    var result = await updateDailySongFields(req.params.id, req.body);
-    if (!result.affectedRows) return res.status(404).json({ code: 404, message: '歌曲不存在或已删除' });
-    res.json({ code: 200, message: '已保存' });
-  } catch (err) {
-    var status = err && Number.isInteger(err.status) ? err.status : 500;
-    res.status(status).json({ code: status, message: err.message || '保存失败，请稍后重试' });
-  }
-});
-
-// 兼容旧后台只保存介绍词/歌词的调用。
-router.put('/daily-songs/:id/intro', superAdminOnly, requirePermission('songs:review'), async (req, res) => {
-  try {
-    var result = await updateDailySongFields(req.params.id, req.body);
-    if (!result.affectedRows) return res.status(404).json({ code: 404, message: '歌曲不存在或已删除' });
-    res.json({ code: 200, message: '已保存' });
-  } catch (err) {
-    var status = err && Number.isInteger(err.status) ? err.status : 500;
-    res.status(status).json({ code: status, message: err.message || '保存失败，请稍后重试' });
-  }
-});
+// 每日推歌管理由独立子路由维护。
 
 // 搜索歌曲信息（用于音乐卡片）
 router.post('/search-song-info', requirePermission('songs:review'), async (req, res) => {
@@ -1772,10 +1563,10 @@ router.put('/settings', requirePermission('settings:view'), async (req, res) => 
       }
       await connection.commit();
     } catch (dbErr) {
-      await connection.rollback();
+      await rollbackOrDiscard(connection, dbErr);
       throw dbErr;
     } finally {
-      connection.release();
+      releaseConnection(connection);
     }
     if (typeof siteRouter.invalidateSiteInfoCache === 'function') {
       siteRouter.invalidateSiteInfoCache();
@@ -1813,12 +1604,12 @@ router.post('/test-email', requirePermission('settings:view'), async (req, res) 
     const { sendEmail } = require('../services/email');
     let success;
     try {
-      success = await withTimeout(sendEmail(email, '🧪 测试邮件 · 示例校园墙', `
+      success = await withTimeout(sendEmail(email, '🧪 测试邮件 · 嘉二の墙墙', `
       <div style="text-align:center;padding:20px;font-family:sans-serif;">
         <div style="font-size:48px;margin-bottom:16px;">✉️</div>
         <h2 style="color:#FF6B9D;">邮件配置正确！</h2>
         <p style="color:#4A3F5C;font-size:15px;line-height:1.7;">🎉 恭喜，你的SMTP配置已经生效啦~<br>以后用户就能收到评论、点赞、关注等邮件通知了 ✨</p>
-        <div style="margin-top:20px;padding:16px;background:#F8F5FF;border-radius:12px;font-size:13px;color:#B8A9D4;">💌 示例校园墙 — 让每一份心意都被看见</div>
+        <div style="margin-top:20px;padding:16px;background:#F8F5FF;border-radius:12px;font-size:13px;color:#B8A9D4;">💌 嘉二の墙墙 — 让每一份心意都被看见</div>
       </div>
       `), TEST_EMAIL_TIMEOUT_MS, '测试邮件发送超时');
     } catch (err) {
@@ -1910,9 +1701,45 @@ router.get('/feedbacks/:id', requirePermission('feedbacks:manage'), async (req, 
 
 // 回复反馈
 router.put('/feedbacks/:id/reply', requirePermission('feedbacks:manage'), async (req, res) => {
+  const reply = typeof req.body.reply === 'string' ? req.body.reply.trim() : '';
+  const status = typeof req.body.status === 'string' ? req.body.status : 'resolved';
+  const allowedStatuses = new Set(['pending', 'processing', 'resolved', 'closed', 'accepted']);
+  if (!allowedStatuses.has(status)) {
+    return res.json({ code: 400, message: '反馈状态无效' });
+  }
+
+  let connection;
   try {
-    const { reply, status } = req.body;
-    await pool.execute('UPDATE feedbacks SET reply = ?, status = ? WHERE id = ?', [reply, status || 'resolved', req.params.id]);
+    await ensureFeedbackTable(pool);
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    const [rows] = await connection.execute(
+      'SELECT id, user_id, reward_points_awarded FROM feedbacks WHERE id = ? FOR UPDATE',
+      [req.params.id]
+    );
+    if (rows.length === 0) {
+      if (!await rollbackOrDiscard(connection, new Error('feedback does not exist'))) {
+        throw new Error('事务回滚失败');
+      }
+      return res.json({ code: 404, message: '反馈不存在' });
+    }
+
+    let rewardGranted = false;
+    if (status === 'accepted' && !Number(rows[0].reward_points_awarded) && rows[0].user_id) {
+      await applyPointDelta(connection, {
+        userId: rows[0].user_id,
+        delta: 20,
+        reason: 'feedback_reward',
+        relatedId: rows[0].id
+      });
+      await connection.execute('UPDATE feedbacks SET reward_points_awarded = 1 WHERE id = ?', [rows[0].id]);
+      rewardGranted = true;
+    }
+    await connection.execute(
+      'UPDATE feedbacks SET reply = ?, status = ? WHERE id = ?',
+      [reply, status, rows[0].id]
+    );
+    await connection.commit();
     
     // 异步发送邮件通知用户
     setImmediate(async () => {
@@ -1932,7 +1759,7 @@ router.put('/feedbacks/:id/reply', requirePermission('feedbacks:manage'), async 
             feedback.email,
             userNickname,
             feedback.title,
-            reply || '管理员已处理您的反馈',
+            reply || (rewardGranted ? '感谢你的有效反馈，已奖励 20 积分。' : '管理员已处理您的反馈'),
             feedback.user_id
           );
         }
@@ -1941,9 +1768,14 @@ router.put('/feedbacks/:id/reply', requirePermission('feedbacks:manage'), async 
       }
     });
     
-    res.json({ code: 200, message: '回复成功' });
+    res.json({ code: 200, message: rewardGranted ? '回复已保存，已奖励用户 20 积分' : '回复成功', data: { rewardGranted } });
   } catch (err) {
+    if (connection) {
+      await rollbackOrDiscard(connection, err);
+    }
     res.json({ code: 500, message: '服务器错误' });
+  } finally {
+    if (connection) releaseConnection(connection);
   }
 });
 
@@ -2395,7 +2227,7 @@ router.post('/email/send-batch', requirePermission('notices:manage'), async (req
     
     // 导入邮件服务
     const { sendEmail } = require('../services/email');
-    const siteUrl = process.env.SITE_URL || 'http://localhost:3000';
+    const siteUrl = process.env.SITE_URL || 'https://wall.jay23.cn';
     
     // 生成卡哇伊风格邮件HTML
     const emailHtml = `
@@ -2403,7 +2235,7 @@ router.post('/email/send-batch', requirePermission('notices:manage'), async (req
         亲爱的同学：
       </p>
       <div style="font-size:14px;color:#4A3F5C;line-height:1.8;white-space:pre-wrap;">${content}</div>
-      <p style="font-size:14px;color:#B8A9D4;margin:16px 0 0;"> 来自 示例校园墙 的温馨提醒</p>
+      <p style="font-size:14px;color:#B8A9D4;margin:16px 0 0;"> 来自 嘉二の墙墙 的温馨提醒</p>
     `;
     
     // 使用kawaiiLayout包装
@@ -2544,7 +2376,7 @@ router.post('/wechat/test-message', requirePermission('wechat:review'), async (r
       touser: openid,
       msgtype: 'text',
       text: {
-        content: '🔔 示例校园墙 - 测试消息'
+        content: '🔔 嘉二の墙墙 - 测试消息'
       }
     });
 
@@ -2774,7 +2606,7 @@ function novelsGetList() {
       var oldIndex = JSON.parse(fs_stories.readFileSync(oldIndexPath, 'utf8'));
       if (Array.isArray(oldIndex) && oldIndex.length > 0) {
         // 已有章节，创建默认小说
-        list.push({ id: 'default', title: '致那个夏天的你', author: '示例校园墙编辑部', desc: '校园青春小说', createdAt: new Date().toISOString().substring(0, 10) });
+        list.push({ id: 'default', title: '致那个夏天的你', author: '嘉二校园墙编辑部', desc: '校园青春小说', createdAt: new Date().toISOString().substring(0, 10) });
         // 把文件从 config/stories/ 移到 config/stories/default/
         var novelDir = path_stories.join(STORIES_BASE, 'default');
         if (!fs_stories.existsSync(novelDir)) fs_stories.mkdirSync(novelDir, { recursive: true });
@@ -2807,7 +2639,7 @@ function novelsGetList() {
   }
   if (list.length === 0) {
     // 全新安装，创建默认小说
-    list.push({ id: 'default', title: '致那个夏天的你', author: '示例校园墙编辑部', desc: '校园青春小说', createdAt: new Date().toISOString().substring(0, 10) });
+    list.push({ id: 'default', title: '致那个夏天的你', author: '嘉二校园墙编辑部', desc: '校园青春小说', createdAt: new Date().toISOString().substring(0, 10) });
   }
   fs_stories.writeFileSync(NOVELS_PATH, JSON.stringify(list, null, 2), 'utf8');
   return list;
@@ -2900,8 +2732,8 @@ function storiesGetIndex(novelId) {
         var idx = [];
         oldStories.forEach(function(s, i) {
           var chapFile = i + '.json';
-          fs_stories.writeFileSync(path_stories.join(dir, chapFile), JSON.stringify({ title: s.title, content: s.content, author: s.author || '示例校园墙编辑部' }, null, 2), 'utf8');
-          idx.push({ file: chapFile, title: s.title, author: s.author || '示例校园墙编辑部', published: false });
+          fs_stories.writeFileSync(path_stories.join(dir, chapFile), JSON.stringify({ title: s.title, content: s.content, author: s.author || '嘉二校园墙编辑部' }, null, 2), 'utf8');
+          idx.push({ file: chapFile, title: s.title, author: s.author || '嘉二校园墙编辑部', published: false });
         });
         fs_stories.writeFileSync(p, JSON.stringify(idx, null, 2), 'utf8');
         fs_stories.renameSync(oldPath, oldPath + '.bak');
@@ -2935,7 +2767,7 @@ function storiesSaveChapter(idx, data, novelId) {
   if (idx >= 0 && idx < index.length) {
     fs_stories.writeFileSync(path_stories.join(dir, index[idx].file), JSON.stringify({ title: data.title, content: data.content, author: data.author }, null, 2), 'utf8');
     index[idx].title = data.title;
-    index[idx].author = data.author || '示例校园墙编辑部';
+    index[idx].author = data.author || '嘉二校园墙编辑部';
     if (index[idx].published === undefined) index[idx].published = false;
     storiesSaveIndex(index, novelId);
   }
@@ -2946,8 +2778,8 @@ function storiesAddChapter(title, content, author, novelId) {
   var dir = getNovelDir(novelId);
   if (!fs_stories.existsSync(dir)) fs_stories.mkdirSync(dir, { recursive: true });
   var nextFile = index.length + '.json';
-  fs_stories.writeFileSync(path_stories.join(dir, nextFile), JSON.stringify({ title: title, content: content || '', author: author || '示例校园墙编辑部' }, null, 2), 'utf8');
-  index.push({ file: nextFile, title: title, author: author || '示例校园墙编辑部', published: false });
+  fs_stories.writeFileSync(path_stories.join(dir, nextFile), JSON.stringify({ title: title, content: content || '', author: author || '嘉二校园墙编辑部' }, null, 2), 'utf8');
+  index.push({ file: nextFile, title: title, author: author || '嘉二校园墙编辑部', published: false });
   storiesSaveIndex(index, novelId);
   return index.length - 1;
 }
@@ -2983,7 +2815,7 @@ router.post('/novels/create', requirePermission('stories:review'), async (req, r
     if (!title) return res.json({ code: 400, message: '小说标题不能为空' });
     var list = novelsGetList();
     var id = 'novel_' + Date.now();
-    list.push({ id: id, title: title, author: author || '示例校园墙编辑部', desc: desc || '', createdAt: new Date().toISOString().substring(0, 10) });
+    list.push({ id: id, title: title, author: author || '嘉二校园墙编辑部', desc: desc || '', createdAt: new Date().toISOString().substring(0, 10) });
     novelsSaveList(list);
     // 初始化该小说的目录和配置
     var dir = getNovelDir(id);
@@ -3526,7 +3358,7 @@ router.post('/stories/publish-to-wechat', requirePermission('stories:review'), a
     storyHtml += '❤️ 校园故事持续征集中<br>';
     storyHtml += '墙墙准备了一篇暖心小说，希望你喜欢 ❤️<br><br>';
     storyHtml += '🎨 如果你也有故事，<strong style="color:#FF6B9D;">欢迎分享给身边的同学哦</strong><br>';
-    storyHtml += '📮 想说的，去 <strong style="color:#FF6B9D;">http://localhost:3000</strong> 投稿吧！<br>';
+    storyHtml += '📮 想说的，去 <strong style="color:#FF6B9D;">https://wall.jay23.cn</strong> 投稿吧！<br>';
     storyHtml += '你的每一个故事，都有可能成为下篇文章的主角 ❤️';
     storyHtml += '</div></td></tr></table>';
     
@@ -3536,14 +3368,14 @@ router.post('/stories/publish-to-wechat', requirePermission('stories:review'), a
     storyHtml += '<div style="font-size:13px;color:#DDA0DD;margin-bottom:16px;">扫码关注 · 分享身边的美好</div>';
     storyHtml += '<table align="center" style="margin:0 auto;"><tr><td style="background:linear-gradient(135deg,#FF69B4,#FFB6C1);padding:4px;border-radius:16px;">';
     storyHtml += '<table style="width:100%;background:#fff;border-radius:12px;"><tr><td style="padding:12px;">';
-    storyHtml += '<img src="http://localhost:3000/images/gzh.jpg" style="width:200px;display:block;border-radius:6px;margin:0 auto;height:auto;" alt="校园墙二维码">';
+    storyHtml += '<img src="https://wall.jay23.cn/images/gzh.jpg" style="width:200px;display:block;border-radius:6px;margin:0 auto;height:auto;" alt="校园墙二维码">';
     storyHtml += '</td></tr></table>';
     storyHtml += '</td></tr></table>';
     storyHtml += '<p style="color:#bbb;font-size:12px;margin:14px 0 4px 0;letter-spacing:1px;">📱 微信扫一扫 · 获取更多精彩</p>';
-    storyHtml += '<p style="color:#FF69B4;font-size:13px;font-weight:bold;word-break:break-all;letter-spacing:0.5px;">http://localhost:3000</p>';
+    storyHtml += '<p style="color:#FF69B4;font-size:13px;font-weight:bold;word-break:break-all;letter-spacing:0.5px;">https://wall.jay23.cn</p>';
     storyHtml += '<div style="width:40px;height:2px;background:#FFB6C1;margin:12px auto 0;border-radius:2px;"></div>';
     storyHtml += '</td></tr></table>';
-    storyHtml += '<p style="text-align:center;color:#ddd;font-size:12px;margin-top:18px;">❀ ' + dateInfo.year + ' 示例校园墙 ❀ ❀</p>';
+    storyHtml += '<p style="text-align:center;color:#ddd;font-size:12px;margin-top:18px;">❀ ' + dateInfo.year + ' 嘉二校园墙 ❀ ❀</p>';
     storyHtml += '</div>';
     
     storyHtml = await uploadStoryImages(storyHtml);
@@ -3553,7 +3385,7 @@ router.post('/stories/publish-to-wechat', requirePermission('stories:review'), a
       author: 'JAY',
       digest: '小说连载 · ' + novelTitle + ' · ' + chapter.title + '。' + (chapter.content || '').replace(/[\n\r]+/g, '').substring(0, 60) + '...',
       content: storyHtml,
-      content_source_url: 'http://localhost:3000',
+      content_source_url: 'https://wall.jay23.cn',
       show_cover_pic: 1,
       need_open_comment: 1,
       only_fans_can_comment: 0

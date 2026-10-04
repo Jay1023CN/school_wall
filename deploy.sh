@@ -19,7 +19,7 @@ if ! DEPLOY_DIR="$(cd -- "$DEPLOY_DIR" 2>/dev/null && pwd -P)"; then
   exit 1
 fi
 # 仓库可能是私有仓库，服务器已配置 Gitee SSH 凭据；如使用公开仓库可通过环境变量改为 HTTPS。
-DEPLOY_REPO_URL="${DEPLOY_REPO_URL:-git@example.com:example/campus-wall.git}"
+DEPLOY_REPO_URL="${DEPLOY_REPO_URL:-git@gitee.com:jay071023/campus_wall.git}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 DEPLOY_SERVICE="${DEPLOY_SERVICE:-wall}"
 DEPLOY_HEALTHCHECK_TIMEOUT="${DEPLOY_HEALTHCHECK_TIMEOUT:-10}"

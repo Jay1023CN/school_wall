@@ -27,20 +27,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#FAFBFE" id="themeColorMeta">
-  <title>示例校园墙 - 广播站点歌</title>
+  <title>嘉二の墙墙 - 广播站点歌</title>
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
   <!-- SEO Meta Tags -->
   <meta name="description" content="校园广播站点歌平台，为你心爱的人点一首歌，让广播站替你传递心声。支持实时查看排歌单，快来点歌吧！">
   <meta name="keywords" content="校园点歌,广播站,点歌,排歌单,校园广播,音乐分享">
-  <link rel="canonical" href="http://localhost:3000/radio">
+  <link rel="canonical" href="https://wall.jay23.cn/radio">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="示例校园墙 - 校园广播站点歌">
+  <meta property="og:title" content="嘉二の墙墙 - 校园广播站点歌">
   <meta property="og:description" content="为你心爱的人点一首歌，让广播站替你传递心声。支持实时查看排歌单，快来点歌吧！">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="http://localhost:3000/radio">
-  <meta property="og:site_name" content="示例校园墙">
+  <meta property="og:url" content="https://wall.jay23.cn/radio">
+  <meta property="og:site_name" content="嘉二の墙墙">
   <meta property="og:locale" content="zh_CN">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/base.css">
@@ -48,10 +48,11 @@
   <link rel="stylesheet" href="/css/responsive.css">
   <link rel="stylesheet" href="/css/mobile-fix.css">
   <link rel="stylesheet" href="/css/reservation.css">
-  <link rel="stylesheet" href="/css/radio.css">
+  <link rel="stylesheet" href="/css/radio.css?v=20260925">
 <link rel="stylesheet" href="/css/campus-ui-polish.css">
 <link rel="stylesheet" href="/css/radio-polish.css">
 <link rel="stylesheet" href="/css/radio-polish-enhanced.css">
+  <link rel="stylesheet" href="/css/user-card.css?v=20260925">
   <script src="/js/theme-mode.js" defer></script>
 <script>(function(){var bp=document.createElement('script');var curProtocol=window.location.protocol.split(':')[0];if(curProtocol==='https'){bp.src='https://zz.bdstatic.com/linksubmit/push.js'}else{bp.src='http://push.zhanzhang.baidu.com/push.js'}var s=document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bp,s)})();</script>
 </head>
@@ -66,7 +67,7 @@
   <!-- 导航栏 -->
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
-      <a href="/" class="nav-logo">🏠 示例校园墙</a>
+      <a href="/" class="nav-logo">🏠 嘉二の墙墙</a>
       <div class="nav-links" id="navLinks">
         <a href="/" class="nav-link" data-page="home"><span>🏠</span> 首页</a>
         <a href="/radio" class="nav-link" data-page="radio"><span>🎵</span> 点歌</a>
@@ -94,7 +95,7 @@
   <!-- 主内容区 -->
   <div class="main-content">
     <!-- SEO H1标签 -->
-    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">示例校园墙 - 校园广播站点歌平台</h1>
+    <h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">嘉二の墙墙 - 校园广播站点歌平台</h1>
     <!-- 页面头部 -->
     <div class="radio-header">
       <h1 class="radio-title">🎵 广播站点歌</h1>
@@ -278,13 +279,13 @@
     </div>
   </div>
 
-  <script src="/js/app.js"></script>
+  <script src="/js/app.js?v=2026100401"></script>
   <script src="/js/side-cards.js"></script>
-  <script>var currentUser = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null');</script>
+  <script>var currentUser = (function(){try{return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null')}catch(e){return null}})();</script>
   <script src="/js/radio.js?v=20261002"></script>
   <script>
     (function() {
-      var defaultSiteName = '示例校园墙';
+      var defaultSiteName = '嘉二の墙墙';
       var cachedSettings = localStorage.getItem('siteSettings');
       if (cachedSettings) {
         try {
@@ -337,6 +338,7 @@
         var sidebar = document.createElement('div');
         sidebar.id = 'notificationSidebar';
         sidebar.className = 'notification-sidebar';
+        sidebar.setAttribute('aria-hidden', 'true');
         sidebar.innerHTML = [
           '<div class="notification-sidebar-overlay" onclick="closeNotificationSidebar()"></div>',
           '<div class="notification-sidebar-content">',
@@ -356,9 +358,8 @@
         createNotificationSidebar();
         var sidebar = document.getElementById('notificationSidebar');
         sidebar.classList.add('show');
-        var sw = window.innerWidth - document.documentElement.clientWidth;
-        if (sw > 0) document.body.style.paddingRight = sw + 'px';
-        document.body.style.overflow = 'hidden';
+        sidebar.setAttribute('aria-hidden', 'false');
+        document.documentElement.classList.add('notification-sidebar-open');
         loadNotifications();
       };
 
@@ -366,10 +367,14 @@
         var sidebar = document.getElementById('notificationSidebar');
         if (sidebar) {
           sidebar.classList.remove('show');
-          document.body.style.paddingRight = '';
-          document.body.style.overflow = '';
+          sidebar.setAttribute('aria-hidden', 'true');
+          document.documentElement.classList.remove('notification-sidebar-open');
         }
       };
+
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') window.closeNotificationSidebar();
+      });
 
       async function loadNotifications() {
         var listEl = document.getElementById('notificationList');
@@ -377,16 +382,21 @@
         listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">加载中...</div>';
         try {
           var res = await fetch('/api/notifications', {
+            credentials: 'same-origin',
             headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || sessionStorage.getItem('token') || '') }
           });
           var data = await res.json();
+          if (!res.ok) throw new Error(data.message || '通知加载失败');
           if (data.code === 200 && data.data && data.data.length > 0) {
             var html = '';
             data.data.forEach(function(notif) {
+              var title = typeof escapeHtml === 'function' ? escapeHtml(notif.title || '') : '';
+              var message = typeof escapeHtml === 'function' ? escapeHtml(notif.message || '') : '';
+              var timeAgo = typeof escapeHtml === 'function' ? escapeHtml(notif.time_ago || '') : '';
               html += '<div class="notification-item">' +
-                '<div class="notification-item-title">' + notif.title + '</div>' +
-                '<div class="notification-item-text">' + (notif.message || '') + '</div>' +
-                '<div class="notification-item-time">' + (notif.time_ago || '') + '</div></div>';
+                '<div class="notification-item-title">' + title + '</div>' +
+                '<div class="notification-item-text">' + message + '</div>' +
+                '<div class="notification-item-time">' + timeAgo + '</div></div>';
             });
             listEl.innerHTML = html;
           } else {
@@ -442,7 +452,7 @@
   </nav>
 
   <footer class="footer">
-    <p>&copy; 2026 示例校园墙 All Rights Reserved</p>
+    <p>&copy; 2026 嘉二の墙墙 All Rights Reserved</p>
     <p>
       <a href="/agreement" target="_blank">用户协议</a> |
       <a href="/privacy" target="_blank">隐私政策</a> |

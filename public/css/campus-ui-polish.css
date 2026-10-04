@@ -78,12 +78,39 @@
 
 .side-card-countdown .countdown-number,
 .quick-card-countdown {
-  font-family: 'DIN Alternate', -apple-system, sans-serif;
-  font-size: 1.4rem !important;
-  font-weight: 800;
+  font-family: 'SF Pro Rounded', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: clamp(1rem, 3.8vw, 1.28rem) !important;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
   color: #D97706 !important;
-  text-shadow: 0 2px 6px rgba(217, 119, 6, 0.15);
+  text-shadow: none;
 }
+
+@media (max-width: 768px) {
+  .quick-card-countdown {
+    font-size: 1rem !important;
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+}
+
+#sideCheckin .checkin-encouragement,
+#sideCheckin .checkin-title-goal {
+  margin-top: 7px;
+  color: #7b6571;
+  font-size: .66rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+#sideCheckin .checkin-title-goal {
+  color: #a96b18;
+  font-weight: 700;
+}
+
+[data-theme="dark"] #sideCheckin .checkin-encouragement { color: #c6b5c2; }
+[data-theme="dark"] #sideCheckin .checkin-title-goal { color: #f1c875; }
 
 /* --- 4. 校园广播点歌台单曲卡片美化 --- */
 .playlist-item {
@@ -116,7 +143,7 @@
 }
 
 /* =======================================================
-   🌟 示例校园墙 - 核心排版精修版
+   🌟 嘉二の墙墙 - 核心排版精修版
    ======================================================= */
 
 /* --- 1. 互动栏轻量化 --- */
@@ -145,6 +172,16 @@
   align-items: center !important;
   gap: 5px !important;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.post-card .action-icon,
+.post-card .action-icon .ui-action-svg {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
 }
 
 .post-card .action-btn:hover {
@@ -197,6 +234,19 @@
   font-size: 0.73rem !important;
   color: #475569 !important;
   line-height: 1.45 !important;
+}
+
+[data-theme="dark"] .hotsearch-item.history-item {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="dark"] .hotsearch-item.history-item .history-event {
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .hotsearch-item.history-item .history-date {
+  color: #94A3B8 !important;
 }
 
 /* --- 3. 评论预览气泡 --- */
@@ -387,9 +437,9 @@
 }
 
 [data-theme="dark"] #sideCheckin {
-  background: linear-gradient(160deg, rgba(30, 27, 42, 0.95), rgba(23, 20, 32, 0.9)) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-light) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25) !important;
 }
 [data-theme="dark"] #sideCheckin .side-card-icon { background: rgba(245, 158, 11, 0.15) !important; box-shadow: none !important; }
 [data-theme="dark"] #sideCheckin .side-card-title { color: #F1F5F9 !important; }
@@ -399,4 +449,23 @@
 
 @media (max-width: 768px) {
   .mobile-checkin-slot #sideCheckin { width: 100% !important; min-width: 0 !important; padding: 11px 12px !important; border-radius: 16px !important; }
+}
+
+/* 校园倒计时卡先由本文件设置了浅色底；夜间模式必须在同一入口反向覆盖。 */
+[data-theme="dark"] .quick-card-gaokao,
+[data-theme="dark"] .side-card-countdown {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-light) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25) !important;
+  --card-accent: linear-gradient(90deg, #d99b37, #f1c875);
+}
+
+[data-theme="dark"] .quick-card-gaokao .quick-card-text,
+[data-theme="dark"] .side-card-countdown .side-card-title {
+  color: #f4f2f8 !important;
+}
+
+[data-theme="dark"] .quick-card-gaokao .quick-card-countdown,
+[data-theme="dark"] .side-card-countdown .countdown-number {
+  color: #f1c875 !important;
 }

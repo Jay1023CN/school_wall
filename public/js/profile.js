@@ -1,8 +1,16 @@
 /**
- * 示例校园墙 - 个人主页模块 (profile.js)
+ * 嘉二の墙墙 - 个人主页模块 (profile.js)
  * 功能：Tab切换、我的帖子/收藏/点歌、修改个人信息、修改密码
  * 后端API返回格式：{ code: 200, message: '...', data: {...} }
  */
+
+function renderBookmarkIcon(active) {
+  return '<svg class="ui-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z"' + (active ? ' fill="currentColor"' : '') + '></path></svg>';
+}
+
+function renderRemoveIcon() {
+  return '<svg class="ui-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 12h7"></path></svg>';
+}
 
 // 转换内容中的链接（自动识别并添加风险提示）
 function convertContentWithLinks(content) {
@@ -120,6 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
   async function loadUserInfo() {
     var user = getCurrentUser();
     if (!user) return;
+    var roleVerified = false;
 
     // 从服务器获取最新完整用户信息（包含 gender/mbti/birthday/hobbies）
     try {
@@ -131,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var meData = await meRes.json();
         if (meData.code === 200 && meData.data) {
           user = meData.data;
+          roleVerified = true;
           var remembered = !!localStorage.getItem('token');
           saveAuth(token, user, remembered);
         }
@@ -192,11 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 检查是否是管理员，显示管理后台入口
     var adminRoles = ['reviewer', 'radio_admin', 'admin', 'super_admin'];
-    // 仅记录是否显示管理入口
-    var isAdmin = user.role && adminRoles.indexOf(user.role) !== -1;
-    if (isAdmin) {
-      var adminBtn = document.getElementById('adminPanelBtn');
-      if (adminBtn) {
+    var adminBtn = document.getElementById('adminPanelBtn');
+    if (adminBtn) {
+      adminBtn.hidden = true;
+      adminBtn.style.display = 'none';
+      if (roleVerified && user.role && adminRoles.indexOf(user.role) !== -1) {
+        adminBtn.hidden = false;
         adminBtn.style.display = 'block';
       }
     }
@@ -588,7 +599,9 @@ document.addEventListener('DOMContentLoaded', function() {
         html += '<span style="margin-left:auto;font-size:0.8rem;">✅ 已签到</span>';
       }
       html += '</div>';
-      if (data.next_level) html += '<div class="profile-points-next">下一级: ' + data.next_level.icon + ' ' + data.next_level.title_name + '（还需 ' + (data.next_level.min_points - data.total_points) + ' 分）</div>';
+      if (data.streak_goal) html += '<div class="profile-checkin-encouragement">' + escapeHtml(data.streak_goal.message) + '</div>';
+      if (data.next_checkin_title) html += '<div class="profile-checkin-title-goal">' + escapeHtml(data.next_checkin_title.message) + '</div>';
+      if (data.next_level) html += '<div class="profile-points-next">下一级: ' + data.next_level.icon + ' ' + escapeHtml(data.next_level.title_name) + '（还需 ' + (data.next_level.min_points - data.total_points) + ' 分）</div>';
       html += '</div>';
       var infoEl = document.getElementById('profileInfo');
       if (infoEl) infoEl.innerHTML = html;
@@ -868,7 +881,7 @@ document.addEventListener('DOMContentLoaded', function() {
           '</div>' +
         '</div>' +
         '<div class="profile-my-post-views" title="浏览量">' +
-          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11 8-11 8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M7 16v-4"/><path d="M11 16V8"/><path d="M15 16v-6"/><path d="M19 16V6"/></svg>' +
           '<span>' + views + '</span>' +
         '</div>' +
       '</div>' +
@@ -887,10 +900,10 @@ document.addEventListener('DOMContentLoaded', function() {
           '<span class="profile-action-num">' + (post.comments_count || 0) + '</span>' +
         '</button>' +
         '<button class="profile-action-btn ' + (post.is_favorited ? 'favorited' : '') + '" onclick="event.stopPropagation();handleProfileFavorite(' + post.id + ', this)" title="收藏">' +
-          '<span class="profile-action-icon">' + (post.is_favorited ? '⭐' : '☆') + '</span>' +
+          '<span class="profile-action-icon">' + renderBookmarkIcon(!!post.is_favorited) + '</span>' +
         '</button>' +
         '<button class="profile-action-btn profile-action-del" onclick="event.stopPropagation();deletePost(' + post.id + ', this)" title="删除">' +
-          '<span class="profile-action-icon">🗑️</span>' +
+          '<span class="profile-action-icon">' + renderRemoveIcon() + '</span>' +
         '</button>' +
       '</div>' +
     '</article>';
@@ -964,7 +977,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var deleteBtnHtml = '';
       if (song.status === 'pending') {
         deleteBtnHtml = '<button class="action-btn delete-btn" onclick="event.stopPropagation();deleteSong(' + song.id + ', this)" title="取消点歌" style="color: #EF4444; margin-left: 8px;">' +
-          '<span class="action-icon">🗑️</span>' +
+            '<span class="action-icon">' + renderRemoveIcon() + '</span>' +
         '</button>';
       }
 
@@ -1467,13 +1480,13 @@ async function toggleFavorite(postId, btn) {
   try {
     var data = await authFetch('/api/posts/' + postId + '/favorite', { method: 'POST' });
     if (data.code === 200) {
-      var icon = btn.querySelector('.action-icon');
+      var icon = btn.querySelector('.action-icon, .profile-action-icon');
       if (data.data.favorited) {
         btn.classList.add('favorited');
-        icon.textContent = '⭐';
+        if (icon) icon.innerHTML = renderBookmarkIcon(true);
       } else {
         btn.classList.remove('favorited');
-        icon.textContent = '☆';
+        if (icon) icon.innerHTML = renderBookmarkIcon(false);
       }
     } else {
       showToast(data.message || '操作失败', 'error');
@@ -1481,6 +1494,11 @@ async function toggleFavorite(postId, btn) {
   } catch (e) {
     showToast('网络错误', 'error');
   }
+}
+
+// 个人页帖子卡片沿用首页收藏处理器，保证按钮状态和图标一致。
+function handleProfileFavorite(postId, btn) {
+  return toggleFavorite(postId, btn);
 }
 
 /**

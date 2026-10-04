@@ -13,10 +13,12 @@ const pageNames = [
 
 pageNames.forEach((pageName) => {
   const page = read(`frontend/${pageName}`);
-  const siteInfoFetches = page.match(/fetch\(\s*['"]\/api\/site-info['"]/g) || [];
+  // 登录页的站点配置逻辑已拆到可缓存的专属脚本，页面与脚本合并后再做共享请求校验。
+  const source = pageName === 'login.html' ? `${page}\n${read('frontend/js/login-page.js')}` : page;
+  const siteInfoFetches = source.match(/fetch\(\s*['"]\/api\/site-info['"]/g) || [];
   assert.strictEqual(siteInfoFetches.length, 1, `${pageName} 应只有一个站点配置请求入口`);
-  assert(page.includes('var siteInfoRequest = window.CampusWallSiteInfoPromise;'), `${pageName} 应优先复用共享站点配置 Promise`);
-  assert(page.includes('window.CampusWallSiteInfoPromise = siteInfoRequest;'), `${pageName} 未命中共享请求时应登记 Promise`);
+  assert(source.includes('var siteInfoRequest = window.CampusWallSiteInfoPromise;'), `${pageName} 应优先复用共享站点配置 Promise`);
+  assert(source.includes('window.CampusWallSiteInfoPromise = siteInfoRequest;'), `${pageName} 未命中共享请求时应登记 Promise`);
 });
 
 const themeMode = read('frontend/js/theme-mode.js');

@@ -106,6 +106,7 @@ releaseNotes.forEach((note) => {
 
 const admin = readRoute('admin.js');
 const slotsAdmin = readRoute('admin/slots.js');
+const dailySongsAdmin = readRoute('admin/daily-songs.js');
 const authMiddleware = fs.readFileSync(path.join(__dirname, '..', 'middleware', 'auth.js'), 'utf8');
 const checkin = readRoute('checkin.js');
 const usersList = admin.slice(
@@ -132,13 +133,15 @@ const songAdminList = admin.slice(admin.indexOf("router.get('/songs'"), admin.in
 assert(songAdminList.includes("CASE sr.status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END"), '点歌管理应先显示待审核，再显示已通过未播放');
 assert(songAdminList.indexOf('ORDER BY CASE sr.status') < songAdminList.indexOf('LIMIT ? OFFSET ?'), '点歌状态排序必须在数据库分页之前');
 const oldViewsRoute = admin.slice(admin.indexOf("router.delete('/post-views/old'"), admin.indexOf('// ===== 头衔管理'));
-const adminFrontend = fs.readFileSync(path.join(__dirname, '..', 'frontend/admin/index.html'), 'utf8');
+const adminFrontend = fs.readFileSync(path.join(__dirname, '..', 'frontend/admin/js/admin.js'), 'utf8');
+const writeTransactionTests = fs.readFileSync(path.join(__dirname, 'test-write-transaction.js'), 'utf8');
 const clearOldViews = adminFrontend.slice(adminFrontend.indexOf('window.clearOldPostViews ='), adminFrontend.indexOf('window.clearAllPostViews ='));
 assert(oldViewsRoute.includes('Number(days) < 1') && oldViewsRoute.includes('Number(days) > 36500'), '清理旧浏览记录必须拒绝非法天数');
 assert(clearOldViews.includes('const days = prompt(') && !clearOldViews.includes('confirm('), '清理旧浏览记录填写天数后应直接执行');
 assert(settings.includes('festival_theme'), '后台系统设置应支持 festival_theme');
 assert(settings.includes('festival_enabled'), '后台系统设置应使用 festival_enabled 开关');
-assert(settings.includes('await connection.beginTransaction()') && settings.includes('await connection.commit()') && settings.includes('await connection.rollback()'), '后台设置保存失败必须整体回滚并报错');
+assert(settings.includes('await connection.beginTransaction()') && settings.includes('await connection.commit()') && settings.includes('await rollbackOrDiscard(connection, dbErr)'), '后台设置保存失败必须回滚事务或销毁状态不明的连接');
+assert(writeTransactionTests.includes('db.failRollback = true') && writeTransactionTests.includes('discardedConnection.destroyed, 1'), '回滚失败专项必须验证事务连接被销毁而非放回连接池');
 assert(admin.includes('siteRouter.invalidateSiteInfoCache()'), '保存后台设置后应清理公开站点设置缓存');
 assert(admin.includes("router.get('/song-reject-reasons', requirePermission('songs:review')") && admin.includes("router.put('/song-reject-reasons', requirePermission('songs:review')"), '打回理由预设应由点歌审核权限维护，而非系统设置权限');
 assert(admin.includes("router.get('/songs/:id', requirePermission('songs:review')"), '广播管理员应可查看点歌详情与预约播放时间');
@@ -154,6 +157,14 @@ const emailRoutes = admin.slice(
 );
 assert(!emailRoutes.includes('console.log('), '邮件接口不得输出无意义调试日志');
 assert(!/console\.error\([^\n;]*,\s*err\s*\)/.test(emailRoutes), '邮件接口错误日志不得输出完整错误对象');
+assert(emailRoutes.includes('const [historyInsertResult] = await pool.execute(') && emailRoutes.includes('const historyId = historyInsertResult.insertId;'), '群发历史 ID 必须直接读取同一次 INSERT 结果，不能跨连接读取 LAST_INSERT_ID');
+assert(!emailRoutes.includes("SELECT LAST_INSERT_ID() as id"), '连接池中不得用另一条查询获取群发历史 ID');
+const storyStreamRoute = admin.slice(
+  admin.indexOf("router.get('/stories/generate-chapter-stream'"),
+  admin.indexOf('const { escapeHtml }', admin.indexOf("router.get('/stories/generate-chapter-stream'"))
+);
+assert(storyStreamRoute.includes("res.on('close'") && storyStreamRoute.includes('if (pingTimer) clearInterval(pingTimer);'), '小说 SSE 在客户端断开和结束时都必须清理心跳定时器');
+assert(storyStreamRoute.includes('res.writableEnded || res.destroyed'), '小说 SSE 不得向已关闭响应继续写入');
 
 const songsRoute = readRoute('songs.js');
 const songVoteRoute = songsRoute.slice(
@@ -200,7 +211,9 @@ assert(notifySettings.includes("'UPDATE user_notify_settings SET ' + updates.joi
 assert(notifySettings.includes("res.json({ code: 200, message: '保存成功' })"), '通知偏好成功响应应保留');
 assert(notifySettings.includes("res.json({ code: 500, message: '服务器错误' })"), '通知偏好异常响应应保留');
 
-const adminPage = readPage('admin/index.html');
+const adminPageHtml = readPage('admin/index.html');
+const adminPage = `${adminPageHtml}\n${['admin.js', 'admin-stories.js']
+  .map((name) => readPage('admin/js/' + name)).join('\n')}`;
 const adminCss = readPage('admin/css/admin.css');
 assert(adminPage.includes('<tbody id="posts-tbody">') && adminPage.includes('<td colspan="8">'), '帖子管理空状态应覆盖实际八列');
 assert(adminPage.includes('<tbody id="users-tbody">') && adminPage.includes('<td colspan="9">'), '用户管理空状态应覆盖实际九列');
@@ -219,17 +232,23 @@ assert(adminPage.includes('data-panel="daily-songs"') && adminPage.includes('dat
 assert(adminPage.includes('href="/admin/mp-draft"') && adminPage.includes('data-super-admin-only="true"') && adminPage.includes('data-title="公众号推送"'), '公众号推送入口必须标记为最高管理员专属');
 assert(adminPage.includes('data-panel="messages" data-super-admin-only="true"') && adminPage.includes('href="/admin/gamification.html" class="sidebar-link" data-super-admin-only="true"'), '私信管理和积分运营入口必须仅对最高管理员显示');
 assert(adminPage.includes("const menuLinks = document.querySelectorAll('.sidebar-link[data-permission], .sidebar-link[data-super-admin-only]')"), '后台菜单权限检查必须覆盖最高管理员专属入口');
-assert(admin.includes("router.get('/daily-songs', superAdminOnly") && admin.includes("router.post('/daily-songs', superAdminOnly"), '每日推歌查询和添加接口必须仅允许最高管理员');
-assert(admin.includes("router.delete('/daily-songs', superAdminOnly") && admin.includes("router.put('/daily-songs/:id/intro', superAdminOnly"), '每日推歌删除和编辑接口必须仅允许最高管理员');
+assert(admin.includes("router.use('/daily-songs', dailySongsRouter)"), '每日推歌路由必须从管理入口挂载在原 API 前缀下');
+assert(admin.includes("router.use('/slots', slotsRouter)"), '时段管理路由必须从管理入口挂载在原 API 前缀下');
+assert(admin.indexOf('router.use(auth, isStaff)') < admin.indexOf("router.use('/slots', slotsRouter)"), '时段子路由必须继承管理后台登录和员工身份校验');
+assert(slotsAdmin.includes("router.get('/', requirePermission('slots:manage')") && slotsAdmin.includes("router.put('/:slotId/calendar-dates', requirePermission('slots:manage')"), '时段子路由必须继续逐接口校验 slots:manage 权限');
+assert(admin.indexOf('router.use(auth, isStaff)') < admin.indexOf("router.use('/daily-songs', dailySongsRouter)"), '每日推歌子路由必须继承管理后台登录和员工身份校验');
+assert(dailySongsAdmin.includes("router.get('/', superAdminOnly") && dailySongsAdmin.includes("router.post('/', superAdminOnly"), '每日推歌查询和添加接口必须仅允许最高管理员');
+assert(dailySongsAdmin.includes("router.delete('/', superAdminOnly") && dailySongsAdmin.includes("router.put('/:id/intro', superAdminOnly"), '每日推歌删除和编辑接口必须仅允许最高管理员');
 assert(!adminPage.includes("console.error('[后台JS错误]'"), '后台全局错误捕获不得向控制台输出错误对象');
 assert(adminPage.includes('公众号图文与草稿箱') && adminPage.includes('href="/admin/mp-draft"'), '日志页公众号入口必须跳转到真实推送工作台');
 assert(!admin.includes("'/trigger-auto-publish'") && !admin.includes("execSync('/usr/bin/node"), '后台不得保留调用不存在脚本的伪自动发布接口');
-assert(!adminPage.includes('每天定时生成公众号图文') && !adminPage.includes('function savePubConfig()'), '后台不得继续展示没有调度器的自动发布开关');
+assert(!adminPage.includes('每天定时生成公众号图文') && !adminPage.includes('/admin/js/admin-publish.js'), '后台不得继续展示没有调度器的自动发布开关');
 
 const mpDraftPage = readPage('admin/mp-draft.html');
-assert(!mpDraftPage.includes('body前200字') && !mpDraftPage.includes("console.error('[apiFetch]"), '公众号请求不得向控制台输出 URL 或响应正文');
-assert(mpDraftPage.includes('data-tab="daily" data-super-admin-only="true"') && mpDraftPage.includes('function applyDailySongPermissions'), '公众号页的推歌入口必须仅对最高管理员显示');
-assert(mpDraftPage.includes("res.data.role !== 'super_admin'") && mpDraftPage.includes("canManageDailySongs = res.data.role === 'super_admin'") && mpDraftPage.includes("name === 'daily' && !canManageDailySongs"), '公众号页必须只允许最高管理员进入并按角色保护推歌页签');
+const mpDraftRuntime = `${mpDraftPage}\n${readPage('admin/js/mp-draft.js')}`;
+assert(!mpDraftRuntime.includes('body前200字') && !mpDraftRuntime.includes("console.error('[apiFetch]"), '公众号请求不得向控制台输出 URL 或响应正文');
+assert(mpDraftRuntime.includes('data-tab="daily" data-super-admin-only="true"') && mpDraftRuntime.includes('function applyDailySongPermissions'), '公众号页的推歌入口必须仅对最高管理员显示');
+assert(mpDraftRuntime.includes("res.data.role !== 'super_admin'") && mpDraftRuntime.includes("canManageDailySongs = res.data.role === 'super_admin'") && mpDraftRuntime.includes("name === 'daily' && !canManageDailySongs"), '公众号页必须只允许最高管理员进入并按角色保护推歌页签');
 const adminRoute = readRoute('admin.js');
 const mpDraftRoute = readRoute('mp-draft.js');
 assert(mpDraftRoute.includes("const { auth, isStaff, superAdminOnly, requirePermission }") && mpDraftRoute.includes('router.use(auth, isStaff, superAdminOnly)') && mpDraftRoute.includes("router.get('/daily-songs', superAdminOnly"), '公众号推送及每日推歌接口必须仅允许最高管理员读取');

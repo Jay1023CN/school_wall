@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { auth } = require('../middleware/auth');
 const { buildReservationMap, buildReservationCountMap } = require('../services/reservation-availability');
 const { getChinaDate, getChinaDayOfWeek } = require('../services/date');
+const { rollbackOrDiscard, releaseConnection } = require('../services/database-transaction');
 const router = express.Router();
 
 function parsePositiveId(value) {
@@ -18,6 +19,12 @@ function isValidChinaDate(value) {
   const [year, month, day] = text.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+async function rollbackReservationValidation(connection, message) {
+  if (!await rollbackOrDiscard(connection, new Error(message))) {
+    throw new Error('事务回滚失败');
+  }
 }
 
 function getListPagination(query) {
@@ -140,7 +147,7 @@ router.post('/', auth, async (req, res) => {
         [slotId]
       );
       if (slots.length === 0) {
-        await connection.rollback();
+        await rollbackReservationValidation(connection, 'reservation slot is unavailable');
         return res.json({ code: 400, message: '时段不存在或已禁用' });
       }
 
@@ -148,7 +155,7 @@ router.post('/', auth, async (req, res) => {
       const dayOfWeek = getChinaDayOfWeek(requestedDate);
       const weekdays = String(slot.weekdays || '').split(',').map(Number).filter(Number.isInteger);
       if (!weekdays.includes(dayOfWeek)) {
-        await connection.rollback();
+        await rollbackReservationValidation(connection, 'reservation date is not open');
         return res.json({ code: 400, message: '该时段在选定日期不开放' });
       }
 
@@ -157,7 +164,7 @@ router.post('/', auth, async (req, res) => {
         [req.user.id, slotId, requestedDate]
       );
       if (existing.length > 0) {
-        await connection.rollback();
+        await rollbackReservationValidation(connection, 'reservation already exists');
         return res.json({ code: 400, message: '您已经预定过该时段' });
       }
 
@@ -166,23 +173,23 @@ router.post('/', auth, async (req, res) => {
         [slotId, requestedDate]
       );
       if (countResult[0].count >= slot.max_songs) {
-        await connection.rollback();
+        await rollbackReservationValidation(connection, 'reservation capacity reached');
         return res.json({ code: 400, message: '该时段已满，无法预定' });
       }
 
       await connection.execute(
-        'INSERT INTO slot_reservations (user_id, slot_id, reservation_date, status) VALUES (?, ?, ?, "confirmed")',
+        'INSERT INTO slot_reservations (user_id, slot_id, reservation_date, status) VALUES (?, ?, ?, "confirmed") ON DUPLICATE KEY UPDATE status = "confirmed", created_at = NOW()',
         [req.user.id, slotId, requestedDate]
       );
       await connection.commit();
     } catch (transactionError) {
-      try { await connection.rollback(); } catch (_) {}
-      if (transactionError.code === 'ER_DUP_ENTRY') {
+      const rolledBack = await rollbackOrDiscard(connection, transactionError);
+      if (rolledBack && transactionError.code === 'ER_DUP_ENTRY') {
         return res.json({ code: 400, message: '您已经预定过该时段' });
       }
       throw transactionError;
     } finally {
-      connection.release();
+      releaseConnection(connection);
     }
     
     res.json({

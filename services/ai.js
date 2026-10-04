@@ -634,7 +634,7 @@ async function saveHistory(openid, userText, aiReply) {
 }
 
 async function getAIReply(text, openid) {
-  var systemPrompt = '你是“墙墙”，示例校园校园墙的微信助手。请用简体中文、自然亲切的口吻直接回答，优先给可执行的下一步；普通问题控制在100字以内，不输出思考过程、Markdown标题或模板化客套话。\n\n服务指引：想投稿回复“投稿”；校园广播点歌打开 http://localhost:3000/radio；推荐歌曲到公众号回复“推歌”。严格区分“点歌”（排期播放）和“推歌”（公众号歌曲推荐）。只使用当前对话和已确认的站点信息；不确定时明确说不知道，不编造时间、规则、人物或链接。';
+  var systemPrompt = '你是“墙墙”，嘉定二中校园墙的微信助手。请用简体中文、自然亲切的口吻直接回答，优先给可执行的下一步；普通问题控制在100字以内，不输出思考过程、Markdown标题或模板化客套话。\n\n服务指引：想投稿回复“投稿”；校园广播点歌打开 https://wall.jay23.cn/radio；推荐歌曲到公众号回复“推歌”。严格区分“点歌”（排期播放）和“推歌”（公众号歌曲推荐）。只使用当前对话和已确认的站点信息；不确定时明确说不知道，不编造时间、规则、人物或链接。';
 
   // 获取历史记录，提供上下文
   var history = [];
@@ -700,23 +700,23 @@ function getRuleReply(text) {
   }
   // 天气
   if (/天气|气温|温度/i.test(t)) {
-    return '🌤️ 天气信息暂时查不到，你可以直接去 http://localhost:3000 看看首页的天气卡片哦~';
+    return '🌤️ 天气信息暂时查不到，你可以直接去 https://wall.jay23.cn 看看首页的天气卡片哦~';
   }
   // 投稿
   if (/投稿|发帖|发布/i.test(t)) {
-    return '📝 想投稿？很简单！\n\n打开 http://localhost:3000 → 点击"发布"→ 写内容提交就行~\n审核通过后就能在墙上看到啦！';
+    return '📝 想投稿？很简单！\n\n打开 https://wall.jay23.cn → 点击"发布"→ 写内容提交就行~\n审核通过后就能在墙上看到啦！';
   }
   // 点歌
   if (/点歌|歌曲|音乐/i.test(t)) {
-    return '🎵 想点歌？\n\n打开 http://localhost:3000 → 进入"点歌"页面 → 选时段和歌曲 → 提交~\n校广播站会定时播放哦！';
+    return '🎵 想点歌？\n\n打开 https://wall.jay23.cn → 进入"点歌"页面 → 选时段和歌曲 → 提交~\n校广播站会定时播放哦！';
   }
   // 绑定
   if (/绑定|微信/i.test(t)) {
-    return '🔗 微信绑定教程\n\n打开 http://localhost:3000 → 登录 → 个人中心 → 绑定微信 → 扫码即可~\n绑定后能收到评论和点赞通知哦~';
+    return '🔗 微信绑定教程\n\n打开 https://wall.jay23.cn → 登录 → 个人中心 → 绑定微信 → 扫码即可~\n绑定后能收到评论和点赞通知哦~';
   }
   // 学校
   if (/学校|嘉定|二中/i.test(t)) {
-    return '🏫 上海市嘉定区第二中学\n📍 德华路388号\n🌐 校园墙：http://localhost:3000';
+    return '🏫 上海市嘉定区第二中学\n📍 德华路388号\n🌐 校园墙：https://wall.jay23.cn';
   }
   // 夸夸
   if (/真棒|厉害|大佬|牛逼/i.test(t)) {
@@ -724,11 +724,11 @@ function getRuleReply(text) {
   }
   // 无聊
   if (/无聊|好无聊|闲/i.test(t)) {
-    return '😊 无聊的话可以去校园墙逛逛~ http://localhost:3000\n看看大家在聊什么，或者发个帖找人聊天也行！';
+    return '😊 无聊的话可以去校园墙逛逛~ https://wall.jay23.cn\n看看大家在聊什么，或者发个帖找人聊天也行！';
   }
 
   // 兜底
-  return '💬 回复"帮助"查看我能做什么吧~\n🌐 http://localhost:3000';
+  return '💬 回复"帮助"查看我能做什么吧~\n🌐 https://wall.jay23.cn';
 }
 
 // ===== AI 生成小说章节 =====
@@ -844,7 +844,8 @@ async function generateSongIntro(songName, artist) {
 }
 
 // 搜索歌曲详细信息（网易云+QQ+AI三源）
-async function searchSongInfo(songName, artist) {
+async function searchSongInfo(songName, artist, options) {
+  var verifyOnly = options && options.verifyOnly;
   // 搜索时只用歌名（去掉中文歌手名避免干扰搜索）
   var searchName = songName;
   var searchArtist = artist || '';
@@ -872,13 +873,8 @@ async function searchSongInfo(songName, artist) {
         var acount = (songs[i].artists || []).length;
         if (acount < bestArtistCount) { best = songs[i]; bestArtistCount = acount; }
       }
-      if (!best) {
-        for (var i = 0; i < songs.length; i++) {
-          if (matchSongName(songs[i].name || '', songName)) { best = songs[i]; break; }
-        }
-      }
-      if (!best) best = songs[0];
       if (best) {
+        if (verifyOnly) return true;
         var albumName = best.album && best.album.name ? best.album.name : '-';
         var year = best.album && best.album.publishTime ? new Date(best.album.publishTime).getFullYear() + '' : '-';
         var duration = best.duration ? Math.floor(best.duration / 60000) + ':' + String(Math.floor((best.duration % 60000) / 1000)).padStart(2, '0') : '-';
@@ -910,10 +906,12 @@ async function searchSongInfo(songName, artist) {
       var songs = qqData.data.song.list;
       var best = null;
       for (var i = 0; i < songs.length; i++) {
-        if (matchSongName(songs[i].songname || '', songName)) { best = songs[i]; break; }
+        var qqSingerList = Array.isArray(songs[i].singer) ? songs[i].singer : [];
+        var qqArtists = qqSingerList.map(function(a) { return a.name || ''; }).join(' ');
+        if (matchSongName(songs[i].songname || '', songName) && (!artist || matchArtist(qqArtists, artist))) { best = songs[i]; break; }
       }
-      if (!best) best = songs[0];
       if (best) {
+        if (verifyOnly) return true;
         var albumName = best.albumname || '-';
         var dur = best.interval ? Math.floor(best.interval / 60) + ':' + String(best.interval % 60).padStart(2, '0') : '-';
         return { album: albumName, year: '-', duration: dur };

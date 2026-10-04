@@ -7,6 +7,55 @@ const router = express.Router();
 
 const POINTS = { CHECKIN: 1, POST: 2, COMMENT: 1, LIKE_RECEIVED: 1, FOLLOW_RECEIVED: 1 };
 
+const CHECKIN_MILESTONES = [3, 5, 7, 14, 30, 60, 100];
+
+function getCheckinPoints(streak) {
+  const days = Number(streak) || 0;
+  let bonus = 0;
+  if (days >= 30) bonus = 10;
+  else if (days >= 14) bonus = 5;
+  else if (days >= 7) bonus = 3;
+  else if (days >= 3) bonus = 2;
+  return POINTS.CHECKIN + bonus;
+}
+
+function getCheckinProgress(streak, totalPoints, nextLevel) {
+  const currentStreak = Math.max(0, Number(streak) || 0);
+  const nextMilestone = CHECKIN_MILESTONES.find((days) => days > currentStreak);
+  const milestoneDays = nextMilestone ? nextMilestone - currentStreak : 0;
+  const progress = nextMilestone ? {
+    target_days: nextMilestone,
+    days_remaining: milestoneDays,
+    message: milestoneDays === 1
+      ? `明天继续签到，就连续${nextMilestone}天啦！`
+      : `再签${milestoneDays}天，就连续${nextMilestone}天啦！`
+  } : null;
+
+  let titleGoal = null;
+  if (nextLevel && Number.isFinite(Number(nextLevel.min_points))) {
+    let points = Math.max(0, Number(totalPoints) || 0);
+    let futureStreak = currentStreak;
+    let days = 0;
+    const targetPoints = Number(nextLevel.min_points);
+    while (points < targetPoints && days < 366) {
+      futureStreak += 1;
+      points += getCheckinPoints(futureStreak);
+      days += 1;
+    }
+    if (days > 0 && days <= 366) {
+      titleGoal = {
+        days_remaining: days,
+        title_name: nextLevel.title_name,
+        icon: nextLevel.icon || '🎖️',
+        message: days === 1
+          ? `明天继续签到，预计解锁「${nextLevel.title_name}」！`
+          : `再签${days}天，预计解锁「${nextLevel.title_name}」！`
+      };
+    }
+  }
+  return { progress, titleGoal };
+}
+
 // ===== 签到 =====
 
 router.post('/', auth, async (req, res) => {
@@ -102,6 +151,8 @@ router.get('/status', auth, async (req, res) => {
     // 等级信息
     const [levelInfo] = await pool.execute('SELECT * FROM level_titles WHERE min_points <= ? ORDER BY min_points DESC LIMIT 1', [totalPoints]);
     const [nextLevel] = await pool.execute('SELECT * FROM level_titles WHERE min_points > ? ORDER BY min_points ASC LIMIT 1', [totalPoints]);
+    const nextLevelData = nextLevel.length > 0 ? { level: nextLevel[0].level, min_points: nextLevel[0].min_points, title_name: nextLevel[0].title_name, icon: nextLevel[0].icon } : null;
+    const checkinProgress = getCheckinProgress(currentStreak, totalPoints, nextLevelData);
 
     res.json({
       code: 200,
@@ -110,7 +161,9 @@ router.get('/status', auth, async (req, res) => {
         streak: currentStreak,
         total_points: totalPoints,
         level: levelInfo.length > 0 ? { id: levelInfo[0].id, level: levelInfo[0].level, title_name: levelInfo[0].title_name, title_color: levelInfo[0].title_color, title_bg: levelInfo[0].title_bg, icon: levelInfo[0].icon } : null,
-        next_level: nextLevel.length > 0 ? { level: nextLevel[0].level, min_points: nextLevel[0].min_points, title_name: nextLevel[0].title_name, icon: nextLevel[0].icon } : null
+        next_level: nextLevelData,
+        streak_goal: checkinProgress.progress,
+        next_checkin_title: checkinProgress.titleGoal
       }
     });
   } catch (err) {

@@ -16,8 +16,10 @@ const WECHAT_APPID = process.env.WECHAT_APPID || 'wx513226ad98127a0d';
 const WECHAT_SIGNATURE_TTL_SECONDS = Math.max(60, Number(process.env.WECHAT_SIGNATURE_TTL_SECONDS) || 300);
 const WECHAT_BODY_LIMIT_BYTES = Math.max(16 * 1024, Number(process.env.WECHAT_BODY_LIMIT_BYTES) || 256 * 1024);
 
-// 重复请求防抖锁（3秒）
+// 微信可能因网络超时重试同一 MsgId；缓存短期回复，避免重复执行业务并重复发消息。
 var processingLock = new Map();
+const MESSAGE_REPLY_CACHE_TTL_MS = 5 * 60 * 1000;
+const MESSAGE_REPLY_CACHE_LIMIT = 1000;
 
 function timingSafeEqualText(left, right) {
   if (typeof left !== 'string' || typeof right !== 'string' || left.length !== right.length) return false;
@@ -152,6 +154,7 @@ router.post('/callback', async (req, res) => {
       var msgType = extractXML(xmlContent, 'MsgType');
       var msgContent = extractXML(xmlContent, 'Content');
       var mediaId = extractXML(xmlContent, 'MediaId');
+      var msgId = extractXML(xmlContent, 'MsgId');
 
       if (!openid) return res.send('');
 
@@ -201,11 +204,33 @@ router.post('/callback', async (req, res) => {
 
       // ===== 文本消息 =====
       if (msgType === 'text' && msgContent) {
-        var requestKey = openid + '_' + msgContent;
-        if (processingLock.has(requestKey)) return res.send('');
-        processingLock.set(requestKey, Date.now());
-        setTimeout(function() { processingLock.delete(requestKey); }, 3000);
-        replyXml = await replyService.handleText(openid, accountId, msgContent);
+        var requestKey = openid + '_' + (msgId || msgContent);
+        var cached = processingLock.get(requestKey);
+        if (cached) {
+          if (cached.replyXml !== undefined && cached.expiresAt > Date.now()) return res.send(cached.replyXml);
+          if (cached.promise) return res.send(await cached.promise);
+          processingLock.delete(requestKey);
+        }
+
+        var replyPromise = replyService.handleText(openid, accountId, msgContent);
+        processingLock.set(requestKey, { promise: replyPromise });
+        try {
+          replyXml = await replyPromise;
+        } catch (err) {
+          processingLock.delete(requestKey);
+          throw err;
+        }
+        processingLock.set(requestKey, {
+          replyXml: replyXml,
+          expiresAt: Date.now() + (msgId ? MESSAGE_REPLY_CACHE_TTL_MS : 3000)
+        });
+        setTimeout(function() {
+          var current = processingLock.get(requestKey);
+          if (current && current.replyXml === replyXml) processingLock.delete(requestKey);
+        }, msgId ? MESSAGE_REPLY_CACHE_TTL_MS : 3000);
+        while (processingLock.size > MESSAGE_REPLY_CACHE_LIMIT) {
+          processingLock.delete(processingLock.keys().next().value);
+        }
         return res.send(replyXml);
       }
 

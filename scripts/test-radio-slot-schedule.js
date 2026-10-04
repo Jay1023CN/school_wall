@@ -13,7 +13,9 @@ const scheduling = read('services/song-scheduling.js');
 const songs = read('routes/songs.js');
 const maintenance = read('services/song-maintenance.js');
 const maintenanceSql = read('repositories/song-maintenance.js');
-const adminHtml = read('frontend/admin/index.html');
+const adminPageHtml = read('frontend/admin/index.html');
+const adminHtml = `${adminPageHtml}\n${['admin.js', 'admin-stories.js']
+  .map((name) => read('frontend/admin/js/' + name)).join('\n')}`;
 const { getChinaJsDayOfWeek } = require(path.join(root, 'services', 'date'));
 
 assert(database.includes('effective_start_date DATE DEFAULT NULL'), 'time_slots 必须保存周期生效日期');
@@ -30,11 +32,16 @@ assert(songs.indexOf('该日期不在当前开放周期内') < songs.indexOf('aw
 assert(slotsAdmin.includes("UPDATE slot_dates SET is_active = 0, manual_override = 1 WHERE id = ? AND slot_id = ?"), '移除日期必须保留为禁用例外，防止自动补齐复活');
 assert(slotsAdmin.includes('INSERT IGNORE INTO slot_dates'), '补齐日期不能覆盖管理员关闭的记录');
 assert(slotsAdmin.includes("router.post('/:slotId/calendar-date'"), '编辑日历必须有单日加播或停播接口');
+assert(slotsAdmin.includes("router.put('/:slotId/calendar-dates'"), '编辑日历必须提供批量保存接口');
+assert(slotsAdmin.includes('await connection.beginTransaction()') && slotsAdmin.includes('日期调整已保存'), '批量保存日期必须使用事务并返回明确结果');
+assert(slotsAdmin.includes('const rangeEnd = getChinaDate(28);'), '编辑日历接口必须覆盖完整的未来 28 天窗口，确保保存后可回读');
 assert(slotsAdmin.includes('manual_override = 1'), '单日加播或停播必须保留为例外，不能被星期周期覆盖');
 assert(songs.includes('Number(d.manual_override) === 1'), '用户投稿列表必须识别非周期日的单日加播');
 assert(adminHtml.includes('id="slot-start-date-calendar"'), '后台必须提供可直接点击的播放日历，不依赖手机 yyyy/mm/dd 输入');
 assert(adminHtml.includes('点紫色日期可设为不播放') && adminHtml.includes('点灰色日期可临时加播'), '日历必须直接表达取消播放和临时加播');
 assert(adminHtml.includes('renderSlotStartDateCalendar') && adminHtml.includes('toggleSlotEditCalendarDate'), '切换星期或点击日期必须即时刷新播放安排');
+assert(adminHtml.includes('slotEditCalendarDirty') && adminHtml.includes('persistSlotEditCalendarDraft'), '日期点击只能暂存，必须在保存时统一提交');
+assert(!adminHtml.includes("method: 'POST',\n                    body: JSON.stringify({ play_date: dateStr, is_active: nextActive })"), '日期点击不得再次逐项立即提交');
 assert(adminHtml.includes('loadSlotEditCalendarDates(id)'), '编辑既有时段时必须载入单日例外');
 assert(!adminHtml.includes('manageSlotDates'), '时段列表不应再提供重复的日期管理入口');
 assert(!adminHtml.includes('id="slot-dates-modal"'), '日期管理弹窗应收拢到编辑日历，避免两处操作');
@@ -47,7 +54,7 @@ assert(admin.includes('allowOverbook') && scheduling.includes('if (!allowOverboo
 assert(adminHtml.includes('id="song-approval-custom-date"') && adminHtml.includes('id="song-approval-custom-slot"'), '后台审核弹窗必须提供自定义日期和时段');
 assert(adminHtml.includes('approvalBody.play_date = customDate'), '后台确认通过必须提交自定义播放日期');
 assert(adminHtml.includes('song-approval-allow-overbook') && adminHtml.includes('approvalBody.allow_overbook = true'), '前端必须提供管理员超额排入选项并提交开关');
-assert.strictEqual(adminHtml, read('public/admin/index.html'), '后台审核页面镜像必须一致');
+assert.strictEqual(adminPageHtml, read('public/admin/index.html'), '后台审核页面镜像必须一致');
 assert.strictEqual(read('frontend/admin/css/admin.css'), read('public/admin/css/admin.css'), '后台样式镜像必须一致');
 
 console.log('[radio-slot-schedule] 通过：星期周期与单日加播/停播例外均已收拢到编辑日历');

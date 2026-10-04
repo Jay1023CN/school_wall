@@ -53,12 +53,17 @@ assert.match(state.dailySongCandidateSql(), /candidate_hidden_at IS NULL/, '公�
 assert.match(state.dailySongCandidateSql(), /COALESCE\(/, '候选查询必须兼容已发布但缺少发布时间的旧记录');
 
 // 候选曲库的管理操作不能伪造已发布；仅允许移出候选或真正删除。
-const adminRoute = fs.readFileSync(require.resolve('../routes/admin'), 'utf8');
-const adminPage = fs.readFileSync(require.resolve('../frontend/admin/index.html'), 'utf8');
+const adminRoute = fs.readFileSync(require.resolve('../routes/admin/daily-songs'), 'utf8');
+const adminRouter = fs.readFileSync(require.resolve('../routes/admin'), 'utf8');
+const adminPageHtml = fs.readFileSync(require.resolve('../frontend/admin/index.html'), 'utf8');
+const adminPageScript = ['admin.js', 'admin-stories.js']
+  .map((name) => fs.readFileSync(require.resolve('../frontend/admin/js/' + name), 'utf8')).join('\n');
+const adminPage = `${adminPageHtml}\n${adminPageScript}`;
 assert.match(adminRoute, /candidate_hidden_at IS NULL/, '公众号候选查询必须排除被移出的歌曲');
-assert.match(adminRoute, /daily-songs\/candidate-visibility/, '后台必须提供独立的候选可见性接口');
+assert.match(adminRouter, /router\.use\('\/daily-songs', dailySongsRouter\)/, '每日推歌 API 必须挂载在原有接口前缀');
+assert.match(adminRoute, /router\.post\('\/candidate-visibility'/, '后台必须提供独立的候选可见性接口');
 assert.match(adminRoute, /UPDATE daily_song_recs SET candidate_hidden_at/, '移出候选不得改写发布状态');
-assert.match(adminRoute, /router\.delete\('\/daily-songs'/, '批量删除必须走单次接口并返回实际影响数量');
+assert.match(adminRoute, /router\.delete\('\/'/, '批量删除必须走单次接口并返回实际影响数量');
 assert.match(adminPage, /dailySongsPageSize/, '候选曲库必须支持每页显示数量');
 assert.match(adminPage, /已同步，无需再次推送/, '已发布歌曲不得继续提示重复推送');
 assert.match(adminPage, /列表已即时更新/, '删除成功后必须给出即时反馈');

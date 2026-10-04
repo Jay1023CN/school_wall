@@ -275,7 +275,7 @@
     var dark = document.documentElement.getAttribute('data-theme') === 'dark';
     if (state.fiveTwenty) meta.setAttribute('content', dark ? '#2D2438' : '#FF7A9A');
     else if (state.teacher) meta.setAttribute('content', dark ? '#1d2928' : '#f7f1e6');
-    else meta.setAttribute('content', dark ? '#1a1423' : '#FAFBFE');
+    else meta.setAttribute('content', dark ? '#0F1218' : '#FAFBFE');
   }
 
   function finishTheme(state, teacherElements, stylesheets, loaded) {

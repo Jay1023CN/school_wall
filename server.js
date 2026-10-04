@@ -13,7 +13,8 @@ const PORT = process.env.PORT || 3000;
 const runtime = createRuntime({
   app, initialize: initDB, startTasks: startBackgroundTasks,
   drainTasks: drainBackgroundTasks, closeDatabase: () => pool.end(),
-  port: PORT, host: process.env.HOST || '0.0.0.0'
+  port: PORT, host: process.env.HOST || '0.0.0.0',
+  shutdownTimeoutMs: Math.min(300000, Math.max(1000, Number(process.env.SHUTDOWN_TIMEOUT_MS) || 240000))
 });
 
 async function start() {

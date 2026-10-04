@@ -121,6 +121,10 @@ async function approveSongWithSchedule(connection, songId, requestedSlotDateId, 
     throw songReviewValidationError('所选日期不在当前开放周期内，请重新选择');
   }
 
+  if (String(songs[0].slot_date_id) === String(slotDate.id) && String(songs[0].slot_id) === String(slotDate.slot_id)) {
+    return { ...slotDate, unchanged: true };
+  }
+
   const [countRows] = await connection.execute(
     'SELECT COUNT(*) AS cnt FROM song_requests WHERE slot_date_id = ? AND id <> ? ' +
     'AND deleted_at IS NULL AND status IN ("pending", "approved")',
@@ -172,6 +176,10 @@ async function rescheduleApprovedSong(connection, songId, requestedSlotDateId, r
   }
   if (!requestedPlayDate && !isSlotDateAllowedByCurrentSchedule(slotDate)) {
     throw songReviewValidationError('所选日期不在当前开放周期内，请重新选择');
+  }
+
+  if (String(songs[0].slot_date_id) === String(slotDate.id) && String(songs[0].slot_id) === String(slotDate.slot_id)) {
+    return { ...slotDate, unchanged: true };
   }
 
   const [countRows] = await connection.execute(

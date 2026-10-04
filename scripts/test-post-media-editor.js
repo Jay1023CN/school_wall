@@ -19,6 +19,7 @@ const mpRoute = read('routes/mp-draft.js');
 const mpService = read('services/mp-draft.js');
 const mpHtml = read('frontend/admin/mp-draft.html');
 const mpUtils = read('frontend/admin/js/mp-draft-utils.js');
+const mpRuntime = `${mpHtml}\n${read('frontend/admin/js/mp-draft.js')}`;
 
 assert(postHtml.includes('id="fileInput" multiple accept="image/*,video/mp4,video/webm,video/ogg,.mp4,.webm,.ogv"'), '投稿页必须使用统一图片和视频选择器');
 assert(!postHtml.includes('id="videoFileInput"'), '投稿页不应保留独立视频选择器');
@@ -54,15 +55,15 @@ assert(postJs.includes('video_poster: uploadedVideoPoster || null'), '投稿必�
 assert(mpRoute.includes('p.images, p.video_url, p.video_poster'), '公众号帖子查询必须携带视频地址和封面');
 assert(mpRoute.includes('function buildPostVideoHTML(post)'), '公众号图文生成必须处理帖子视频');
 assert(mpRoute.includes('播放器无法显示？点击打开视频页面'), '公众号视频必须保留站内打开兜底链接');
-assert(mpRoute.includes('async function prepareArticleForWeixin(article, onVideoProgress)'), '公众号手动同步和一键发布必须共用媒体准备链');
+assert(mpRoute.includes('async function prepareArticleForWeixin(article, onVideoProgress, beforeExternal)'), '公众号媒体准备入口必须支持外部副作用前的持久化检查点');
 assert(mpRoute.includes('const prepared = await prepareArticleForWeixin(articles[0]);'), '一键发布必须先处理图片和视频再创建草稿');
-assert(mpRoute.includes('var prepared = await prepareArticleForWeixin(article, function(progress)'), '异步同步必须通过共享媒体准备链处理视频');
+assert(mpRoute.includes('async function processMpSyncJob(input)') && mpRoute.includes('await prepareArticleForWeixin(payload.article, async video =>'), '持久化同步 worker 必须通过共享媒体准备链处理视频');
 assert(mpService.includes("type=video"), '公众号视频必须调用永久视频素材接口');
 assert(mpService.includes("name=\"description\""), '公众号永久视频上传必须提供视频描述字段');
-assert(mpHtml.includes('<script src="/admin/js/mp-draft-utils.js"></script>'), '公众号后台必须加载视频预览工具模块');
+assert(/<script src="\/admin\/js\/mp-draft-utils\.js\?v=\d+"><\/script>/.test(mpHtml), '公众号后台必须加载带版本的视频预览工具模块');
 assert(mpUtils.includes('function buildPreviewVideoHtml(post)'), '公众号后台预览必须展示帖子视频');
 assert(mpUtils.includes('function getPreviewVideoUrl(value)'), '公众号帖子列表必须校验视频地址');
-assert(mpHtml.includes('getPreviewVideoUrl(p.video_url)'), '公众号帖子列表必须标记视频投稿');
+assert(mpRuntime.includes('getPreviewVideoUrl(p.video_url)'), '公众号帖子列表必须标记视频投稿');
 assert(mpUtils.includes('播放器无法显示？点击打开视频页面'), '公众号视频预览必须保留站内打开兜底链接');
 assert.strictEqual(mpHtml, read('public/admin/mp-draft.html'), '公众号草稿页面镜像必须一致');
 assert.strictEqual(mpUtils, read('public/admin/js/mp-draft-utils.js'), '公众号草稿工具模块镜像必须一致');

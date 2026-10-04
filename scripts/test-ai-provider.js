@@ -8,11 +8,27 @@ process.env.DASHSCOPE_API_KEY = 'test-qwen-key';
 
 const https = require('https');
 const originalRequest = https.request;
+const originalGet = https.get;
 const originalLoad = Module._load;
 let nextResponse = { statusCode: 200, body: { choices: [{ message: { content: 'GLM 测试回复' } }] } };
 let responseQueue = [];
 let lastRequest = null;
 let requestCount = 0;
+let musicResponseQueue = [];
+
+https.get = function(url, options, callback) {
+  const request = new EventEmitter();
+  request.destroy = function() {};
+  process.nextTick(function() {
+    const responseDef = musicResponseQueue.shift() || { statusCode: 200, body: '{}' };
+    const response = new EventEmitter();
+    response.statusCode = responseDef.statusCode || 200;
+    callback(response);
+    response.emit('data', JSON.stringify(responseDef.body));
+    response.emit('end');
+  });
+  return request;
+};
 
 // ai.js 只在带 openid 时访问数据库；这里替换数据库模块，使 provider 测试无需 MySQL。
 const databaseModulePath = path.resolve(__dirname, '..', 'config', 'database.js');
@@ -85,11 +101,28 @@ const ai = require('../services/ai');
   const busy = await ai.getAIReply('高峰期测试');
   assert.match(busy, /访问量较大/);
   assert.strictEqual(requestCount, 2);
+  musicResponseQueue = [
+    { body: { result: { songs: [{ name: '测试歌', artists: [{ name: '错误歌手' }], album: { name: '错误专辑' }, duration: 120000 }] } } },
+    { body: { data: { song: { list: [{ songname: '测试歌', singer: [{ name: '错误歌手' }], albumname: '错误专辑', interval: 120 }] } } } }
+  ];
+  const wrongArtist = await ai.searchSongInfo('测试歌', '正确歌手');
+  assert.strictEqual(wrongArtist, null, '歌名相同但歌手不符时不能误报找到歌曲');
+  musicResponseQueue = [
+    { body: { result: { songs: [{ name: '测试歌', artists: [{ name: '正确歌手' }], album: { name: '正确专辑' }, duration: 120000 }] } } }
+  ];
+  const verifySong = await ai.searchSongInfo('测试歌', '正确歌手', { verifyOnly: true });
+  assert.strictEqual(verifySong, true, '推歌流程应能在命中时快速结束核验');
+  musicResponseQueue = [
+    { body: { result: { songs: [{ name: '测试歌', artists: [{ name: '正确歌手' }], album: { name: '正确专辑' }, duration: 120000 }] } } }
+  ];
+  const exactSong = await ai.searchSongInfo('测试歌', '正确歌手');
+  assert.ok(exactSong && exactSong.album === '正确专辑', '歌名与歌手匹配时应返回已找到结果');
   console.log('AI provider tests passed');
 })().catch(function(error) {
   console.error(error.stack || error.message);
   process.exitCode = 1;
 }).finally(function() {
   https.request = originalRequest;
+  https.get = originalGet;
   Module._load = originalLoad;
 });

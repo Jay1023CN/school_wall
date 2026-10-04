@@ -16,6 +16,10 @@ function isPrivateOrPlaceholderIp(value) {
   const parts = value.split('.').map(Number);
   if (parts.length !== 4 || parts.some(part => part < 0 || part > 255)) return true;
   return parts[0] === 0 || parts[0] === 10 || parts[0] === 127 ||
+    // RFC 5737 documentation networks are fixtures, never real server addresses.
+    (parts[0] === 192 && parts[1] === 0 && parts[2] === 2) ||
+    (parts[0] === 198 && parts[1] === 51 && parts[2] === 100) ||
+    (parts[0] === 203 && parts[1] === 0 && parts[2] === 113) ||
     (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
     (parts[0] === 192 && parts[1] === 168) ||
     value === '255.255.255.255';

@@ -3,7 +3,7 @@ message: "If you use Campus Wall in a paper, article, product introduction, or d
 title: "Campus Wall"
 authors:
   - family-names: "Jay071023"
-repository-code: "https://github.com/Jay071023/school_wall"
+repository-code: "https://github.com/Jay1023CN/school_wall"
 license: "Apache-2.0"
-version: "0.1.0"
-date-released: 2026-09-08
+version: "1.0.0"
+date-released: 2026-10-04

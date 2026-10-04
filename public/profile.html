@@ -9,13 +9,14 @@
     (function () {
       var root = document.documentElement;
       root.classList.add("app-booting");
+      var released = false;
       var themeReady = false;
-      var timeout = window.setTimeout(function () { release(true); }, 7000);
+      var hardTimeoutId = window.setTimeout(function () { release(true); }, 7000);
       function release(force) {
-        if (themeReady || force) {
-          window.clearTimeout(timeout);
-          root.classList.remove("app-booting");
-        }
+        if (released || (!themeReady && !force)) return;
+        released = true;
+        window.clearTimeout(hardTimeoutId);
+        root.classList.remove("app-booting");
       }
       window.addEventListener("festival-theme-ready", function () {
         themeReady = true;
@@ -26,7 +27,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#FAFBFE" id="themeColorMeta">
-  <title>示例校园墙 - 个人主页</title>
+  <title>嘉二の墙墙 - 个人主页</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/variables.css">
   <link rel="stylesheet" href="/css/campus-ui-polish.css">
@@ -39,18 +40,20 @@
   <link rel="stylesheet" href="/css/profile-polish.css">
   <script src="/js/theme-mode.js" defer></script>
   <style>
-    .wechat-bind-card { margin-bottom: 20px; padding: 20px; background: rgba(255,255,255,0.9); border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-    .wechat-bind-header { font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #333; }
-    .wechat-bind-hint { color: #666; margin-bottom: 16px; font-size: 14px; }
+    .wechat-bind-card { margin-bottom: 20px; padding: 20px; background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-light); box-shadow: var(--shadow-card); }
+    .wechat-bind-header { font-size: 18px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary); }
+    .wechat-bind-hint { color: var(--text-secondary); margin-bottom: 16px; font-size: 14px; }
     .btn-wechat-bind { background: linear-gradient(135deg, #07c160, #06ad56); color: #fff; border: none; padding: 12px 28px; border-radius: 25px; font-size: 15px; cursor: pointer; transition: transform 0.2s; }
     .btn-wechat-bind:hover { transform: scale(1.05); }
-    .btn-wechat-unbind { background: #f5f5f5; color: #666; border: 1px solid #ddd; padding: 10px 24px; border-radius: 25px; font-size: 14px; cursor: pointer; margin-left: 10px; }
+    .btn-wechat-unbind { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color); padding: 10px 24px; border-radius: 25px; font-size: 14px; cursor: pointer; margin-left: 10px; }
     .wechat-status-bound { color: #07c160; font-weight: 600; }
 
     /* 微信二维码弹窗 */
     .wechat-modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       z-index: 99999;
       display: flex; align-items: center; justify-content: center;
       animation: wechatFadeIn 0.3s ease;
@@ -60,11 +63,12 @@
       to { opacity: 1; }
     }
     .wechat-modal-card {
-      background: #fff; border-radius: 20px;
+      background: var(--bg-card); border-radius: 20px;
+      border: 1px solid var(--border-light);
       padding: 40px 36px 32px;
       max-width: 380px; width: 90%;
       text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
       animation: wechatSlideUp 0.35s cubic-bezier(0.21,1.02,0.35,1);
       position: relative;
       z-index: 1;
@@ -76,26 +80,26 @@
     .wechat-modal-close {
       position: absolute; top: 12px; right: 16px;
       background: none; border: none;
-      font-size: 24px; color: #999; cursor: pointer;
+      font-size: 24px; color: var(--text-light); cursor: pointer;
       padding: 4px 8px; border-radius: 8px;
       transition: all 0.2s; line-height: 1;
     }
-    .wechat-modal-close:hover { background: #f0f0f0; color: #333; }
+    .wechat-modal-close:hover { background: var(--bg-secondary); color: var(--text-primary); }
     .wechat-modal-title {
-      font-size: 20px; font-weight: 700; color: #1a1a2e;
+      font-size: 20px; font-weight: 700; color: var(--text-primary);
       margin-bottom: 6px;
     }
     .wechat-modal-subtitle {
-      font-size: 14px; color: #888;
+      font-size: 14px; color: var(--text-secondary);
       margin-bottom: 24px;
     }
     .wechat-modal-qr-wrapper {
       position: relative;
       display: inline-block;
       padding: 12px;
-      background: #f8f9fa;
+      background: #FFFFFF;
       border-radius: 16px;
-      border: 2px solid #e8eaed;
+      border: 2px solid var(--border-color);
       margin-bottom: 20px;
       transition: border-color 0.3s;
     }
@@ -113,7 +117,7 @@
     }
     .wechat-modal-spinner {
       width: 18px; height: 18px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--border-color);
       border-top: 2px solid #07c160;
       border-radius: 50%;
       animation: wechatSpin 0.8s linear infinite;
@@ -121,14 +125,14 @@
     @keyframes wechatSpin { to { transform: rotate(360deg); } }
     .wechat-modal-steps {
       text-align: left;
-      background: #f8f9fa;
+      background: var(--bg-secondary);
       border-radius: 12px;
       padding: 14px 18px;
       margin-bottom: 18px;
     }
     .wechat-modal-step {
       display: flex; align-items: center; gap: 10px;
-      font-size: 13px; color: #555;
+      font-size: 13px; color: var(--text-secondary);
       padding: 4px 0;
     }
     .wechat-modal-step-num {
@@ -193,7 +197,7 @@
   <!-- 导航栏 -->
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
-      <a href="/" class="nav-logo">🏠 示例校园墙</a>
+      <a href="/" class="nav-logo">🏠 嘉二の墙墙</a>
       <div class="nav-links" id="navLinks">
         <a href="/" class="nav-link" data-page="home"><span>🏠</span> 首页</a>
         <a href="/radio" class="nav-link" data-page="radio"><span>🎵</span> 点歌</a>
@@ -254,10 +258,12 @@
       <!-- 用户资料信息（性别/MBTI/生日/爱好） -->
       <div class="profile-detail-info" id="profileDetailInfo"></div>
 
-      <div class="profile-menu-item" style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--card-bg);border-radius:12px;margin-top:16px;cursor:pointer;border:1px solid var(--border-color);transition:all 0.2s;" onclick="toggleFeedbackForm()" id="feedbackToggleBtn">
-        <span style="font-size:1.3rem;">💬</span>
-        <span>意见反馈</span>
-        <span style="margin-left:auto;color:var(--text-light);" id="feedbackArrow">→</span>
+      <div class="profile-action-stack">
+        <div class="profile-menu-item profile-action-entry" style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--card-bg);border-radius:12px;margin-top:16px;cursor:pointer;border:1px solid var(--border-color);transition:all 0.2s;" onclick="toggleFeedbackForm()" id="feedbackToggleBtn">
+          <span class="profile-action-icon" aria-hidden="true">💬</span>
+          <span>意见反馈</span>
+          <span style="margin-left:auto;color:var(--text-light);" id="feedbackArrow">→</span>
+        </div>
       </div>
       <div id="feedbackInlineForm" style="display:none;margin-top:12px;padding:16px 18px;background:var(--card-bg);border-radius:12px;border:1px solid var(--border-color);">
         <div style="margin-bottom:12px;">
@@ -289,9 +295,11 @@
         }
       </style>
 
-      <button class="btn-edit-profile" onclick="window.location.href='/edit-profile'">✏️ 编辑资料</button>
-      <button class="btn-edit-profile btn-secondary" id="changePasswordBtn">⚙️ 修改密码</button>
-      <button class="btn-edit-profile btn-admin" id="adminPanelBtn" onclick="window.location.href='/admin'">⚙️ 管理后台</button>
+      <div class="profile-action-stack profile-account-actions">
+        <button class="btn-edit-profile profile-action-btn profile-action-primary" onclick="window.location.href='/edit-profile'"><span class="profile-action-icon" aria-hidden="true">✏️</span><span>编辑资料</span><span class="profile-action-arrow" aria-hidden="true">→</span></button>
+        <button class="btn-edit-profile btn-secondary profile-action-btn profile-action-secondary" id="changePasswordBtn"><span class="profile-action-icon" aria-hidden="true">🔐</span><span>修改密码</span><span class="profile-action-arrow" aria-hidden="true">→</span></button>
+        <button class="btn-edit-profile btn-admin profile-action-btn profile-action-admin" id="adminPanelBtn" hidden onclick="window.location.href='/admin'"><span class="profile-action-icon" aria-hidden="true">🛠️</span><span>管理后台</span><span class="profile-action-arrow" aria-hidden="true">→</span></button>
+      </div>
     </div>
 
     <div class="profile-card wechat-bind-card" id="wechatBindCard">
@@ -564,14 +572,14 @@
     </div>
   </div>
 
-  <script src="/js/app.js"></script>
+  <script src="/js/app.js?v=2026100401"></script>
   <script src="/js/side-cards.js"></script>
   <script src="/js/user-card.js"></script>
-  <script src="/js/profile.js"></script>
+  <script src="/js/profile.js?v=20260925"></script>
   <script>var currentUser = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null');</script>
   <script>
     (function() {
-      var defaultSiteName = '示例校园墙';
+      var defaultSiteName = '嘉二の墙墙';
       var cachedSettings = localStorage.getItem('siteSettings');
       if (cachedSettings) {
         try {
@@ -600,6 +608,21 @@
         document.title = siteName + ' - 个人主页';
         var navLogo = document.querySelector('.nav-logo');
         if (navLogo) navLogo.textContent = '🏠 ' + siteName;
+        // 520特别模式
+        if (settings.special_mode_520) {
+          document.body.classList.add('mode-520', 'profile-page');
+          var themeCss = document.getElementById('theme-festival-520-css');
+          if (themeCss) themeCss.disabled = false;
+        } else {
+          document.body.classList.remove('mode-520');
+          var themeCss = document.getElementById('theme-festival-520-css');
+          if (themeCss) themeCss.disabled = true;
+        }
+        var themeColorMeta = document.getElementById('themeColorMeta');
+        if (themeColorMeta) {
+          var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+          themeColorMeta.setAttribute('content', settings.special_mode_520 ? (isDark ? '#2D2438' : '#FF7A9A') : (isDark ? '#0F1218' : '#FAFBFE'));
+        }
       }
     })();
   </script>
@@ -840,7 +863,7 @@
   </nav>
 
   <footer class="footer">
-    <p>&copy; 2026 示例校园墙 All Rights Reserved</p>
+    <p>&copy; 2026 嘉二の墙墙 All Rights Reserved</p>
     <p><a href="https://beian.miit.gov.cn/" target="_blank" rel="nofollow">粤ICP备2025514735号-3</a></p>
   </footer>
 </body>

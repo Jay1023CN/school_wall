@@ -29,8 +29,8 @@ function buildTextReply(openid, accountId, text) {
 
 function buildNewsReply(openid, accountId, title, description, picUrl, linkUrl) {
   var ts = Math.floor(Date.now() / 1000);
-  if (!picUrl) picUrl = 'http://localhost:3000/images/show.png';
-  if (!linkUrl) linkUrl = 'http://localhost:3000';
+  if (!picUrl) picUrl = 'https://wall.jay23.cn/images/show.png';
+  if (!linkUrl) linkUrl = 'https://wall.jay23.cn';
   return '<xml>' +
     '<ToUserName><![CDATA[' + cdata(openid) + ']]></ToUserName>' +
     '<FromUserName><![CDATA[' + cdata(accountId) + ']]></FromUserName>' +
@@ -184,21 +184,50 @@ async function handleRegCode(openid, code) {
     var [users] = await pool.execute('SELECT id FROM users WHERE openid = ?', [openid]);
     if (users.length > 0) return { text: T.regAlreadyBound() };
 
-    // 每个微信在十分钟内只保留一个已验证、尚未完成网页提交的注册流程。
-    // 否则用户在页面刷新后反复生成并发送 REG，会留下多条待注册记录。
+    // 先匹配当前输入的验证码。用户刷新注册页后可能生成新码，不能被旧的
+    //“已验证但未提交”记录拦截，否则网页显示的新码永远无法完成验证。
+    var [codes] = await pool.execute(
+      'SELECT id, code, openid, verified, used FROM wechat_reg_codes WHERE code = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE) LIMIT 1',
+      [code]
+    );
+    if (codes.length > 0) {
+      var current = codes[0];
+      if (Number(current.used) === 1) return { text: T.regAlreadyBound() };
+      if (Number(current.verified) === 1) {
+        return current.openid === openid
+          ? { text: T.regCodePending(current.code) }
+          : { text: T.regCodeInvalid() };
+      }
+
+      // 条件更新保证微信重复投递同一 MsgId 时只有第一条消息完成状态变更。
+      var [updated] = await pool.execute(
+        'UPDATE wechat_reg_codes SET verified = 1, openid = ?, verified_at = NOW() WHERE id = ? AND verified = 0 AND used = 0',
+        [openid, current.id]
+      );
+      if (updated.affectedRows === 1) {
+        // 新验证码明确代表用户当前注册页，清理同一微信的旧待提交流程，
+        // 避免后续恢复入口再次指向旧验证码。
+        await pool.execute(
+          'UPDATE wechat_reg_codes SET used = 1 WHERE openid = ? AND verified = 1 AND used = 0 AND id <> ?',
+          [openid, current.id]
+        );
+        return { text: T.regCodeConfirm(code) };
+      }
+
+      var [raced] = await pool.execute('SELECT openid, verified, used FROM wechat_reg_codes WHERE id = ? LIMIT 1', [current.id]);
+      if (raced.length > 0 && Number(raced[0].verified) === 1 && raced[0].openid === openid && Number(raced[0].used) === 0) {
+        return { text: T.regCodePending(code) };
+      }
+      return { text: T.regCodeInvalid() };
+    }
+
+    // 当前输入不是有效新码时，才尝试恢复同一微信已有的验证流程。
     var [pending] = await pool.execute(
       'SELECT code FROM wechat_reg_codes WHERE openid = ? AND verified = 1 AND used = 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE) ORDER BY verified_at DESC LIMIT 1',
       [openid]
     );
     if (pending.length > 0) return { text: T.regCodePending(pending[0].code) };
-
-    var [codes] = await pool.execute(
-      'SELECT id FROM wechat_reg_codes WHERE code = ? AND verified = 0 AND used = 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE) LIMIT 1',
-      [code]
-    );
-    if (codes.length === 0) return { text: T.regCodeInvalid() };
-    await pool.execute('UPDATE wechat_reg_codes SET verified = 1, openid = ?, verified_at = NOW() WHERE id = ?', [openid, codes[0].id]);
-    return { text: T.regCodeConfirm(code) };
+    return { text: T.regCodeInvalid() };
   } catch (e) {
     console.error('[reply] handleRegCode 失败:', e.message);
     return { text: T.regError() };

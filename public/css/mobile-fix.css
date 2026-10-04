@@ -57,7 +57,9 @@
 }
 
 .password-panel-inner {
-    background: white;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
     border-radius: 16px;
     width: 90%;
     max-width: 500px;
@@ -71,7 +73,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 20px 24px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-light);
 }
 
 .password-panel-header h3 {
@@ -141,13 +143,15 @@
     border-radius: 10px;
     font-size: 0.95rem;
     transition: all 0.2s;
-    background: #fafafa;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 .password-field-input:focus {
     border-color: #FF6B9D;
     box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
-    background: white;
+    background: var(--bg-card);
+    color: var(--text-primary);
     outline: none;
 }
 
@@ -414,8 +418,10 @@
         height: auto !important;
         border-radius: 20px !important;
         transform: none !important;
-        background: #fff !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
+        background: var(--bg-card) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-light) !important;
+        box-shadow: var(--shadow-sm) !important;
         max-width: 100% !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -427,8 +433,8 @@
     .search-bar:focus-within {
         transform: none !important;
         box-shadow: 0 1px 8px rgba(255, 107, 157, 0.12) !important;
-        border-color: rgba(255, 107, 157, 0.3) !important;
-        background: #fff !important;
+        border-color: var(--primary) !important;
+        background: var(--bg-card) !important;
     }
 
     .search-bar:focus-within::before { display: none !important; }
@@ -489,8 +495,9 @@
     select:focus,
     textarea:focus {
         border-color: #FF6B9D !important;
-        box-shadow: 0 0 0 4px rgba(255, 107, 157, 0.1) !important;
-        background: #fff !important;
+        box-shadow: 0 0 0 4px rgba(255, 117, 165, 0.18) !important;
+        background: var(--bg-card) !important;
+        color: var(--text-primary) !important;
         outline: none !important;
     }
 
@@ -1334,8 +1341,8 @@ body.radio-page .hot-song-vote .vote-count {
 }
 
 [data-theme="dark"] #sideCheckin {
-    border-color: rgba(120, 205, 163, 0.2) !important;
-    background: #243a32 !important;
+    border-color: var(--border-light) !important;
+    background: var(--bg-card) !important;
 }
 
 @media (max-width: 768px) {
@@ -2821,26 +2828,47 @@ body.home-page .post-card .action-btn:focus-visible {
 }
 
 body.home-page .post-card .action-btn:active {
-    transform: scale(0.97);
+    transform: scale(0.95);
 }
 
-body.home-page .post-card .action-btn.liked,
+@keyframes heart-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.32); }
+    70% { transform: scale(0.92); }
+    100% { transform: scale(1); }
+}
+
+body.home-page .post-card .action-btn.liked {
+    background: rgba(255, 107, 157, 0.12);
+    color: var(--primary-dark, #e5558a);
+}
+
+body.home-page .post-card .action-btn.liked .action-icon {
+    display: inline-block;
+    animation: heart-pop 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
 body.home-page .post-card .action-btn.favorited {
-    background: transparent;
-    color: #9a627f;
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
 }
 
 body.home-page .post-card .action-btn.liked:hover,
-body.home-page .post-card .action-btn.liked:focus-visible,
+body.home-page .post-card .action-btn.liked:focus-visible {
+    background: rgba(255, 107, 157, 0.18);
+    color: var(--primary-dark, #e5558a);
+}
+
 body.home-page .post-card .action-btn.favorited:hover,
 body.home-page .post-card .action-btn.favorited:focus-visible {
-    background: rgba(177, 126, 153, 0.15);
-    color: #8d5673;
+    background: rgba(245, 158, 11, 0.18);
+    color: #b45309;
 }
 
 body.home-page .post-card .action-icon {
     flex: 0 0 auto;
     font-size: 1rem;
+    transition: transform 0.18s ease;
 }
 
 body.home-page .post-card .post-comments-preview {
@@ -2885,34 +2913,41 @@ body.home-page .post-card .comment-preview-more {
 }
 
 [data-theme="dark"] body.home-page .post-card .action-btn {
-    color: #c7c0ca;
+    color: var(--text-secondary);
 }
 
 [data-theme="dark"] body.home-page .post-card .action-btn:hover,
 [data-theme="dark"] body.home-page .post-card .action-btn:focus-visible {
-    background: rgba(205, 172, 194, 0.12);
-    color: #e0c4d4;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
 }
 
-[data-theme="dark"] body.home-page .post-card .action-btn.liked,
+[data-theme="dark"] body.home-page .post-card .action-btn.liked {
+    background: transparent;
+    color: var(--primary);
+}
+
 [data-theme="dark"] body.home-page .post-card .action-btn.favorited {
     background: transparent;
-    color: #e4b8cd;
+    color: #FBBF24;
 }
 
-[data-theme="dark"] body.home-page .post-card .comment-preview-author,
+[data-theme="dark"] body.home-page .post-card .comment-preview-author {
+    color: var(--secondary);
+}
+
 [data-theme="dark"] body.home-page .post-card .comment-preview-more {
-    color: #d5b9ca;
+    color: var(--primary);
 }
 
 [data-theme="dark"] body.home-page .post-card .post-comments-preview {
-    border-color: rgba(205, 172, 194, 0.2);
-    background: rgba(58, 50, 64, 0.72);
+    border-color: var(--border-light);
+    background: rgba(22, 27, 36, 0.72);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 [data-theme="dark"] body.home-page .post-card .post-actions {
-    border-top-color: rgba(205, 196, 210, 0.24);
+    border-top-color: var(--border-light);
 }
 
 /* 顶部通知与退出共用同一组浅色状态，退出按钮与通知文字保持舒适间距。 */
@@ -2970,17 +3005,17 @@ body.home-page .post-card .comment-preview-more {
 }
 
 [data-theme="dark"] .navbar {
-    --wall-nav-ink: #b8b2bc;
-    --wall-nav-hover: #e0c4d4;
-    --wall-nav-surface: rgba(205, 172, 194, 0.12);
-    --wall-nav-border: rgba(205, 172, 194, 0.34);
-    --wall-nav-focus: rgba(225, 192, 211, 0.58);
-    --wall-nav-divider: rgba(205, 196, 210, 0.28);
+    --wall-nav-ink: #94A3B8;
+    --wall-nav-hover: #F1F5F9;
+    --wall-nav-surface: rgba(255, 255, 255, 0.08);
+    --wall-nav-border: rgba(255, 255, 255, 0.12);
+    --wall-nav-focus: rgba(255, 117, 165, 0.45);
+    --wall-nav-divider: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="dark"] .navbar .nav-control-icon {
-    background: rgba(42, 38, 47, 0.72);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+    background: rgba(27, 33, 45, 0.78);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
 }
 @media (max-width: 768px) {
     body.home-page .post-card .post-actions {
@@ -3159,4 +3194,176 @@ body.home-page .post-card .comment-preview-more {
         display: none !important;
         content: none !important;
     }
+}
+/* 中等桌面签到卡已放入主内容流，必须覆盖侧栏卡片的固定窄宽度。 */
+@media (min-width: 769px) and (max-width: 1599px) {
+    .desktop-checkin-slot #sideCheckin {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .desktop-checkin-slot #sideCheckin .side-card-body {
+        width: auto !important;
+        min-width: 0 !important;
+        flex: 1 1 360px;
+    }
+}
+
+/* 签到鼓励文案在窄侧栏或主内容卡中都允许自然换行，不能被固定宽度截断。 */
+#sideCheckin .checkin-encouragement,
+#sideCheckin .checkin-title-goal {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+}
+
+/* ===== 现代夜间视觉与图片防爆闪规范 ===== */
+[data-theme="dark"] .post-image,
+[data-theme="dark"] .detail-image {
+    filter: brightness(0.86);
+    transition: filter 0.25s ease;
+}
+
+[data-theme="dark"] .post-image-wrapper:hover .post-image,
+[data-theme="dark"] .post-image-wrapper:active .post-image,
+[data-theme="dark"] .detail-image:hover {
+    filter: brightness(1);
+}
+
+.post-card .post-images.image-count-1 .post-image-wrapper {
+    max-width: 440px;
+    max-height: 380px;
+}
+
+/* 侧边栏卡片夜间模式全量统一样式 */
+[data-theme="dark"] .side-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-light) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25) !important;
+}
+
+[data-theme="dark"] #sideHitokoto .side-card-content,
+[data-theme="dark"] .quick-card-hitokoto-text,
+[data-theme="dark"] .hitokoto-author,
+[data-theme="dark"] .hitokoto-from {
+    color: #E2E8F0 !important;
+}
+
+/* 移动端 (≤768px) 核心卡片呼吸槽与排版收口 */
+@media (max-width: 768px) {
+    body.home-page .post-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 16px 14px 12px !important;
+        margin: 0 0 12px 0 !important;
+        margin-inline: 0 !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+    }
+
+    body.home-page #postList {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    body.home-page .post-card .post-content {
+        font-size: 0.94rem !important;
+        line-height: 1.65 !important;
+        margin: 8px 0 12px 0 !important;
+        letter-spacing: 0.01em !important;
+    }
+
+    body.home-page .post-card .post-images.image-count-1 .post-image-wrapper {
+        max-width: 100% !important;
+        max-height: 280px !important;
+    }
+
+    body.home-page .post-card .post-images {
+        gap: 6px !important;
+        margin-bottom: 12px !important;
+    }
+
+    body.home-page .post-card .action-btn {
+        min-height: 44px !important;
+        padding: 6px 4px !important;
+        font-size: 0.78rem !important;
+        border-radius: 10px !important;
+    }
+
+    /* 移动端详情页与评论流黄金排版 */
+    body.post-detail-page .detail-card,
+    body.post-detail-page .comment-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 0 14px 0 !important;
+        margin-inline: 0 !important;
+        border-radius: 14px !important;
+        padding: 18px 14px !important;
+    }
+
+    body.post-detail-page .detail-content {
+        font-size: 0.96rem !important;
+        line-height: 1.7 !important;
+        letter-spacing: 0.01em !important;
+    }
+
+    body.post-detail-page .comment-item {
+        padding: 12px 0 !important;
+    }
+
+    body.post-detail-page .comment-reply-item {
+        margin-left: 28px !important;
+        padding: 8px 10px !important;
+        border-radius: 8px !important;
+    }
+
+    body.post-detail-page .comment-input {
+        font-size: 0.92rem !important;
+        line-height: 1.5 !important;
+    }
+}
+
+/* ===== 校园大考倒计时微交互美化 (春考/等级考/高考切换指示) ===== */
+.quick-card-gaokao,
+.side-card-countdown {
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+.quick-card-gaokao:hover,
+.side-card-countdown:hover {
+    transform: translateY(-2px);
+}
+
+.quick-card-gaokao:active,
+.side-card-countdown:active {
+    transform: scale(0.96) !important;
+}
+
+.quick-card-gaokao::after {
+    content: '↻';
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    font-size: 0.72rem;
+    opacity: 0.45;
+    transition: opacity 0.2s, transform 0.4s;
+    pointer-events: none;
+}
+
+.quick-card-gaokao:hover::after {
+    opacity: 0.9;
+    transform: rotate(180deg);
+}
+
+[data-theme="dark"] .quick-card-gaokao::after {
+    color: var(--text-light);
 }

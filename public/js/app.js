@@ -1,5 +1,5 @@
 /**
- * 示例校园墙 - 公共模块 (app.js)
+ * 嘉二の墙墙 - 公共模块 (app.js)
  * 所有页面都引用的基础JS文件
  * 包含：API配置、认证管理、Toast提示、工具函数等
  */
@@ -60,7 +60,7 @@ function updateThemeColor() {
   } else if (isTeacherFestival) {
     meta.setAttribute('content', isDark ? '#1d2928' : '#f7f1e6');
   } else {
-    meta.setAttribute('content', isDark ? '#1a1423' : '#FAFBFE');
+    meta.setAttribute('content', isDark ? '#0F1218' : '#FAFBFE');
   }
 }
 
@@ -143,6 +143,50 @@ function hasHeader(headers, name) {
   return Object.keys(headers).some(function(key) { return key.toLowerCase() === target; });
 }
 
+var pendingWriteRequests = {};
+
+async function prepareWriteRequest(url, options) {
+  try {
+  var method = String(options.method || 'GET').toUpperCase();
+  var path;
+  try { path = new URL(url, window.location.origin).pathname; } catch (_) { return null; }
+  var supported = method === 'POST' && (/^\/api\/(songs|feedback|posts)\/?$/.test(path) || /^\/api\/posts\/\d+\/comments$/.test(path) || /^\/api\/messages\/conversations\/\d+\/messages$/.test(path));
+  if (!supported || typeof options.body !== 'string' || hasHeader(options.headers, 'Idempotency-Key')) return null;
+  if (!window.crypto || !window.crypto.subtle || typeof TextEncoder === 'undefined') return null;
+  // Store only a digest and random receipt ID; never persist submitted text or credentials.
+  var input = method + ':' + path + ':' + (getToken() || '') + ':' + options.body;
+  var digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  var fingerprint = Array.from(new Uint8Array(digest)).map(function(byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+  try {
+    var stored = JSON.parse(sessionStorage.getItem('pending-write-requests') || '{}');
+    if (stored && typeof stored === 'object' && !Array.isArray(stored)) pendingWriteRequests = stored;
+  } catch (_) {}
+  var now = Date.now();
+  Object.keys(pendingWriteRequests).forEach(function(key) {
+    if (!pendingWriteRequests[key] || !/^[a-f0-9]{32}$/.test(pendingWriteRequests[key].key || '') || !Number.isFinite(pendingWriteRequests[key].expiresAt) || pendingWriteRequests[key].expiresAt <= now) delete pendingWriteRequests[key];
+  });
+  if (!pendingWriteRequests[fingerprint]) {
+    var random = new Uint8Array(16);
+    window.crypto.getRandomValues(random);
+    pendingWriteRequests[fingerprint] = { key: Array.from(random).map(function(byte) { return byte.toString(16).padStart(2, '0'); }).join(''), expiresAt: now + 24 * 60 * 60 * 1000 };
+  }
+  while (Object.keys(pendingWriteRequests).length > 100) delete pendingWriteRequests[Object.keys(pendingWriteRequests)[0]];
+  options.headers = options.headers || {};
+  options.headers['Idempotency-Key'] = pendingWriteRequests[fingerprint].key;
+  try { sessionStorage.setItem('pending-write-requests', JSON.stringify(pendingWriteRequests)); } catch (_) {}
+  return fingerprint;
+  } catch (_) {
+    // Older browsers may deny WebCrypto/storage; preserve the existing request path.
+    return null;
+  }
+}
+
+function finishWriteRequest(fingerprint, data) {
+  if (!fingerprint || !data || Number(data.code) >= 500 || Number(data.code) === 429) return;
+  delete pendingWriteRequests[fingerprint];
+  try { sessionStorage.setItem('pending-write-requests', JSON.stringify(pendingWriteRequests)); } catch (_) {}
+}
+
 async function requestJson(url, options, withAuth) {
   options = options || {};
   options.headers = options.headers || {};
@@ -153,6 +197,7 @@ async function requestJson(url, options, withAuth) {
   if (!hasHeader(options.headers, 'Content-Type') && !(options.body instanceof FormData)) {
     options.headers['Content-Type'] = 'application/json';
   }
+  var writeFingerprint = await prepareWriteRequest(url, options);
   var requestOptions = Object.assign({}, options);
   var timeoutMs = Number.parseInt(options.timeoutMs, 10);
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) timeoutMs = 15000;
@@ -177,6 +222,7 @@ async function requestJson(url, options, withAuth) {
       data = { code: res.status, message: text || ('请求失败（HTTP ' + res.status + '）') };
     }
     if (!res.ok && (data.code == null || data.code === 200)) data.code = res.status;
+    finishWriteRequest(writeFingerprint, data);
     return data;
   } catch (e) {
     return { code: 500, message: e && e.name === 'AbortError' ? '请求超时，请稍后重试' : '网络错误，请稍后重试' };

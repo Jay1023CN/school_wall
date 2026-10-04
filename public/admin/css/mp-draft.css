@@ -570,6 +570,31 @@ body.admin-mp-page [data-theme="dark"] .selection-action-bar,
   background: var(--mp-surface) !important;
 }
 
+[data-theme="dark"] body.admin-mp-page .preview-template-trigger,
+[data-theme="dark"] body.admin-mp-page .preview-theme-menu,
+[data-theme="dark"] body.admin-mp-page .preview-theme-option {
+  border-color: var(--mp-line) !important;
+  background: var(--mp-surface) !important;
+  color: var(--mp-ink) !important;
+}
+
+[data-theme="dark"] body.admin-mp-page .preview-theme-option:hover,
+[data-theme="dark"] body.admin-mp-page .preview-theme-option.is-active {
+  border-color: #8b7dd8 !important;
+  background: #252d45 !important;
+}
+
+[data-theme="dark"] body.admin-mp-page .preview-template-label small,
+[data-theme="dark"] body.admin-mp-page .preview-template-arrow {
+  color: var(--mp-muted) !important;
+}
+
+[data-theme="dark"] body.admin-mp-page #dailySongSelector,
+[data-theme="dark"] body.admin-mp-page #batchTplBar {
+  border-color: var(--mp-line) !important;
+  background: var(--mp-surface-muted) !important;
+}
+
 @media (max-width: 1024px) and (min-width: 769px) {
   body.admin-mp-page .container {
     width: min(100% - 32px, 1080px);
@@ -609,8 +634,8 @@ body.admin-mp-page [data-theme="dark"] .selection-action-bar,
 
   body.admin-mp-page .top-bar .back-link {
     flex: 0 0 auto;
-    min-height: 34px;
-    padding: 6px 9px;
+    min-height: 44px;
+    padding: 9px 12px;
     font-size: 11px;
   }
 
@@ -681,6 +706,12 @@ body.admin-mp-page [data-theme="dark"] .selection-action-bar,
   body.admin-mp-page .toolbar select,
   body.admin-mp-page .toolbar .btn-primary {
     grid-column: 1 / -1;
+  }
+
+  body.admin-mp-page input,
+  body.admin-mp-page select,
+  body.admin-mp-page textarea {
+    font-size: 16px !important;
   }
 
   body.admin-mp-page .toolbar #postStatus {

@@ -11,9 +11,10 @@ Thanks for helping improve the public mirror. It is safe to discuss and change a
 ## Making a change
 
 1. Read `docs/PROJECT_INDEX.md` to find the responsible page, route, service and test.
-2. Keep `frontend/` and `public/` identical when changing HTML, page JavaScript or CSS.
+2. Keep `frontend/` and `public/` identical when changing HTML, page JavaScript or CSS; run `npm run sync:frontend` and then `npm run check:mirrors`.
 3. Cover the affected desktop and mobile layout, including `768px/769px`, empty, loading, error and permission states where applicable.
 4. Update the code map when an entry point moves or its responsibility changes.
+5. For transaction, idempotency or durable-task changes, run the focused checks: `npm run test:schema-migrations`, `npm run test:write-transaction`, `npm run test:notification-outbox`, `npm run test:content-transactions`, `npm run test:mp-sync-jobs` and `npm run test:architecture-reliability` as applicable.
 
 ## Verify before opening a pull request
 

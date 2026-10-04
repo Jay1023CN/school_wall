@@ -8,7 +8,7 @@ const settings = {
   smtp_port: '587',
   smtp_user: 'noreply@example.test',
   smtp_pass: 'test-only-password',
-  smtp_from: '示例校园墙'
+  smtp_from: '嘉二の墙墙'
 };
 let createCount = 0;
 let closeCount = 0;
@@ -71,7 +71,7 @@ async function main() {
     { playDate: '2026-09-07', startTime: '12:10:00', endTime: '12:40:00' }
   );
   const songApproval = sent[3];
-  assert.strictEqual(songApproval.subject, '🎵 点歌审核通过 · 示例校园墙');
+  assert.strictEqual(songApproval.subject, '🎵 点歌审核通过 · 嘉二の墙墙');
   assert(songApproval.html.includes('2026年09月07日'), '审核通过邮件必须明确播放日期');
   assert(songApproval.html.includes('12:10 - 12:40'), '审核通过邮件必须明确开始和结束时间');
   assert(songApproval.html.includes('午间广播'), '审核通过邮件必须明确时段名');

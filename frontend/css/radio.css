@@ -526,3 +526,35 @@ body.radio-page .hot-song-vote .vote-count { color: #aa6045; font-size: .78rem; 
   }
 }
 /* End radio page styles. */
+
+html.notification-sidebar-open {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+/* 横屏桌面：排行榜改为表单和今日排歌下方的横向浏览区。 */
+@media (min-width: 769px) and (orientation: landscape) {
+  body.radio-page .radio-form-section {
+    grid-row: 2;
+  }
+
+  body.radio-page .hot-songs-section {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  body.radio-page .hot-songs-list {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(260px, 1fr);
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 0 0 8px;
+  }
+
+  body.radio-page .hot-song-item {
+    height: 100%;
+    align-items: flex-start;
+  }
+}

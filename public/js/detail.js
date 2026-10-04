@@ -5,6 +5,10 @@
  */
 // 已移到 app.js，全局共享
 
+function renderBookmarkIcon(active) {
+  return '<svg class="ui-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z"' + (active ? ' fill="currentColor"' : '') + '></path></svg>';
+}
+
 /**
  * 记录帖子浏览量（QQ空间风格）
  * - 1分钟内同一帖子不重复计数
@@ -35,14 +39,14 @@ function updatePostMetaTags(post) {
   var title = post.title || '帖子详情';
   var content = (post.content || '').replace(/<[^>]+>/g, '').trim();
   var desc = content.length > 120 ? content.substring(0, 120) + '...' : content;
-  if (!desc) desc = '查看示例校园墙上的帖子详情';
-  document.title = title + ' - 示例校园墙';
+  if (!desc) desc = '查看嘉二の墙墙上的帖子详情';
+  document.title = title + ' - 嘉二の墙墙';
   var metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) metaDesc.setAttribute('content', desc);
   var metaKeywords = document.querySelector('meta[name="keywords"]');
-  if (metaKeywords) metaKeywords.setAttribute('content', title + ',示例校园,校园墙,校园社区');
+  if (metaKeywords) metaKeywords.setAttribute('content', title + ',嘉定二中,校园墙,校园社区');
   var ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute('content', title + ' - 示例校园墙');
+  if (ogTitle) ogTitle.setAttribute('content', title + ' - 嘉二の墙墙');
   var ogDesc = document.querySelector('meta[property="og:description"]');
   if (ogDesc) ogDesc.setAttribute('content', desc);
 }
@@ -177,10 +181,10 @@ async function handleFavorite(btn) {
     var icon = btn.querySelector('.action-icon');
     if (data.data.favorited) {
       btn.classList.add('favorited');
-      icon.textContent = '⭐';
+      if (icon) icon.innerHTML = renderBookmarkIcon(true);
     } else {
       btn.classList.remove('favorited');
-      icon.textContent = '☆';
+      if (icon) icon.innerHTML = renderBookmarkIcon(false);
     }
   } else {
     showToast(data.message || '操作失败', 'error');
@@ -386,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
           '<span class="action-count">' + (post.views || 0) + '</span>' +
         '</button>' +
         '<button class="action-btn ' + (isFavorited ? 'favorited' : '') + '" id="btnFavorite">' +
-          '<span class="action-icon">' + (isFavorited ? '⭐' : '☆') + '</span>' +
+          '<span class="action-icon">' + renderBookmarkIcon(!!isFavorited) + '</span>' +
           '<span class="action-count"></span>' +
         '</button>' +
       '</div>';
@@ -1320,7 +1324,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 右侧：站点卡片
     var rightCard = document.createElement('div');
     rightCard.className = 'side-deco-card side-deco-right';
-    var siteName = '示例校园墙';
+    var siteName = '嘉二の墙墙';
     try {
       var cached = localStorage.getItem('siteSettings');
       if (cached) { var s = JSON.parse(cached); if (s.site_name) siteName = s.site_name; }

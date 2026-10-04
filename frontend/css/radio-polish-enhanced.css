@@ -220,3 +220,72 @@ body.radio-page .hot-song-vote .vote-btn:hover {
 body.radio-page .hot-song-vote .vote-btn:active {
   transform: scale(0.92) !important;
 }
+
+/* --- 5. 点歌台深色模式全量适配（深空极光质感） --- */
+[data-theme="dark"] body.radio-page .radio-form-card,
+[data-theme="dark"] body.radio-page .hot-songs-section,
+[data-theme="dark"] body.radio-page .playlist-section {
+  background: var(--bg-card) !important;
+  border-color: var(--border-light) !important;
+  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] body.radio-page .hot-song-item,
+[data-theme="dark"] body.radio-page .playlist-item,
+[data-theme="dark"] body.radio-page .slot-card-item {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-light) !important;
+}
+
+[data-theme="dark"] body.radio-page .hot-song-item:hover,
+[data-theme="dark"] body.radio-page .playlist-item:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: var(--primary) !important;
+}
+
+[data-theme="dark"] body.radio-page .radio-form input,
+[data-theme="dark"] body.radio-page .radio-form select,
+[data-theme="dark"] body.radio-page .radio-form textarea {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] body.radio-page .radio-form input:focus,
+[data-theme="dark"] body.radio-page .radio-form select:focus,
+[data-theme="dark"] body.radio-page .radio-form textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(255, 131, 170, 0.2) !important;
+}
+
+[data-theme="dark"] body.radio-page .hot-song-name,
+[data-theme="dark"] body.radio-page .playlist-item .song-name,
+[data-theme="dark"] body.radio-page .form-label {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] body.radio-page .hot-song-artist,
+[data-theme="dark"] body.radio-page .playlist-item .song-artist,
+[data-theme="dark"] body.radio-page .radio-subtitle {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] body.radio-page .hot-song-vote .vote-btn {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #F87171 !important;
+}
+
+/* 移动端 (≤768px) 表单与歌曲列表触控热区 */
+@media (max-width: 768px) {
+  body.radio-page .radio-form-card,
+  body.radio-page .hot-songs-section {
+    padding: 18px 14px !important;
+    border-radius: 16px !important;
+  }
+
+  body.radio-page .hot-song-item {
+    padding: 10px 12px !important;
+    min-height: 44px !important;
+  }
+}

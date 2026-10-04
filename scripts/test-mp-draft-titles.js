@@ -77,7 +77,7 @@ const previewArticle = normalizeDraftArticle({
   title: '<b>晚自习后的操场</b>\n',
   digest: '  同学们在聊夜跑。  ',
   content: '<p>实际发送的正文</p>',
-  content_source_url: 'http://localhost:3000/post/42',
+  content_source_url: 'https://wall.jay23.cn/post/42',
   thumb_media_id: 'thumb-id',
   video_url: 'https://example.invalid/video.mp4'
 });

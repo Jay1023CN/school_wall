@@ -27,11 +27,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#FAFBFE" id="themeColorMeta">
-  <title>示例校园墙 - 编辑帖子</title>
+  <title>嘉二の墙墙 - 编辑帖子</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/animations.css">
   <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/campus-ui-polish.css">
+  <link rel="stylesheet" href="/css/mobile-fix.css">
   <script src="/js/theme-mode.js" defer></script>
   <style>
     .editor-toolbar {
@@ -39,29 +41,27 @@
       align-items: center;
       gap: 12px;
       padding: 14px 18px;
-      background: linear-gradient(180deg, #ffffff, #f8f9fa);
-      border: 1px solid #e9ecef;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
       border-bottom: none;
       border-radius: 12px 12px 0 0;
       margin-bottom: -1px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
     }
     .editor-btn {
       padding: 7px 14px;
-      border: 1px solid #e0e3e8;
-      background: #fff;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
       border-radius: 8px;
       cursor: pointer;
       font-size: 0.95rem;
       font-weight: 600;
-      color: #4a4a4a;
+      color: var(--text-primary);
       transition: all 0.2s ease;
       min-width: 40px;
       height: 34px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     }
     .editor-btn b { font-weight: 800; }
     .editor-btn:hover {
@@ -74,7 +74,7 @@
     .editor-btn:active { transform: translateY(0); }
     .editor-btn-mark { font-size: 1rem; line-height: 1; }
     .editor-btn-label { white-space: nowrap; font-size: .8rem; }
-    .editor-toolbar-hint { color: #78918c; font-size: .76rem; white-space: nowrap; }
+    .editor-toolbar-hint { color: var(--text-light); font-size: .76rem; white-space: nowrap; }
     .word-counter {
       margin-left: auto;
       font-size: 0.82rem;
@@ -96,11 +96,11 @@
     .emoji-picker {
       display: none;
       position: absolute;
-      background: #fff;
-      border: 1px solid #dee2e6;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      box-shadow: var(--shadow-lg);
       z-index: 100;
       max-width: 320px;
       flex-wrap: wrap;
@@ -288,7 +288,7 @@
   <!-- 导航栏 -->
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
-      <a href="/" class="nav-logo">🏠 示例校园墙</a>
+      <a href="/" class="nav-logo">🏠 嘉二の墙墙</a>
       <div class="nav-links" id="navLinks">
         <a href="/" class="nav-link" data-page="home"><span>🏠</span> 首页</a>
         <a href="/radio" class="nav-link" data-page="radio"><span>🎵</span> 点歌</a>
@@ -401,7 +401,7 @@
     </div>
   </div>
 
-  <script src="/js/app.js"></script>
+  <script src="/js/app.js?v=2026100401"></script>
   <script src="/js/post-editor.js"></script>
   <script src="/js/edit-post.js?v=20261003"></script>
   <script>
@@ -410,7 +410,7 @@
   <script>var currentUser = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null');</script>
   <script>
     (function() {
-      var defaultSiteName = '示例校园墙';
+      var defaultSiteName = '嘉二の墙墙';
       var cachedSettings = localStorage.getItem('siteSettings');
       if (cachedSettings) {
         try {
@@ -467,7 +467,7 @@
   </nav>
   
   <footer class="footer">
-    <p>&copy; 2026 示例校园墙 All Rights Reserved</p>
+    <p>&copy; 2026 嘉二の墙墙 All Rights Reserved</p>
     <p><a href="https://beian.miit.gov.cn/" target="_blank" rel="nofollow">粤ICP备2025514735号-3</a></p>
   </footer>
   <style id="edit-post-page-responsive-polish">

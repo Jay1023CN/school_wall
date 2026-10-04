@@ -131,7 +131,7 @@
   }
 
   function initAll() {
-    // ===== 高考倒计时 =====
+    // ===== 校园大考倒计时 (上海春考 / 等级考 / 高考联动切换) =====
     (function() {
       var sideEl = document.getElementById('sideGaokaoCountdown');
       var progressBar = document.getElementById('progressBar');
@@ -140,11 +140,12 @@
       var sideGaokaoTitle = sideGaokao ? sideGaokao.querySelector('.side-card-title') : null;
       var sideGaokaoIcon = sideGaokao ? sideGaokao.querySelector('.side-card-icon') : null;
 
-      var currentMode = 'gaokao';
       var exams = {
-        gaokao: { name: '高考', month: 6, day: 7, hour: 9, icon: '📚' },
-        dengkao: { name: '等级考', month: 5, day: 5, hour: 9, icon: '📝' }
+        chunkao: { name: '上海春考', shortName: '春考', month: 1, day: 6, hour: 9, icon: '🌸' },
+        dengkao: { name: '等级考', shortName: '等级考', month: 5, day: 5, hour: 9, icon: '📝' },
+        gaokao: { name: '高考', shortName: '高考', month: 6, day: 7, hour: 9, icon: '📚' }
       };
+      var examOrder = ['chunkao', 'dengkao', 'gaokao'];
 
       function getExamDate(exam) {
         var now = new Date();
@@ -155,6 +156,23 @@
         }
         return examDate;
       }
+
+      function getNearestMode() {
+        var now = new Date();
+        var minDiff = Infinity;
+        var nearest = 'chunkao';
+        examOrder.forEach(function(key) {
+          var diff = getExamDate(exams[key]) - now;
+          if (diff > 0 && diff < minDiff) {
+            minDiff = diff;
+            nearest = key;
+          }
+        });
+        return nearest;
+      }
+
+      var currentMode = getNearestMode();
+      var autoSwitchTimer = null;
 
       function update() {
         var now = new Date();
@@ -185,8 +203,16 @@
       }
 
       function switchMode() {
-        currentMode = currentMode === 'gaokao' ? 'dengkao' : 'gaokao';
+        var idx = examOrder.indexOf(currentMode);
+        currentMode = examOrder[(idx + 1) % examOrder.length];
         update();
+      }
+
+      function resetAutoSwitch() {
+        if (autoSwitchTimer) clearInterval(autoSwitchTimer);
+        autoSwitchTimer = setInterval(function() {
+          switchMode();
+        }, 6000);
       }
 
       update();
@@ -194,16 +220,16 @@
 
       if (sideGaokao) {
         sideGaokao.style.cursor = 'pointer';
+        sideGaokao.setAttribute('title', '点击切换春考/等级考/高考倒计时');
         sideGaokao.addEventListener('click', function() {
           switchMode();
-          this.style.transform = 'translateY(-50%) scale(0.92)';
-          setTimeout(function() { this.style.transform = ''; }.bind(this), 150);
+          resetAutoSwitch();
+          this.style.transform = 'scale(0.96)';
+          var self = this;
+          setTimeout(function() { self.style.transform = ''; }, 150);
         });
 
-        // 自动轮播每5秒切换
-        setInterval(function() {
-          switchMode();
-        }, 5000);
+        resetAutoSwitch();
       }
     })();
 

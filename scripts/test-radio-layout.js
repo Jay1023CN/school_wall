@@ -26,7 +26,7 @@ assert(radioCss.includes('@media (max-width: 768px)'), '移动端布局必须使
 assert(radioHtml.indexOf('class="radio-section playlist-section"') < radioHtml.indexOf('class="radio-section radio-form-section"'), '移动端播放状态必须排在表单之前');
 assert(radioHtml.indexOf('class="radio-section radio-form-section"') < radioHtml.indexOf('class="radio-section hot-songs-section"'), '移动端表单必须排在排行榜之前');
 assert(radioJs.includes('visibleCount > 0') && radioJs.includes('📢 今日排歌进行中'), '播放列表加载后必须更新通知条');
-assert(radioHtml.includes('<link rel="stylesheet" href="/css/radio.css">'), '点歌页必须加载专属样式表');
+assert(radioHtml.includes('<link rel="stylesheet" href="/css/radio.css'), '点歌页必须加载专属样式表');
 assert(!radioHtml.includes('id="page-responsive-fix"') && !radioHtml.includes('id="radio-layout-rebuild"'), '点歌页不应保留重复的内联终态样式');
 assert(radioHtml.includes('for="songName"') && radioHtml.includes('for="songArtist"') && radioHtml.includes('for="songRecipient"'), '表单标签必须关联输入字段');
 assert(radioHtml.includes('id="slotSelectLabel"') && radioHtml.includes('aria-labelledby="slotSelectLabel"'), '播放时段必须提供可访问名称');

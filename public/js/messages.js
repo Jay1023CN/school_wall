@@ -762,7 +762,12 @@ async function fetchWithAuth(url, options = {}) {
     ...options.headers
   };
   
-  const response = await fetch(url, { ...options, headers });
+  const requestOptions = { ...options, headers };
+  const fingerprint = typeof prepareWriteRequest === 'function' ? await prepareWriteRequest(url, requestOptions) : null;
+  const response = await fetch(url, requestOptions);
+  if (fingerprint && typeof finishWriteRequest === 'function') {
+    try { finishWriteRequest(fingerprint, await response.clone().json()); } catch (_) {}
+  }
   
   if (response.status === 401) {
     // token过期，提示重新登录（不自动跳转）

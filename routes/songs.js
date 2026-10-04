@@ -1,3 +1,4 @@
+const { runWriteTransaction } = require('../services/write-transaction');
 const express = require('express');
 const { maintenance } = require('../modules/songs');
 const { parseBoundedPositiveInt } = require('../services/number-utils');
@@ -142,9 +143,7 @@ router.post('/', auth, async (req, res) => {
     }
     
     let pendingReviewNotice = null;
-    const connection = await pool.getConnection();
-    try {
-      await connection.beginTransaction();
+    const outcome = await runWriteTransaction(pool, req, 'songs:create', async connection => {
       const { today, rangeEnd } = getChinaDayRange();
 
       // 锁定用户和日期行，使每日上限、名额检查与插入保持同一事务。
@@ -156,15 +155,13 @@ router.post('/', auth, async (req, res) => {
         [slotDateId, today, rangeEnd]
       );
     if (slotDates.length === 0) {
-        await connection.rollback();
-        return res.json({ code: 400, message: '该时段日期不可用或已过期' });
+        return { status: 400, body: { code: 400, message: '该时段日期不可用或已过期' } };
       }
 
       const slotDate = slotDates[0];
       const actualSlotId = slotDate.slot_id;
       if (slot_id && String(slot_id) !== String(actualSlotId)) {
-        await connection.rollback();
-        return res.json({ code: 400, message: '时段日期不匹配' });
+        return { status: 400, body: { code: 400, message: '时段日期不匹配' } };
       }
 
       // 数据库中的 slot_dates 是历史生成记录；周期配置可能已被管理员调整。
@@ -172,8 +169,7 @@ router.post('/', auth, async (req, res) => {
       const allowedDays = String(slotDate.weekdays || '')
         .split(',').map(Number).filter(day => Number.isInteger(day) && day >= 0 && day <= 6);
       if (allowedDays.length > 0 && Number(slotDate.manual_override) !== 1 && !allowedDays.includes(getChinaJsDayOfWeek(slotDate.play_date))) {
-        await connection.rollback();
-        return res.json({ code: 400, message: '该日期不在当前开放周期内，请选择其他日期' });
+        return { status: 400, body: { code: 400, message: '该日期不在当前开放周期内，请选择其他日期' } };
       }
 
       const [countResult] = await connection.execute(
@@ -181,8 +177,7 @@ router.post('/', auth, async (req, res) => {
         [slotDateId]
       );
       if (Number(countResult[0].cnt) >= Number(slotDate.max_songs)) {
-        await connection.rollback();
-        return res.json({ code: 400, message: '该时段点歌已满' });
+        return { status: 400, body: { code: 400, message: '该时段点歌已满' } };
       }
 
       const [settingsRows] = await connection.execute('SELECT config_value FROM settings WHERE config_key = "daily_song_limit"');
@@ -195,15 +190,14 @@ router.post('/', auth, async (req, res) => {
         [req.user.id, todayStart, tomorrowStart]
       );
       if (Number(userSongCount[0].cnt) >= dailyLimit) {
-        await connection.rollback();
-        return res.json({ code: 400, message: '您今日已点' + dailyLimit + '首歌，已达到每日上限，请明天再来' });
+        return { status: 400, body: { code: 400, message: '您今日已点' + dailyLimit + '首歌，已达到每日上限，请明天再来' } };
       }
 
       const [result] = await connection.execute(
         'INSERT INTO song_requests (user_id, song_name, artist, message, to_whom, slot_id, slot_date_id, is_anonymous) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [req.user.id, songName, songArtist, message || '', to_whom || '', actualSlotId, slotDateId, anonymous ? 1 : 0]
       );
-      await connection.commit();
+
       pendingReviewNotice = {
         songName,
         artist: songArtist,
@@ -213,13 +207,10 @@ router.post('/', auth, async (req, res) => {
         endTime: slotDate.end_time,
         requesterName: anonymous ? '匿名' : (req.user.nickname || req.user.username || '同学')
       };
-      res.json({ code: 200, message: '点歌成功', data: { id: result.insertId } });
-    } catch (transactionError) {
-      try { await connection.rollback(); } catch (_) {}
-      throw transactionError;
-    } finally {
-      connection.release();
-    }
+      return { status: 200, body: { code: 200, message: '点歌成功', data: { id: result.insertId } } };
+    });
+    res.status(outcome.status).json(outcome.body);
+    if (outcome.replayed || outcome.status >= 400) return;
 
     // 邮件只在事务提交成功后异步发送；SMTP 或邮件日志失败均不能影响点歌结果。
     if (pendingReviewNotice) {

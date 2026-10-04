@@ -40,10 +40,7 @@ function validateRegistrationFields(body, requireEmail) {
 }
 
 function getClientIdentity(req) {
-  const forwarded = typeof req.headers['x-forwarded-for'] === 'string'
-    ? req.headers['x-forwarded-for'].split(',')[0].trim()
-    : '';
-  const value = forwarded || req.ip || 'unknown';
+  const value = require('../services/ip-lookup').getClientIp(req) || 'unknown';
   return String(value).replace(/^::ffff:/, '').slice(0, 64) || 'unknown';
 }
 
@@ -253,7 +250,7 @@ router.post('/send-register-email-code', async (req, res) => {
       return res.json({ code: 403, message: '当前未开启邮箱验证注册' });
     }
 
-    const clientIp = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+    const clientIp = require('../services/ip-lookup').getClientIp(req);
     const rate = checkRegisterEmailRateLimit(clientIp, email);
     if (!rate.allowed) return res.json({ code: 429, message: rate.message });
 
@@ -420,7 +417,11 @@ router.post('/register-wechat', async (req, res) => {
     const record = codes[0];
     let formData;
     try {
-      formData = JSON.parse(record.form_data);
+      // mysql2 may decode MySQL JSON columns into an object. Older drivers and
+      // some schemas return the same value as a JSON string, so accept both.
+      formData = typeof record.form_data === 'string'
+        ? JSON.parse(record.form_data)
+        : record.form_data;
     } catch (parseError) {
       await connection.rollback();
       return res.json({ code: 400, message: '注册信息无效，请重新操作' });

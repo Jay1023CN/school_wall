@@ -5,172 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>订阅号配置说明</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
-  line-height: 1.8;
-  color: #333;
-  background: #f5f5f5;
-  padding: 20px;
-}
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  background: #fff;
-  border-radius: 12px;
-  padding: 40px 50px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.08);
-}
-h1 { font-size: 1.8em; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #3B82F6; color: #1a1a1a; }
-h2 { font-size: 1.4em; margin: 28px 0 14px; color: #2c3e50; }
-h3 { font-size: 1.15em; margin: 22px 0 10px; color: #34495e; }
-p { margin: 12px 0; }
-ul, ol { margin: 10px 0; padding-left: 24px; }
-li { margin: 6px 0; }
-code {
-  background: #f0f2f5;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.9em;
-  color: #e74c3c;
-  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
-}
-pre {
-  background: #282c34;
-  color: #abb2bf;
-  padding: 16px 20px;
-  border-radius: 8px;
-  overflow-x: auto;
-  font-size: 0.85em;
-  line-height: 1.5;
-  margin: 16px 0;
-}
-pre code { background: none; color: inherit; padding: 0; }
-blockquote {
-  border-left: 4px solid #3B82F6;
-  background: #f0f7ff;
-  padding: 12px 18px;
-  margin: 16px 0;
-  border-radius: 0 8px 8px 0;
-  color: #555;
-}
-a { color: #3B82F6; text-decoration: none; }
-a:hover { text-decoration: underline; }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 16px 0;
-}
-th, td {
-  border: 1px solid #e0e0e0;
-  padding: 8px 12px;
-  text-align: left;
-}
-th { background: #f8f9fa; font-weight: 600; }
-img { max-width: 100%; border-radius: 6px; }
-hr { border: none; border-top: 1px solid #eee; margin: 24px 0; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: #f5f7fb; color: #243247; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+.container { max-width: 820px; margin: 0 auto; padding: 32px 40px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 8px 30px rgba(15, 23, 42, .06); }
+h1 { margin: 0 0 8px; color: #1e293b; font-size: 28px; }
+h2 { margin: 28px 0 10px; color: #334155; font-size: 20px; }
+h3 { margin: 20px 0 8px; color: #475569; font-size: 17px; }
+p { margin: 10px 0; }
+ul, ol { margin: 8px 0; padding-left: 24px; }
+code, pre { font-family: "SFMono-Regular", Consolas, monospace; }
+code { padding: 1px 5px; border-radius: 4px; background: #f1f5f9; color: #b42318; }
+pre { overflow-x: auto; padding: 14px 16px; border-radius: 8px; background: #0f172a; color: #e2e8f0; }
+.note { padding: 12px 16px; border-left: 4px solid #3b82f6; background: #eff6ff; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+th, td { padding: 8px 10px; border: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+th { background: #f8fafc; }
+@media (max-width: 600px) { body { padding: 12px; } .container { padding: 24px 18px; } }
 </style>
 </head>
 <body>
-<div class="container">
+<main class="container">
 <h1>订阅号配置说明</h1>
-<h2>已完成的代码适配</h2>
-<p>✅ 已移除带参数二维码功能，改为固定公众号二维码<br />
-✅ 已禁用模板消息功能（订阅号不支持）<br />
-✅ 保留了基础功能：用户信息获取、消息接收</p>
-<h2>你需要完成的配置</h2>
-<h3>1. 获取公众号二维码</h3>
+<p class="note">本文只记录当前源码支持的配置和流程。Token、AES Key、Secret、JWT 密钥等真实值只能放在服务器私有环境变量中，不能写入仓库、日志或截图。</p>
+
+<h2>一、服务器回调</h2>
+<p>微信公众平台的服务器地址使用：</p>
+<pre>https://你的域名/api/wechat/callback</pre>
+<p>回调由 <code>routes/wechat.js</code> 处理 GET 验证和 POST 消息。签名校验默认要求时间戳在最近 5 分钟内；可通过 <code>WECHAT_SIGNATURE_TTL_SECONDS</code> 调整，消息体上限由 <code>WECHAT_BODY_LIMIT_BYTES</code> 控制。</p>
+<p>在服务器私有配置中填写以下变量，值从微信公众平台获取：</p>
+<pre>WECHAT_TOKEN=请填入公众号服务器配置中的Token
+WECHAT_ENCODING_AES_KEY=请填入公众号服务器配置中的EncodingAESKey
+WECHAT_APPID=请填入公众号AppID
+WECHAT_SECRET=请填入公众号AppSecret</pre>
+<p><code>WECHAT_TOKEN</code> 用于签名，启用安全模式或兼容模式时还需要 <code>WECHAT_ENCODING_AES_KEY</code>。<code>WECHAT_SECRET</code> 用于公众号接口调用和 access token 获取；未配置时相关服务不会启动。</p>
+
+<h2>二、当前支持的订阅号能力</h2>
+<ul>
+<li>接收关注、取消关注、文本、图片、语音、位置和链接消息。</li>
+<li>通过固定公众号二维码完成关注，再在对话中发送绑定码；不依赖带参数二维码。</li>
+<li>模板消息发送函数保留兼容接口，但订阅号不支持模板消息，当前不会实际发送。</li>
+</ul>
+
+<h2>三、网站绑定流程</h2>
 <ol>
-<li>登录微信公众平台：https://mp.weixin.qq.com</li>
-<li>进入 <strong>设置与开发</strong> → <strong>公众号设置</strong> → <strong>账号详情</strong></li>
-<li>点击 <strong>下载二维码</strong></li>
-<li>将下载的二维码图片重命名为 <code>wechat-qrcode.png</code></li>
-<li>放到 <code>public/images/</code> 目录下</li>
+<li>用户登录个人中心，点击“绑定微信”。</li>
+<li>网站调用 <code>POST /api/wechat/generate-bind</code>，返回一次性绑定码和固定二维码 <code>/images/gzh.jpg</code>。</li>
+<li>用户扫码关注公众号后，在对话中发送页面显示的绑定码。</li>
+<li>页面调用 <code>POST /api/wechat/verify-follow</code> 检查绑定状态；已绑定账号可通过 <code>POST /api/wechat/unbind</code> 解除绑定。</li>
 </ol>
-<p><strong>重要</strong>：网站端的微信绑定功能需要此二维码图片，请确保已放置！</p>
-<h3>2. 配置服务器域名（必需）</h3>
-<p>如果你需要接收用户消息和关注事件，需要配置服务器：</p>
+<p>绑定状态查询使用 <code>GET /api/wechat/status</code>。绑定码和关注记录有有效期，页面提示失效后重新生成即可。</p>
+
+<h2>四、上线前检查</h2>
 <ol>
-<li>登录微信公众平台</li>
-<li>进入 <strong>设置与开发</strong> → <strong>基本配置</strong></li>
-<li>找到 <strong>服务器配置</strong> 部分</li>
-<li>配置以下信息：</li>
-<li><strong>服务器地址(URL)</strong>：<code>https://你的域名/api/wechat/callback</code></li>
-<li><strong>Token</strong>：<code>example_token_change_me</code>（与代码中一致）</li>
-<li><strong>EncodingAESKey</strong>：<code>YrPSemEzvB38xDrD6R1WQd7pPQL7ctvXXnUZ7KnB3nF</code>（已配置）</li>
-<li><strong>消息加解密方式</strong>：安全模式（推荐）或兼容模式</li>
-<li>点击 <strong>提交</strong> 完成验证</li>
+<li>确认服务器使用 HTTPS，回调路径可从公网访问。</li>
+<li>确认私有环境变量已加载，真实值未出现在 Git 差异、日志和前端资源中。</li>
+<li>在微信公众平台提交服务器配置，检查 GET 验证返回微信提供的 <code>echostr</code>。</li>
+<li>用测试账号验证关注、发送绑定码、状态查询和解除绑定。</li>
 </ol>
-<p><strong>注意</strong>：代码已自动配置了你提供的 EncodingAESKey，无需手动修改。</p>
-<h3>3. 订阅号功能限制说明</h3>
-<table>
-<thead>
-<tr>
-<th>功能</th>
-<th>订阅号</th>
-<th>服务号</th>
-<th>当前状态</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>生成带参数二维码</td>
-<td>❌</td>
-<td>✅</td>
-<td>已改为固定二维码</td>
-</tr>
-<tr>
-<td>模板消息通知</td>
-<td>❌</td>
-<td>✅</td>
-<td>已禁用</td>
-</tr>
-<tr>
-<td>网页授权登录</td>
-<td>❌</td>
-<td>✅</td>
-<td>保持不变</td>
-</tr>
-<tr>
-<td>接收关注/扫码事件</td>
-<td>✅</td>
-<td>✅</td>
-<td>正常工作</td>
-</tr>
-<tr>
-<td>获取用户OpenID</td>
-<td>✅</td>
-<td>✅</td>
-<td>正常工作</td>
-</tr>
-<tr>
-<td>获取用户昵称头像</td>
-<td>✅</td>
-<td>✅</td>
-<td>正常工作</td>
-</tr>
-</tbody>
-</table>
-<h3>4. 用户绑定流程变化</h3>
-<p><strong>原流程（服务号）：</strong><br />
-1. 用户扫码 → 自动追踪 → 完成绑定</p>
-<p><strong>新流程（订阅号）：</strong><br />
-1. 用户看到公众号二维码<br />
-2. 用户手动扫码关注<br />
-3. 用户需要手动刷新页面确认绑定<br />
-4. 系统通过其他方式验证绑定状态</p>
-<h3>5. 后续建议</h3>
-<p>如果你需要完整功能（带参数二维码、模板消息），建议：<br />
-- 升级公众号为服务号（需要企业认证）<br />
-- 或者重新注册一个服务号</p>
-<h2>测试验证</h2>
-<p>启动服务器后，访问以下地址测试：<br />
-- 首页：http://localhost:3000<br />
-- 微信绑定页面：在个人中心点击"绑定微信"</p>
-<p>如果遇到问题，请检查：<br />
-1. 公众号二维码图片是否正确放置<br />
-2. 服务器域名是否已配置（如需接收事件）<br />
-3. Token 是否与公众号后台一致</p>
-</div>
+</main>
 </body>
 </html>

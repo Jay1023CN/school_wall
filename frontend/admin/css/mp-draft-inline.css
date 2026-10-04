@@ -1,0 +1,1997 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fb; color: #333; min-height: 100vh;
+        }
+        [data-theme="dark"] body {
+            background: #1a1a2e; color: #e0e0e0;
+        }
+
+        /* ===== 顶部导航 ===== */
+        .top-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 16px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .top-bar h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .top-bar .back-link {
+            color: white; text-decoration: none; font-size: 14px;
+            display: flex; align-items: center; gap: 6px; opacity: 0.85;
+            padding: 6px 14px; border-radius: 20px; background: rgba(255,255,255,0.15);
+            transition: opacity 0.2s, background 0.2s;
+        }
+        .top-bar .back-link:hover { opacity: 1; background: rgba(255,255,255,0.25); }
+
+        /* ===== 主体容器 ===== */
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+        /* ===== Tab导航 ===== */
+        .tabs {
+            display: flex; gap: 4px; background: white; border-radius: 12px;
+            padding: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 24px;
+        }
+        [data-theme="dark"] .tabs { background: #16213e; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .tab-btn {
+            flex: 1; padding: 12px 20px; border: none; background: transparent;
+            font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 10px;
+            color: #888; transition: all 0.3s;
+        }
+        .tab-btn:hover { color: #667eea; background: rgba(102,126,234,0.08); }
+        .tab-btn.active { color: white; background: linear-gradient(135deg, #667eea, #764ba2); }
+        [data-theme="dark"] .tab-btn.active { color: white; }
+        .tab-btn .badge {
+            display: inline-block; background: rgba(255,107,157,0.2); color: #FF6B9D;
+            font-size: 11px; padding: 1px 8px; border-radius: 10px; margin-left: 6px;
+        }
+        .tab-btn.active .badge { background: rgba(255,255,255,0.3); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ===== 面板卡片 ===== */
+        .card {
+            background: white; border-radius: 16px; padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+        }
+        [data-theme="dark"] .card { background: #16213e; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+        .card-title {
+            font-size: 16px; font-weight: 700; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card-desc { font-size: 13px; color: #999; margin-bottom: 16px; }
+
+        /* ===== 工具栏 ===== */
+        .toolbar {
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+        }
+        .toolbar label { font-size: 13px; color: #888; }
+        .toolbar select, .toolbar input {
+            padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 8px;
+            font-size: 13px; background: white; color: #333;
+        }
+        [data-theme="dark"] .toolbar select, [data-theme="dark"] .toolbar input {
+            background: #1a1a2e; border-color: #333; color: #e0e0e0;
+        }
+        .btn {
+            padding: 8px 20px; border: none; border-radius: 10px; font-size: 14px;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-success { background: linear-gradient(135deg, #43e97b, #38f9d7); color: white; }
+        .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(67,233,123,0.4); }
+        .btn-danger { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+        .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,87,108,0.4); }
+        .btn-outline {
+            background: transparent; border: 1px solid #667eea; color: #667eea;
+        }
+        .btn-outline:hover { background: rgba(102,126,234,0.08); }
+        [data-theme="dark"] .btn-outline { border-color: #667eea; color: #667eea; }
+        .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+
+        /* ===== 帖子表格 ===== */
+        .post-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .post-table th {
+            text-align: left; padding: 10px 12px; border-bottom: 2px solid #f0f0f0;
+            color: #888; font-weight: 600; font-size: 12px;
+        }
+        .post-table td { padding: 10px 12px; border-bottom: 1px solid #f5f5f5; }
+        [data-theme="dark"] .post-table th { border-bottom-color: #333; }
+        [data-theme="dark"] .post-table td { border-bottom-color: #2a2a3e; }
+        .post-table tr:hover td { background: rgba(102,126,234,0.03); }
+        .post-table tr.row-selected td { background: rgba(102,126,234,0.08); }
+        [data-theme="dark"] .post-table tr.row-selected td { background: rgba(102,126,234,0.15); }
+        .post-table .post-title { font-weight: 600; color: #333; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .post-table .post-preview { font-size: 12px; color: #aaa; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; line-height: 1.4; }
+        [data-theme="dark"] .post-table .post-title { color: #e0e0e0; }
+        .post-table .post-author { color: #888; font-size: 12px; }
+        .post-table .post-stats { color: #999; font-size: 12px; white-space: nowrap; }
+        .post-table .checkbox-cell { width: 36px; text-align: center; }
+        .post-table input[type="checkbox"] {
+            width: 16px; height: 16px; cursor: pointer; accent-color: #667eea;
+        }
+        .select-all { font-size: 12px; color: #667eea; cursor: pointer; margin-left: 8px; }
+        .select-all:hover { text-decoration: underline; }
+
+        /* ===== 预览区域 ===== */
+        .preview-area {
+            border: 2px dashed #FFD1DC; border-radius: 20px; padding: 24px;
+            max-height: 600px; overflow-y: auto; background: linear-gradient(135deg, #FFF5F8, #F8F0FF, #F0F8FF);
+            font-size: 14px; line-height: 1.6; overflow-x: hidden;
+        }
+        /* 预览内部所有内容(卡片/列表)统一居中且不超过 680px,避免大屏下"贴左/贴右下" */
+        .preview-area > * { max-width: 680px; width: 100%; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+        .preview-area > div[style] { box-sizing: border-box; max-width: min(680px, 100%) !important; }
+        /* 防止内嵌 flex/grid 子元素(min-width 内容大小)撑爆父容器 */
+        .preview-area * { max-width: 100%; }
+        .preview-area img { height: auto; }
+        /* 移动端进一步缩小内嵌卡片的 padding,避免子元素溢出 */
+        @media (max-width: 600px) {
+            .preview-area { padding: 12px !important; }
+            .preview-area > div[style] { max-width: 100% !important; }
+            .preview-area > div[style] > div[style] { max-width: 100% !important; }
+            .preview-area img { max-width: 100% !important; height: auto !important; }
+            .preview-area .song-name, .preview-area [class*="song"] { word-break: break-word; overflow-wrap: anywhere; }
+            .preview-area div[style*="white-space:nowrap"] { white-space: normal !important; }
+        }
+        [data-theme="dark"] .preview-area { background: #1a1a2e; border-color: #333; }
+        .preview-area .placeholder {
+            text-align: center; padding: 60px 20px; color: #ccc;
+        }
+        .preview-area .placeholder .icon { font-size: 56px; margin-bottom: 16px; }
+        .preview-area .placeholder .text { font-size: 15px; color: #999; }
+        .preview-toolbar {
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+        }
+        .preview-toolbar .toggle-group { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .preview-toolbar .toggle-group label { cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .preview-toolbar .toggle-group input[type="checkbox"] { accent-color: #667eea; }
+
+        /* ===== 草稿列表 ===== */
+        .draft-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px;
+        }
+        [data-theme="dark"] .draft-item { background: #1a1a2e; }
+        .draft-item .draft-info { flex: 1; }
+        .draft-item .draft-title { font-weight: 600; font-size: 14px; }
+        .draft-item .draft-meta { color: #999; font-size: 12px; margin-top: 4px; }
+        .draft-item .draft-actions { display: flex; gap: 8px; }
+        .draft-empty { text-align: center; padding: 40px; color: #bbb; }
+
+        /* ===== 消息提示 ===== */
+        .msg {
+            padding: 12px 16px; border-radius: 10px; font-size: 13px; margin: 12px 0;
+            display: none;
+        }
+        .msg.success { display: block; background: #e8f5e9; color: #2e7d32; }
+        .msg.error { display: block; background: #fbe9e7; color: #c62828; }
+        .msg.info { display: block; background: #e3f2fd; color: #1565c0; }
+        [data-theme="dark"] .msg.success { background: rgba(46,125,50,0.15); color: #66bb6a; }
+        [data-theme="dark"] .msg.error { background: rgba(198,40,40,0.15); color: #ef5350; }
+        [data-theme="dark"] .msg.info { background: rgba(21,101,192,0.15); color: #42a5f5; }
+
+        /* ===== 加载动画 ===== */
+        .loading {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid rgba(102,126,234,0.3); border-top: 2px solid #667eea;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            vertical-align: middle; margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .status-bar {
+            text-align: center; padding: 12px; color: #999; font-size: 13px;
+            border-top: 1px solid #f0f0f0; margin-top: 24px;
+        }
+        [data-theme="dark"] .status-bar { border-top-color: #2a2a3e; }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 768px) {
+            .top-bar { padding: 12px 16px; flex-direction: column; gap: 10px; }
+            .top-bar h1 { font-size: 17px; }
+            .container { padding: 12px; }
+            .card { padding: 16px; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .post-table { font-size: 12px; }
+            .post-table .post-title { max-width: 150px; }
+            .preview-area { max-height: 400px; }
+            .draft-item { flex-direction: column; gap: 10px; align-items: flex-start; }
+        }
+
+        /* ===== 移动端优化 (max-width: 600px) ===== */
+        @media (max-width: 600px) {
+            /* 顶部导航 */
+            .top-bar {
+                padding: 10px 12px !important;
+                flex-direction: column !important;
+                gap: 8px !important;
+            }
+            .top-bar h1 {
+                font-size: 16px !important;
+                justify-content: center;
+            }
+            .top-bar .back-link {
+                font-size: 12px;
+                padding: 5px 12px;
+            }
+
+            /* 容器 */
+            .container {
+                padding: 10px !important;
+            }
+
+            /* Tab导航 - 移动端横向滚动 */
+            .tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+                padding: 4px;
+                gap: 2px;
+            }
+            .tabs::-webkit-scrollbar { display: none; }
+            .tab-btn {
+                padding: 10px 14px !important;
+                font-size: 13px !important;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            .tab-btn .badge {
+                font-size: 10px !important;
+                padding: 1px 6px !important;
+                margin-left: 4px !important;
+            }
+
+            /* 卡片 */
+            .card {
+                padding: 14px !important;
+                border-radius: 12px !important;
+                margin-bottom: 14px;
+            }
+            .card-title {
+                font-size: 15px !important;
+                margin-bottom: 12px !important;
+            }
+            .card-desc {
+                font-size: 12px !important;
+                margin-bottom: 12px !important;
+            }
+
+            /* 工具栏 */
+            .toolbar {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+            }
+            .toolbar label {
+                font-size: 12px;
+            }
+            .toolbar select, .toolbar input {
+                font-size: 13px;
+                padding: 8px 10px;
+                width: 100%;
+            }
+            .toolbar > * {
+                width: 100%;
+                text-align: center;
+            }
+            .toolbar > span {
+                text-align: center;
+            }
+
+            /* 按钮 */
+            .btn {
+                padding: 10px 16px !important;
+                font-size: 13px !important;
+                width: 100%;
+                justify-content: center;
+            }
+            .btn-sm {
+                padding: 8px 14px !important;
+                font-size: 12px !important;
+            }
+            /* 只隐藏工具栏的弹性占位，正文卡片里的 flex:1 容器必须保留，
+               否则移动端会把歌名、教程和热歌榜文字整列隐藏。 */
+            .toolbar > span[style*="flex:1"] { display: none; }
+
+            /* 表格 */
+            .post-table {
+                font-size: 11px !important;
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .post-table th, .post-table td {
+                padding: 8px 6px !important;
+            }
+            .post-table .post-title {
+                max-width: 120px !important;
+                font-size: 12px !important;
+            }
+            .post-table .post-preview {
+                max-width: 120px !important;
+                font-size: 11px !important;
+            }
+            .post-table .post-stats {
+                font-size: 11px !important;
+                white-space: nowrap;
+            }
+            .post-table .post-author {
+                font-size: 11px !important;
+            }
+            .checkbox-cell { width: 28px !important; }
+            .post-table input[type="checkbox"] {
+                width: 14px !important;
+                height: 14px !important;
+            }
+
+            /* 预览区域 */
+            .preview-area {
+                max-height: 350px !important;
+                padding: 12px !important;
+                font-size: 13px !important;
+                border-radius: 10px !important;
+            }
+            .preview-toolbar {
+                flex-direction: column !important;
+                gap: 8px !important;
+            }
+            .preview-toolbar .toggle-group {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .preview-toolbar label {
+                font-size: 12px;
+            }
+            .preview-toolbar .btn {
+                width: 100%;
+                margin-bottom: 4px;
+            }
+
+            /* 每周之星 */
+            #weeklyStarSection .card {
+                padding: 12px !important;
+            }
+            [id$="StarSection"] [style*="display:flex"] {
+                flex-wrap: wrap !important;
+            }
+
+            /* 那年今日 */
+            #todayHistorySection [style*="display:flex"] {
+                flex-wrap: wrap !important;
+            }
+
+            /* 发布指南 */
+            [id="tab-drafts"] [style*="display: flex"] {
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+            [id="tab-drafts"] strong {
+                font-size: 14px !important;
+            }
+            [id="tab-drafts"] p {
+                font-size: 12px !important;
+            }
+
+            /* 状态栏 */
+            .status-bar {
+                font-size: 11px !important;
+                padding: 10px !important;
+            }
+
+            /* 消息提示 */
+            .msg {
+                font-size: 12px !important;
+                padding: 10px 12px !important;
+                margin: 8px 0 !important;
+            }
+
+            /* 全选复选框 */
+            .select-all {
+                font-size: 11px !important;
+            }
+
+            /* ===== 推歌模板选择器（新增） ===== */
+            #batchTplBar {
+                gap: 4px !important;
+                padding: 8px !important;
+            }
+            #batchTplBar > span {
+                width: 100% !important;
+                text-align: left !important;
+            }
+            #batchTplBar button {
+                padding: 4px 8px !important;
+                font-size: 10px !important;
+                flex: 1 1 auto !important;
+                min-width: 60px !important;
+            }
+            /* 单首歌曲的模板选择行 */
+            #dailySongList select[id^="songTpl_"] {
+                width: 100% !important;
+                font-size: 12px !important;
+                padding: 6px 8px !important;
+            }
+            #dailySongList button[onclick^="previewSongTpl"] {
+                width: 100% !important;
+                text-align: center !important;
+                padding: 6px 10px !important;
+            }
+            /* 推歌列表（移动端拉高） */
+            #dailySongList {
+                max-height: 70vh !important;
+            }
+        }
+
+        /* ===== 超小屏幕优化 (max-width: 400px) ===== */
+        @media (max-width: 400px) {
+            .top-bar h1 { font-size: 15px !important; }
+            .container { padding: 8px !important; }
+            .card { padding: 12px !important; border-radius: 10px !important; }
+            .tab-btn { padding: 8px 10px !important; font-size: 12px !important; }
+            .post-table { font-size: 10px !important; }
+            .post-table .post-title { max-width: 100px !important; font-size: 11px !important; }
+            .post-table .post-preview { display: none !important; }
+            .btn { padding: 8px 12px !important; font-size: 12px !important; }
+        }
+
+        /* ===== 按钮扩展 ===== */
+        .btn-info {
+            background: #17a2b8; color: white; border: none;
+        }
+        .btn-info:hover { background: #138496; }
+        [data-theme="dark"] .btn-info { background: #138496; }
+
+body.admin-mp-page {
+        background: linear-gradient(135deg, #fff8fb 0%, #f6f2ff 58%, #f1f7ff 100%);
+      }
+      body.admin-mp-page .top-bar {
+        padding: 18px clamp(16px, 4vw, 42px);
+        box-shadow: 0 8px 24px rgba(118, 75, 162, 0.14);
+      }
+      body.admin-mp-page .container {
+        width: min(1120px, calc(100% - 32px));
+        padding: 26px 0 48px;
+      }
+      body.admin-mp-page .card {
+        border-radius: 20px;
+        border: 1px solid rgba(167, 139, 250, 0.14);
+        box-shadow: 0 8px 24px rgba(118, 75, 162, 0.08);
+      }
+      body.admin-mp-page .tabs {
+        gap: 6px;
+        padding: 6px;
+        border-radius: 16px;
+        background: rgba(255,255,255,.72);
+      }
+      body.admin-mp-page .tab-btn {
+        min-height: 42px;
+        border-radius: 12px;
+      }
+      body.admin-mp-page .toolbar,
+      body.admin-mp-page .preview-toolbar {
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      body.admin-mp-page .preview-template-picker {
+        position: relative;
+      }
+      body.admin-mp-page .preview-template-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 44px;
+        padding: 9px 12px 9px 8px;
+        border: 1px solid #e1d9ff;
+        border-radius: 11px;
+        background: #fff;
+        color: #493b70;
+        cursor: pointer;
+        box-shadow: 0 2px 7px rgba(91, 61, 153, .07);
+      }
+      body.admin-mp-page .preview-template-trigger:hover {
+        border-color: #aa94f3;
+        box-shadow: 0 4px 12px rgba(91, 61, 153, .13);
+      }
+      body.admin-mp-page .preview-template-swatch {
+        width: 22px;
+        height: 22px;
+        border-radius: 8px;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.38);
+      }
+      body.admin-mp-page .preview-template-label {
+        display: grid;
+        gap: 1px;
+        text-align: left;
+        line-height: 1.1;
+      }
+      body.admin-mp-page .preview-template-label small { color: #927da6; font-size: 10px; }
+      body.admin-mp-page .preview-template-arrow { color: #8e79b5; font-size: 11px; }
+      body.admin-mp-page .preview-theme-menu {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(118px, 1fr));
+        gap: 8px;
+        width: min(620px, calc(100vw - 64px));
+        margin-top: 8px;
+        padding: 10px;
+        border: 1px solid #e4dcfb;
+        border-radius: 14px;
+        background: rgba(255,255,255,.98);
+        box-shadow: 0 12px 28px rgba(82, 58, 132, .16);
+        position: absolute;
+        z-index: 20;
+        max-height: min(460px, calc(100vh - 180px));
+        max-height: min(460px, calc(100dvh - 180px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+      }
+      body.admin-mp-page .preview-theme-menu[hidden] { display: none !important; }
+      body.admin-mp-page .preview-theme-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid #ece7f7;
+        border-radius: 10px;
+        background: #fff;
+        color: #4b3d68;
+        text-align: left;
+        cursor: pointer;
+      }
+      body.admin-mp-page .preview-theme-option:hover,
+      body.admin-mp-page .preview-theme-option.is-active {
+        border-color: #a98cf1;
+        background: #faf8ff;
+      }
+      body.admin-mp-page .preview-theme-option .preview-template-swatch { flex: 0 0 auto; }
+      body.admin-mp-page .post-table {
+        overflow-x: auto;
+        border-radius: 16px;
+      }
+      body.admin-mp-page .post-preview,
+      body.admin-mp-page .preview-area {
+        border-radius: 16px;
+      }
+      @media (max-width: 768px) {
+        body.admin-mp-page .container {
+          width: min(100% - 20px, 560px);
+          padding-top: 16px;
+        }
+        body.admin-mp-page .top-bar {
+          padding: 14px;
+        }
+        body.admin-mp-page .top-bar h1 {
+          font-size: 17px;
+        }
+        body.admin-mp-page .tabs {
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+        body.admin-mp-page .tabs::-webkit-scrollbar {
+          display: none;
+        }
+        body.admin-mp-page .preview-template-picker { width: 100%; }
+        body.admin-mp-page .preview-template-trigger { width: 100%; justify-content: flex-start; }
+        body.admin-mp-page .preview-theme-menu {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          width: 100%;
+          box-sizing: border-box;
+          max-height: min(52vh, 420px);
+        }
+        body.admin-mp-page .tab-btn {
+          min-width: 100px;
+          white-space: nowrap;
+        }
+      }
+      .mp-qr-fallback {
+        font-size: 13px;
+        color: #C44569;
+        margin-top: 6px;
+        line-height: 1.6;
+        text-align: center;
+      }
+      .mp-qr-fallback b { font-weight: 700; }
+
+      /* ===== 公众号推送页：统一入口与移动端工作区 ===== */
+      body.admin-mp-page .top-bar {
+        background: rgba(255, 255, 255, 0.94);
+        color: #293247;
+        border-bottom: 1px solid rgba(213, 194, 223, 0.55);
+        box-shadow: 0 6px 18px rgba(86, 63, 105, 0.08);
+        backdrop-filter: blur(14px);
+      }
+      body.admin-mp-page .top-bar h1 {
+        color: #bd5b87;
+      }
+      body.admin-mp-page .top-bar .back-link {
+        color: #6d6474;
+        background: #fff;
+        border: 1px solid #eadfeb;
+      }
+      body.admin-mp-page .tabs {
+        border: 1px solid rgba(213, 194, 223, 0.7);
+        box-shadow: 0 8px 22px rgba(86, 63, 105, 0.07);
+      }
+      body.admin-mp-page .tab-btn.active {
+        background: #ef76a5;
+      }
+      body.admin-mp-page .tab-btn[data-tab="daily"] {
+        color: #b4577d;
+      }
+      body.admin-mp-page .tab-btn[data-tab="daily"].active {
+        background: #d46f9d;
+      }
+      body.admin-mp-page .daily-song-page-card {
+        overflow: hidden;
+      }
+      body.admin-mp-page .daily-song-page-intro {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 2px 2px 20px;
+        border-bottom: 1px solid #f1e8f2;
+      }
+      body.admin-mp-page .daily-song-page-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        border-radius: 14px;
+        background: #fff0f5;
+        border: 1px solid #ffd7e6;
+        font-size: 24px;
+      }
+      body.admin-mp-page .daily-song-page-kicker {
+        color: #c88ca7;
+        font-size: 10px;
+        letter-spacing: 2px;
+        font-weight: 700;
+      }
+      body.admin-mp-page .daily-song-page-title {
+        margin-top: 3px;
+        color: #30384a;
+        font-size: 20px;
+        font-weight: 800;
+      }
+      body.admin-mp-page .daily-song-page-desc {
+        margin-top: 5px;
+        color: #8e8794;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      body.admin-mp-page .daily-song-mount {
+        min-height: 24px;
+      }
+      body.admin-mp-page .daily-song-page-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #f1e8f2;
+      }
+      body.admin-mp-page .daily-song-page-actions .btn {
+        min-width: 148px;
+        justify-content: center;
+      }
+      body.admin-mp-page #dailySongSelector {
+        margin: 18px 0 0 !important;
+        padding: 18px !important;
+        background: #fff !important;
+        border: 1px solid #f0dce8 !important;
+        box-shadow: 0 8px 20px rgba(130, 75, 105, 0.06);
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-icon {
+        background: #fff0f5 !important;
+        border: 1px solid #ffd7e6;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-copy {
+        min-width: 0;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-copy > div:first-child {
+        color: #bd5b87 !important;
+        font-size: 17px !important;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-tools label {
+        background: #fff8fb !important;
+        border-color: #f0dce8 !important;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-tools button {
+        border-color: #ef9fbe !important;
+        color: #bd5b87 !important;
+      }
+      body.admin-mp-page .daily-song-selector-actions > button:first-child {
+        background: #ef76a5 !important;
+        box-shadow: none !important;
+        border-radius: 10px !important;
+      }
+      body.admin-mp-page .daily-song-selector-actions > button + button {
+        background: #f7f3f7 !important;
+        color: #756b78 !important;
+        border: 1px solid #e8dfe9 !important;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-list {
+        border: 1px solid #f4e8ee;
+        background: #fffbfd !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item {
+        box-shadow: none !important;
+        border-color: #f1dfe8 !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-actions button {
+        box-shadow: none !important;
+      }
+
+      @media (max-width: 700px) {
+        body.admin-mp-page .top-bar {
+          flex-direction: row !important;
+          align-items: center;
+          gap: 10px !important;
+          padding: 12px 14px !important;
+        }
+        body.admin-mp-page .top-bar h1 {
+          min-width: 0;
+          font-size: 16px !important;
+          white-space: nowrap;
+        }
+        body.admin-mp-page .top-bar .back-link {
+          flex: 0 0 auto;
+          padding: 7px 10px;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+        body.admin-mp-page .container {
+          width: min(100% - 20px, 560px);
+          padding: 14px 0 28px !important;
+        }
+        body.admin-mp-page .tabs {
+          margin-bottom: 14px;
+          scroll-snap-type: x proximity;
+        }
+        body.admin-mp-page .tab-btn {
+          min-width: 112px;
+          scroll-snap-align: start;
+        }
+        body.admin-mp-page .daily-song-page-card {
+          padding: 14px !important;
+        }
+        body.admin-mp-page .daily-song-page-intro {
+          align-items: flex-start;
+          gap: 10px;
+          padding-bottom: 14px;
+        }
+        body.admin-mp-page .daily-song-page-icon {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          font-size: 21px;
+        }
+        body.admin-mp-page .daily-song-page-title {
+          font-size: 18px;
+        }
+        body.admin-mp-page .daily-song-page-desc {
+          font-size: 12px;
+        }
+        body.admin-mp-page .daily-song-page-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 8px;
+          margin-top: 12px;
+          padding-top: 12px;
+        }
+        body.admin-mp-page .daily-song-page-actions .btn {
+          width: 100%;
+          min-width: 0;
+        }
+        body.admin-mp-page #dailySongSelector {
+          margin-top: 12px !important;
+          padding: 12px !important;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-head {
+          display: grid !important;
+          grid-template-columns: 42px minmax(0, 1fr);
+          align-items: start !important;
+          gap: 10px !important;
+          margin-bottom: 12px !important;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-icon {
+          width: 42px !important;
+          height: 42px !important;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-tools {
+          grid-column: 1 / -1;
+          width: 100%;
+          justify-content: stretch !important;
+          padding-top: 2px;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-tools label,
+        body.admin-mp-page #dailySongSelector .daily-song-selector-tools button {
+          flex: 1 1 0;
+          justify-content: center;
+          white-space: nowrap;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-copy > div:first-child {
+          font-size: 16px !important;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-copy > div:last-child {
+          white-space: normal !important;
+          line-height: 1.45;
+        }
+        body.admin-mp-page #dailySongSelector > button {
+          width: 100% !important;
+          margin-top: 10px !important;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-list {
+          max-height: 65vh !important;
+          padding: 6px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item {
+          padding: 12px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-head {
+          align-items: flex-start !important;
+          flex-wrap: wrap;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-actions {
+          gap: 6px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-actions button {
+          flex: 1 1 calc(50% - 6px);
+          min-width: 0;
+          padding: 6px 8px !important;
+          font-size: 11px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template {
+          align-items: stretch !important;
+          gap: 6px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template select {
+          min-width: 0 !important;
+        }
+        body.admin-mp-page #manualSongForm {
+          padding: 14px !important;
+        }
+        body.admin-mp-page #manualSongForm > div[style*="grid-template-columns"] {
+          grid-template-columns: 1fr !important;
+        }
+        body.admin-mp-page .preview-toolbar .toggle-group {
+          justify-content: flex-start;
+          text-align: left;
+        }
+      }
+
+      @media (max-width: 400px) {
+        body.admin-mp-page .top-bar h1 {
+          font-size: 15px !important;
+        }
+        body.admin-mp-page .top-bar .back-link {
+          padding: 6px 8px;
+          font-size: 11px;
+        }
+        body.admin-mp-page .tab-btn {
+          min-width: 106px;
+        }
+      }
+
+      /* ===== 每日推歌：移动端防溢出工作区 ===== */
+      @media (max-width: 700px) {
+        body.admin-mp-page .top-bar h1 {
+          flex: 1 1 auto;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        body.admin-mp-page .daily-song-page-intro > div:last-child,
+        body.admin-mp-page #dailySongSelector .daily-song-selector-copy {
+          min-width: 0;
+        }
+        body.admin-mp-page .daily-song-page-title,
+        body.admin-mp-page #dailySongSelector .daily-song-selector-copy > div:first-child {
+          overflow-wrap: anywhere;
+        }
+
+        body.admin-mp-page #dailySongSelector {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-head {
+          min-width: 0;
+        }
+        body.admin-mp-page .daily-song-selector-actions {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 8px;
+          width: 100%;
+          min-width: 0;
+          margin-top: 10px;
+        }
+        body.admin-mp-page .daily-song-selector-actions .btn {
+          width: 100% !important;
+          min-width: 0;
+          margin-top: 0 !important;
+        }
+
+        body.admin-mp-page #batchTplBar {
+          flex-direction: column !important;
+          align-items: stretch !important;
+          gap: 8px !important;
+          width: 100%;
+          min-width: 0;
+          overflow: hidden;
+        }
+        body.admin-mp-page #batchTplBar > div {
+          width: 100%;
+          min-width: 0;
+        }
+        body.admin-mp-page #batchTplBar > div:first-child {
+          margin-bottom: 0 !important;
+        }
+        body.admin-mp-page #batchTplBar > div:last-child {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px !important;
+        }
+        body.admin-mp-page #batchTplBar button {
+          width: 100%;
+          min-width: 0 !important;
+          overflow: hidden;
+          white-space: normal !important;
+          line-height: 1.35;
+          padding: 6px 8px !important;
+        }
+
+        body.admin-mp-page #dailySongList {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow-x: hidden !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          overflow: hidden;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-head {
+          display: grid !important;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: start !important;
+          min-width: 0;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-head > div {
+          min-width: 0;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-head > div > div:first-child {
+          overflow: visible !important;
+          text-overflow: clip !important;
+          white-space: normal !important;
+          overflow-wrap: anywhere;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-head > div > div:last-child {
+          overflow-wrap: anywhere;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-actions {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px !important;
+          width: 100%;
+          min-width: 0;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-actions button {
+          width: 100%;
+          min-width: 0 !important;
+          overflow: hidden;
+          white-space: normal !important;
+          line-height: 1.35;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template {
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 6px !important;
+          width: 100%;
+          min-width: 0;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template > span {
+          grid-column: 1 / -1;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template select,
+        body.admin-mp-page #dailySongList .daily-song-item-template button {
+          width: 100%;
+          min-width: 0 !important;
+        }
+        body.admin-mp-page #dailySongList textarea,
+        body.admin-mp-page #manualSongForm,
+        body.admin-mp-page #manualSongForm input,
+        body.admin-mp-page #manualSongForm textarea {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+        }
+        body.admin-mp-page #dailySongList textarea {
+          display: block;
+          overflow-x: hidden;
+          overflow-wrap: anywhere;
+        }
+        body.admin-mp-page #manualSongForm {
+          overflow: hidden;
+        }
+        body.admin-mp-page #manualSongForm .manual-song-form-actions {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px !important;
+        }
+        body.admin-mp-page #manualSongForm .manual-song-form-actions button {
+          width: 100%;
+          min-width: 0;
+        }
+      }
+
+      @media (max-width: 400px) {
+        body.admin-mp-page #batchTplBar > div:last-child,
+        body.admin-mp-page #manualSongForm .manual-song-form-actions {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template button {
+          width: 100%;
+        }
+      }
+
+/* ===== 每日推歌页面重排：桌面保留，移动端以工作区为中心 ===== */
+      body.admin-mp-page {
+        --mp-ink: #283449;
+        --mp-muted: #7d8798;
+        --mp-line: #e8e4ee;
+        --mp-pink: #e875a7;
+        --mp-pink-deep: #c95d8d;
+        --mp-lilac: #8b7bdc;
+        overflow-x: hidden;
+        overscroll-behavior-x: none;
+      }
+      body.admin-mp-page,
+      body.admin-mp-page * {
+        min-width: 0;
+      }
+      body.admin-mp-page .top-bar {
+        min-height: 68px;
+        padding: 14px clamp(16px, 4vw, 42px);
+        gap: 16px;
+      }
+      body.admin-mp-page .top-bar h1 {
+        color: var(--mp-ink);
+        line-height: 1.25;
+        letter-spacing: .01em;
+      }
+      body.admin-mp-page .top-bar .back-link {
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+      body.admin-mp-page .container {
+        width: min(1180px, calc(100% - 48px));
+        padding: 24px 0 52px;
+      }
+      body.admin-mp-page .tabs {
+        margin-bottom: 18px;
+        border: 1px solid rgba(213, 194, 223, .8);
+        box-shadow: 0 8px 22px rgba(86, 63, 105, .07);
+      }
+      body.admin-mp-page .tab-btn {
+        min-height: 44px;
+        color: #8992a2;
+      }
+      body.admin-mp-page .tab-btn.active {
+        background: linear-gradient(135deg, #e875a7, #9b86df);
+      }
+      body.admin-mp-page .card {
+        border-color: rgba(193, 168, 205, .22);
+        box-shadow: 0 10px 28px rgba(82, 64, 102, .07);
+      }
+      body.admin-mp-page .card-title {
+        color: var(--mp-ink);
+      }
+      body.admin-mp-page .daily-song-page-card {
+        padding: clamp(20px, 3vw, 30px);
+        overflow: visible;
+      }
+      body.admin-mp-page .daily-song-page-intro {
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr);
+        align-items: center;
+        gap: 14px;
+        padding: 0 0 20px;
+        border-bottom: 1px solid var(--mp-line);
+      }
+      body.admin-mp-page .daily-song-page-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: linear-gradient(145deg, #fff1f6, #f5efff);
+        border: 1px solid #f1d9e8;
+        box-shadow: 0 8px 18px rgba(218, 114, 163, .12);
+        font-size: 25px;
+      }
+      body.admin-mp-page .daily-song-page-kicker {
+        color: #be83a1;
+      }
+      body.admin-mp-page .daily-song-page-title {
+        color: var(--mp-ink);
+        letter-spacing: .01em;
+      }
+      body.admin-mp-page .daily-song-page-desc {
+        color: var(--mp-muted);
+      }
+      body.admin-mp-page .daily-song-page-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 18px;
+        border-top: 1px solid var(--mp-line);
+      }
+      body.admin-mp-page .daily-song-page-actions .btn {
+        min-width: 152px;
+        min-height: 42px;
+        justify-content: center;
+      }
+
+      /* 选择区是每日推歌的主工作区 */
+      body.admin-mp-page #dailySongSelector {
+        width: 100%;
+        max-width: 100%;
+        margin: 18px 0 0 !important;
+        padding: 20px !important;
+        background: #fff !important;
+        border: 1px solid #eadfea !important;
+        border-radius: 18px !important;
+        box-shadow: 0 8px 24px rgba(73, 54, 92, .06);
+        overflow: hidden;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-head {
+        display: grid !important;
+        grid-template-columns: 48px minmax(0, 1fr) auto;
+        align-items: center !important;
+        gap: 12px !important;
+        margin-bottom: 16px !important;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f0e9f1;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-icon {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+        background: linear-gradient(145deg, #fff1f6, #f5efff) !important;
+        border: 1px solid #f1d9e8 !important;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-copy {
+        min-width: 0;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-copy > div:first-child {
+        color: var(--mp-ink) !important;
+        font-size: 18px !important;
+        line-height: 1.3;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-copy > div:last-child {
+        color: var(--mp-muted) !important;
+        line-height: 1.5;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-tools {
+        display: flex !important;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-tools label,
+      body.admin-mp-page #dailySongSelector .daily-song-selector-tools button {
+        min-height: 36px;
+        white-space: nowrap;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-tools label {
+        background: #faf8fc !important;
+        border-color: #e8e0ed !important;
+      }
+      body.admin-mp-page #dailySongSelector .daily-song-selector-tools button {
+        border-color: #e5c9d8 !important;
+        color: var(--mp-pink-deep) !important;
+      }
+      body.admin-mp-page #batchTplBar {
+        display: block;
+        margin: 0 0 14px !important;
+        padding: 14px !important;
+        background: #fbf8fc !important;
+        border: 1px solid #eee5f1;
+        border-radius: 14px !important;
+      }
+      body.admin-mp-page #batchTplBar > div:first-child {
+        margin-bottom: 10px !important;
+        color: var(--mp-pink-deep) !important;
+        letter-spacing: .01em;
+      }
+      body.admin-mp-page #batchTplBar > div:last-child {
+        display: flex !important;
+        align-items: center;
+        gap: 8px !important;
+        flex-wrap: wrap;
+      }
+      body.admin-mp-page #batchTplBar button {
+        min-height: 34px;
+        padding: 6px 12px !important;
+        color: #a65f7f !important;
+        background: #fff !important;
+        border-color: #ead5e1 !important;
+      }
+      body.admin-mp-page #dailySongList {
+        width: 100%;
+        max-width: 100%;
+        max-height: min(58vh, 520px) !important;
+        padding: 4px !important;
+        background: #fbfafc !important;
+        border: 1px solid #eee9f1;
+        border-radius: 14px !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item {
+        width: 100%;
+        margin-bottom: 10px !important;
+        padding: 16px !important;
+        background: #fff !important;
+        border: 1px solid #ece5ee !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 14px rgba(70, 51, 88, .045) !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item:last-child {
+        margin-bottom: 0 !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-head {
+        display: grid !important;
+        grid-template-columns: 20px minmax(0, 1fr) auto;
+        align-items: start !important;
+        gap: 10px !important;
+        margin-bottom: 14px !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-head > input {
+        width: 18px !important;
+        height: 18px !important;
+        margin-top: 2px;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-head > div {
+        min-width: 0;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-head > div > div:first-child {
+        color: var(--mp-ink) !important;
+        line-height: 1.4;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-head > div > div:last-child {
+        color: var(--mp-muted) !important;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-head > span {
+        align-self: start;
+        white-space: nowrap;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-actions {
+        display: flex !important;
+        align-items: stretch;
+        gap: 8px !important;
+        flex-wrap: wrap;
+        margin-bottom: 12px !important;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f1edf2;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-actions button {
+        min-height: 34px;
+        padding: 7px 12px !important;
+        flex: 0 1 auto;
+        border-radius: 9px !important;
+        box-shadow: none !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-template {
+        display: grid !important;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center !important;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-template > span {
+        color: var(--mp-muted) !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-template select {
+        width: 100%;
+        min-width: 0 !important;
+        min-height: 36px;
+        padding: 7px 10px !important;
+        color: #9a5c7b !important;
+        background: #fff !important;
+        border-color: #ead5e1 !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-template button {
+        min-height: 34px;
+        padding: 7px 10px !important;
+        border-radius: 9px !important;
+      }
+      body.admin-mp-page #dailySongList textarea {
+        display: block;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 76px !important;
+        padding: 10px 12px !important;
+        color: #435066;
+        background: #fcfbfd !important;
+        border-color: #e5dfe9 !important;
+        line-height: 1.65 !important;
+        overflow-wrap: anywhere;
+      }
+      body.admin-mp-page #dailySongList textarea:focus,
+      body.admin-mp-page #manualSongForm input:focus,
+      body.admin-mp-page #manualSongForm textarea:focus {
+        outline: 3px solid rgba(232, 117, 167, .16);
+        border-color: #d88bab !important;
+      }
+      body.admin-mp-page #manualSongForm {
+        width: 100%;
+        max-width: 100%;
+        margin-top: 16px !important;
+        padding: 18px !important;
+        background: #fbfafc !important;
+        border: 1px solid #e9e1ec !important;
+        border-radius: 14px !important;
+        overflow: hidden;
+      }
+      body.admin-mp-page #manualSongForm > div:first-child {
+        color: var(--mp-ink) !important;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #eee8f0;
+      }
+      body.admin-mp-page #manualSongForm input,
+      body.admin-mp-page #manualSongForm textarea {
+        max-width: 100%;
+        min-width: 0;
+        color: #435066;
+        background: #fff !important;
+        border-color: #e5dfe9 !important;
+      }
+      body.admin-mp-page #manualSongForm .manual-song-form-actions {
+        display: flex !important;
+        align-items: stretch;
+        gap: 10px !important;
+      }
+      body.admin-mp-page #manualSongForm .manual-song-form-actions button {
+        min-height: 40px;
+        flex: 0 1 auto;
+      }
+      body.admin-mp-page .daily-song-selector-actions {
+        display: flex !important;
+        gap: 10px !important;
+        align-items: stretch;
+        margin-top: 14px;
+      }
+      body.admin-mp-page .daily-song-selector-actions .btn {
+        min-height: 42px;
+        flex: 1 1 0;
+        width: auto !important;
+        margin-top: 0 !important;
+        border-radius: 10px !important;
+        box-shadow: none !important;
+      }
+      body.admin-mp-page .daily-song-selector-actions > button:first-child {
+        background: #e875a7 !important;
+      }
+      body.admin-mp-page .daily-song-selector-actions > button + button {
+        background: #f7f4f8 !important;
+        color: #776d7e !important;
+        border: 1px solid #e6dfe9 !important;
+      }
+
+      /* 预览工作区：选项与动作分层，避免按钮挤成一团 */
+      body.admin-mp-page .preview-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+      }
+      body.admin-mp-page .preview-toolbar .toggle-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        min-width: 0;
+      }
+      body.admin-mp-page .preview-toolbar .toggle-group label {
+        min-height: 44px;
+        padding: 10px 11px;
+        background: #faf8fc;
+        border: 1px solid #eee7f0;
+        border-radius: 9px;
+        white-space: nowrap;
+      }
+      body.admin-mp-page .preview-toolbar > .btn {
+        min-height: 44px;
+        white-space: nowrap;
+      }
+      body.admin-mp-page .preview-area {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      /* 已生成后将选帖工作区收拢：避免管理员误以为仍需重复生成。 */
+      body.admin-mp-page .post-selection-complete {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 16px 18px;
+        border: 1px solid #cdebdc;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f2fff7, #f7fbff);
+        color: #286747;
+      }
+      body.admin-mp-page .post-selection-complete-copy {
+        min-width: 0;
+      }
+      body.admin-mp-page .post-selection-complete-title {
+        font-size: 15px;
+        font-weight: 800;
+      }
+      body.admin-mp-page .post-selection-complete-desc {
+        margin-top: 4px;
+        color: #597364;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      body.admin-mp-page .preview-article-meta {
+        margin: 16px 0 12px;
+        padding: 13px 15px;
+        border: 1px solid #e7ddef;
+        border-radius: 12px;
+        background: #fffcff;
+      }
+      body.admin-mp-page .preview-article-meta-label {
+        color: #9a6e8c;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .08em;
+      }
+      body.admin-mp-page .preview-article-meta-title {
+        display: block;
+        margin-top: 5px;
+        color: #30384a;
+        font-size: 16px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+      body.admin-mp-page .preview-article-meta-desc {
+        margin: 5px 0 0;
+        color: #817889;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      body.admin-mp-page .preview-article-meta-helper {
+        margin-top: 9px;
+        padding-top: 8px;
+        border-top: 1px dashed #eadfeb;
+        color: #9b8d9d;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+      body.admin-mp-page .preview-area > * {
+        min-width: 0;
+      }
+      body.admin-mp-page .post-table {
+        max-width: 100%;
+      }
+      body.admin-mp-page [role="dialog"],
+      body.admin-mp-page .modal,
+      body.admin-mp-page .modal-content {
+        width: min(560px, calc(100vw - 24px)) !important;
+        max-width: calc(100vw - 24px) !important;
+        max-height: calc(100dvh - 24px);
+        overflow: auto;
+      }
+      body.admin-mp-page > div[style*="z-index:9999"] {
+        top: max(12px, env(safe-area-inset-top)) !important;
+        right: 12px !important;
+        left: 12px !important;
+        width: auto !important;
+        max-width: calc(100vw - 24px) !important;
+        text-align: center;
+      }
+
+      @media (max-width: 768px) {
+        body.admin-mp-page .top-bar {
+          min-height: 58px;
+          padding: 10px 12px !important;
+          flex-direction: row !important;
+          align-items: center;
+          gap: 10px !important;
+        }
+        body.admin-mp-page .top-bar h1 {
+          flex: 1 1 auto;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 16px !important;
+        }
+        body.admin-mp-page .top-bar .back-link {
+          padding: 7px 10px;
+          font-size: 12px;
+        }
+        body.admin-mp-page .container {
+          width: calc(100% - 20px);
+          max-width: 560px;
+          padding: 14px 0 32px !important;
+        }
+        body.admin-mp-page .tabs {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px;
+          margin-bottom: 14px;
+          overflow: visible;
+        }
+        body.admin-mp-page .tabs::-webkit-scrollbar { display: none; }
+        body.admin-mp-page .tab-btn {
+          min-width: 0;
+          width: 100%;
+          min-height: 42px;
+          padding: 10px 12px !important;
+          font-size: 13px !important;
+          white-space: nowrap;
+        }
+        body.admin-mp-page .card {
+          padding: 14px !important;
+          border-radius: 14px !important;
+        }
+        body.admin-mp-page .daily-song-page-card {
+          padding: 14px !important;
+        }
+        body.admin-mp-page .daily-song-page-intro {
+          grid-template-columns: 42px minmax(0, 1fr);
+          gap: 10px;
+          padding-bottom: 14px;
+        }
+        body.admin-mp-page .daily-song-page-icon {
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          font-size: 21px;
+        }
+        body.admin-mp-page .daily-song-page-title {
+          font-size: 18px;
+          overflow-wrap: anywhere;
+        }
+        body.admin-mp-page .daily-song-page-desc {
+          font-size: 12px;
+          line-height: 1.5;
+          overflow-wrap: anywhere;
+        }
+        body.admin-mp-page .daily-song-page-actions {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 8px;
+          margin-top: 14px;
+          padding-top: 14px;
+        }
+        body.admin-mp-page .daily-song-page-actions .btn {
+          width: 100%;
+          min-width: 0;
+        }
+        body.admin-mp-page #dailySongSelector {
+          margin-top: 12px !important;
+          padding: 12px !important;
+          border-radius: 14px !important;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-head {
+          grid-template-columns: 42px minmax(0, 1fr);
+          align-items: start !important;
+          gap: 10px !important;
+          margin-bottom: 12px !important;
+          padding-bottom: 12px;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-icon {
+          width: 42px !important;
+          height: 42px !important;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-copy > div:first-child {
+          font-size: 16px !important;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-copy > div:last-child {
+          font-size: 12px !important;
+          white-space: normal !important;
+          overflow-wrap: anywhere;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-tools {
+          grid-column: 1 / -1;
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          gap: 8px;
+          width: 100%;
+        }
+        body.admin-mp-page #dailySongSelector .daily-song-selector-tools label,
+        body.admin-mp-page #dailySongSelector .daily-song-selector-tools button {
+          width: 100%;
+          justify-content: center;
+          min-height: 40px;
+        }
+        body.admin-mp-page #batchTplBar {
+          padding: 10px !important;
+        }
+        body.admin-mp-page #batchTplBar > div:last-child {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px !important;
+        }
+        body.admin-mp-page #batchTplBar button {
+          width: 100%;
+          min-width: 0 !important;
+          min-height: 36px;
+          padding: 7px 6px !important;
+          overflow-wrap: anywhere;
+          white-space: normal !important;
+          line-height: 1.3;
+        }
+        body.admin-mp-page #dailySongList {
+          max-height: 62vh !important;
+          padding: 3px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item {
+          padding: 12px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-head {
+          grid-template-columns: 20px minmax(0, 1fr) auto;
+          gap: 8px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-head > span {
+          font-size: 10px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-actions {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-actions button {
+          width: 100%;
+          min-width: 0 !important;
+          min-height: 38px;
+          padding: 7px 5px !important;
+          overflow-wrap: anywhere;
+          white-space: normal !important;
+          line-height: 1.3;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template {
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 6px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template > span {
+          grid-column: 1 / -1;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template select,
+        body.admin-mp-page #dailySongList .daily-song-item-template button {
+          width: 100%;
+          min-width: 0 !important;
+          min-height: 38px;
+        }
+        body.admin-mp-page #manualSongForm {
+          padding: 14px !important;
+        }
+        body.admin-mp-page #manualSongForm > div[style*="grid-template-columns"] {
+          grid-template-columns: minmax(0, 1fr) !important;
+          gap: 10px !important;
+        }
+        body.admin-mp-page #manualSongForm .manual-song-form-actions {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px !important;
+        }
+        body.admin-mp-page #manualSongForm .manual-song-form-actions button {
+          width: 100%;
+          min-width: 0;
+          padding: 9px 8px !important;
+        }
+        body.admin-mp-page .preview-toolbar {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 10px;
+        }
+        body.admin-mp-page .preview-toolbar .toggle-group {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px;
+        }
+        body.admin-mp-page .preview-toolbar .toggle-group label {
+          min-width: 0;
+          overflow-wrap: anywhere;
+          white-space: normal;
+          line-height: 1.35;
+        }
+        body.admin-mp-page .preview-toolbar > .btn {
+          width: 100%;
+        }
+        body.admin-mp-page .preview-area {
+          max-height: 460px !important;
+          padding: 10px !important;
+        }
+        body.admin-mp-page .post-selection-complete {
+          align-items: stretch;
+          flex-direction: column;
+          padding: 14px;
+        }
+        body.admin-mp-page .post-selection-complete .btn {
+          width: 100%;
+        }
+        body.admin-mp-page .post-table {
+          display: block;
+          width: 100%;
+          overflow: visible;
+        }
+        body.admin-mp-page .post-table thead { display: none; }
+        body.admin-mp-page .post-table tbody,
+        body.admin-mp-page .post-table tr,
+        body.admin-mp-page .post-table td { display: block; width: 100%; }
+        body.admin-mp-page .post-table tr { position:relative;margin-bottom:10px;padding:12px 12px 12px 44px;border:1px solid #eee;border-radius:12px;background:#fff; }
+        body.admin-mp-page .post-table td { border:0 !important;padding:3px 0 !important;white-space:normal;overflow-wrap:anywhere; }
+        body.admin-mp-page .post-table .checkbox-cell { position:absolute;left:14px;top:15px;width:20px; }
+        body.admin-mp-page .post-table td[data-label="#"] { display:none; }
+        body.admin-mp-page .post-table .post-author,
+        body.admin-mp-page .post-table .post-stats { font-size:12px;color:#888; }
+        body.admin-mp-page .post-table .post-author::before { content:"作者：";color:#aaa; }
+        body.admin-mp-page .weekly-star-toolbar { display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px !important; }
+        body.admin-mp-page .weekly-star-toolbar .btn { width:100%; }
+        body.admin-mp-page .weekly-star-toolbar span { grid-column:1 / -1;margin-left:0 !important; }
+        body.admin-mp-page .weekly-star-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px; }
+        body.admin-mp-page .weekly-star-card { min-width:0; }
+        body.admin-mp-page .toolbar { display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px !important;align-items:center; }
+        body.admin-mp-page .toolbar label,
+        body.admin-mp-page .toolbar select,
+        body.admin-mp-page .toolbar .btn { min-width:0;width:100%; }
+        body.admin-mp-page .toolbar #postStatus { grid-column:1 / -1; }
+        body.admin-mp-page .toolbar > span[style*="flex:1"] { display:none; }
+        body.admin-mp-page .toolbar .btn-primary { grid-column:1 / -1; }
+      }
+
+      @media (max-width: 400px) {
+        body.admin-mp-page .container {
+          width: calc(100% - 16px);
+        }
+        body.admin-mp-page .top-bar h1 {
+          font-size: 15px !important;
+        }
+        body.admin-mp-page .top-bar .back-link {
+          padding: 6px 8px;
+          font-size: 11px;
+        }
+        body.admin-mp-page .tab-btn {
+          min-width: 98px;
+          padding-left: 10px !important;
+          padding-right: 10px !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-template button {
+          width: 100%;
+        }
+        body.admin-mp-page #manualSongForm .manual-song-form-actions,
+        body.admin-mp-page .preview-toolbar .toggle-group {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        body.admin-mp-page #batchTplBar > div:last-child {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        body.admin-mp-page .weekly-star-grid { grid-template-columns:minmax(0,1fr); }
+      }
+
+      /* ===== 每日推歌与下周广播点歌：移动端工作流收拢 ===== */
+      body.admin-mp-page .daily-song-radio-addon {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-top: 16px;
+        padding: 14px 16px;
+        border: 1px solid #dbeeea;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f7fffd, #f8fbff);
+      }
+      body.admin-mp-page .daily-song-radio-addon-copy { min-width: 0; }
+      body.admin-mp-page .daily-song-radio-addon-copy > div { color: #245d58; font-size: 14px; font-weight: 800; line-height: 1.45; }
+      body.admin-mp-page .daily-song-radio-addon-copy small { display: block; margin-top: 4px; color: #78918e; font-size: 11px; line-height: 1.5; }
+      body.admin-mp-page .daily-song-radio-switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        flex: 0 0 auto;
+        min-height: 36px;
+        padding: 0 12px;
+        border: 1px solid #b9ddd7;
+        border-radius: 999px;
+        background: #fff;
+        color: #23736d;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      body.admin-mp-page .daily-song-radio-switch input { width: 16px; height: 16px; accent-color: #2a8a83; }
+      body.admin-mp-page .preview-area .mp-video-preview-card {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+      body.admin-mp-page .preview-area .mp-video-preview-card img {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        max-height: 360px;
+        object-fit: cover;
+        margin: 0 auto;
+      }
+      @media (max-width: 768px) {
+        body.admin-mp-page .daily-song-radio-addon { align-items: stretch; flex-direction: column; gap: 10px; margin-top: 12px; padding: 12px; }
+        body.admin-mp-page .daily-song-radio-switch { width: 100%; justify-content: center; }
+        body.admin-mp-page .daily-song-page-actions { grid-template-columns: minmax(0, 1fr) !important; }
+        body.admin-mp-page .daily-song-page-actions .btn { min-height: 44px; }
+        body.admin-mp-page #dailySongList .daily-song-item-head { gap: 8px !important; }
+        body.admin-mp-page #dailySongList .daily-song-item-head > div { flex-basis: calc(100% - 34px); }
+        body.admin-mp-page #dailySongList .daily-song-item-head > span { margin-left: 26px; }
+        body.admin-mp-page #dailySongList .daily-song-item-actions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        body.admin-mp-page #dailySongList .daily-song-item-actions button { width: 100%; min-height: 38px; padding-inline: 7px !important; }
+        body.admin-mp-page #dailySongList .daily-song-item-template { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 7px !important; align-items: stretch !important; }
+        body.admin-mp-page #dailySongList .daily-song-item-template select,
+        body.admin-mp-page #dailySongList .daily-song-item-template button { width: 100%; min-height: 38px; }
+        body.admin-mp-page .preview-area .mp-video-preview-card { margin-top: 12px !important; padding: 8px !important; border-radius: 12px !important; }
+        body.admin-mp-page .preview-area .mp-video-preview-card img { max-height: none; aspect-ratio: 16 / 9; }
+      }
+
+      /* 每日推歌是独立工作区：编辑、预览、同步入口保持同一页的上下文。 */
+      body.admin-mp-page .daily-song-inline-preview {
+        margin-top: 18px;
+        border: 1px solid rgba(255,107,157,.22);
+        border-radius: 20px;
+        background: linear-gradient(145deg, #fffafd 0%, #f8f7ff 100%);
+        box-shadow: 0 12px 32px rgba(103, 82, 144, .09);
+        overflow: hidden;
+      }
+      body.admin-mp-page .daily-song-inline-preview[hidden] { display: none; }
+      body.admin-mp-page .daily-song-inline-preview-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 18px 20px;
+        background: linear-gradient(135deg, rgba(255,107,157,.12), rgba(138,111,255,.12));
+        border-bottom: 1px solid rgba(255,107,157,.12);
+      }
+      body.admin-mp-page .daily-song-inline-preview-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+      body.admin-mp-page .daily-song-inline-preview-kicker { color: #b26a92; font-size: 10px; letter-spacing: 2px; font-weight: 700; }
+      body.admin-mp-page .daily-song-inline-preview-title { margin-top: 4px; color: #2d2940; font-size: 19px; font-weight: 800; line-height: 1.35; word-break: break-word; }
+      body.admin-mp-page .daily-song-inline-preview-digest { margin-top: 5px; color: #756f86; font-size: 12px; line-height: 1.6; }
+      body.admin-mp-page .daily-song-inline-preview-body { max-width: 720px; margin: 0 auto; background: #fff; min-height: 120px; }
+      body.admin-mp-page .daily-song-inline-preview-foot { padding: 11px 16px; color: #91899f; font-size: 11px; line-height: 1.6; text-align: center; border-top: 1px solid #f0eaf4; }
+      body.admin-mp-page .daily-song-item-editor-toggle { flex: 0 0 auto; border: 1px solid #ead8e7; border-radius: 999px; background: #fff; color: #9b6a8c; padding: 5px 10px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+      body.admin-mp-page .daily-song-item-editor-toggle:hover { border-color: #ff8fb1; color: #d14e7c; }
+      body.admin-mp-page .daily-song-item-details { padding-top: 2px; }
+      body.admin-mp-page .daily-song-item-summary { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; color: #a79caf; font-size: 11px; }
+      body.admin-mp-page .cover-prompt-panel {
+        margin: 14px 16px 16px;
+        padding: 14px;
+        border: 1px solid #eadff0;
+        border-radius: 16px;
+        background: linear-gradient(145deg, #fffdfd, #f8f7ff);
+      }
+      body.admin-mp-page .cover-prompt-panel[hidden] { display: none; }
+      body.admin-mp-page .cover-prompt-panel-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; color:#554663; font-size:13px; font-weight:800; }
+      body.admin-mp-page .cover-prompt-panel-head small { color:#a49aaa; font-size:11px; font-weight:400; }
+      body.admin-mp-page .cover-prompt-panel textarea { display:block; width:100%; min-height:92px; margin:10px 0; box-sizing:border-box; resize:vertical; border:1px solid #e7dcea; border-radius:12px; padding:10px 12px; background:#fff; color:#51465e; font:12px/1.75 inherit; }
+      @media (min-width: 769px) {
+        body.admin-mp-page .preview-area { display:flex; flex-direction:column; align-items:center; padding-inline:20px; }
+        body.admin-mp-page .preview-area > div[style] { width:min(680px, 100%) !important; margin-left:auto !important; margin-right:auto !important; }
+        body.admin-mp-page .preview-article-meta, body.admin-mp-page #articleCoverPromptPanel { max-width: 760px; margin-left:auto; margin-right:auto; }
+      }
+      @media (max-width: 768px) {
+        body.admin-mp-page .daily-song-inline-preview-head { flex-direction: column; padding: 16px; }
+        body.admin-mp-page .daily-song-inline-preview-actions { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); }
+        body.admin-mp-page .daily-song-inline-preview-actions .btn { width: 100%; }
+        body.admin-mp-page .daily-song-inline-preview-body { overflow-x: hidden; }
+        body.admin-mp-page .daily-song-item-editor-toggle { margin-left: auto; }
+      }
+
+      /* 候选曲目已经在“今日推歌选择”工作区内，不再套第二层列表卡片。
+         这里必须同时包含选择器 ID 与列表 class，才能覆盖旧版工作区规则。 */
+      body.admin-mp-page #dailySongSelector #dailySongList.daily-song-list {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: min(58vh, 520px) !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        overflow-x: hidden !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 12px 10px !important;
+        background: transparent !important;
+        border: 0 !important;
+        border-bottom: 1px solid #eee6ed !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item:last-child {
+        border-bottom: 0 !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-head {
+        display: grid !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        grid-template-columns: 20px minmax(0, 1fr) 96px !important;
+        grid-template-areas: "check info edit" !important;
+        min-height: 0 !important;
+        height: auto !important;
+        align-items: start !important;
+        align-content: start !important;
+        gap: 0 10px !important;
+        margin: 0 !important;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-head > .daily-song-select { grid-area: check; }
+      body.admin-mp-page #dailySongList .daily-song-item-main { grid-area: info; min-width: 0; }
+      body.admin-mp-page #dailySongList .daily-song-item-badges {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        margin-top: 5px;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-badges > span { margin: 0 !important; }
+      body.admin-mp-page #dailySongList .daily-song-item-editor-toggle {
+        grid-area: edit;
+        justify-self: end;
+        width: 96px !important;
+        min-width: 96px;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        align-self: start;
+      }
+      body.admin-mp-page #dailySongList .daily-song-item-summary {
+        display: block;
+        margin: 5px 0 0 30px !important;
+        line-height: 1.45;
+      }
+      @media (max-width: 768px) {
+        body.admin-mp-page #dailySongSelector #dailySongList.daily-song-list { max-height: 62vh !important; }
+        body.admin-mp-page #dailySongList .daily-song-item-head {
+          grid-template-columns: 20px minmax(0, 1fr) !important;
+          grid-template-areas:
+            "check info"
+            ". edit" !important;
+        }
+        body.admin-mp-page #dailySongList .daily-song-item-editor-toggle {
+          justify-self: start;
+          width: 92px !important;
+          min-width: 92px;
+          margin-top: 7px !important;
+        }
+      }

@@ -220,6 +220,7 @@ body.admin-page .admin-pagination {
 body.admin-page .admin-layout {
     display: flex;
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 body.admin-page .admin-sidebar {
@@ -231,6 +232,11 @@ body.admin-page .admin-sidebar {
     width: 260px;
     height: 100vh;
     max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
     overflow-x: hidden;
     overflow-y: auto;
     color: var(--admin-color-white);
@@ -711,21 +717,22 @@ body.admin-page .admin-panel.active {
 
         /* ===== 深色模式变量 ===== */
         [data-theme="dark"] {
-            --bg-primary: #0F1117;
-            --bg-secondary: #1A1D2E;
-            --bg-card: #1E2235;
-            --bg-glass: rgba(30, 34, 53, 0.85);
-            --bg-section: #252A3E;
-            --text-primary: #E8ECF4;
-            --text-secondary: #94A3B8;
-            --text-light: #64748B;
-            --text-inverse: #0F1117;
-            --border-light: #2D3348;
-            --border-color: #374151;
+            color-scheme: dark;
+            --bg-primary: #12141f;
+            --bg-secondary: #191c29;
+            --bg-card: #202332;
+            --bg-glass: rgba(32, 35, 50, 0.88);
+            --bg-section: #292d3d;
+            --text-primary: #f4f2f8;
+            --text-secondary: #c9c6d3;
+            --text-light: #a5a1b2;
+            --text-inverse: #171823;
+            --border-light: #34384a;
+            --border-color: #45495d;
             --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
             --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
-            --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.6);
+            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.34);
+            --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.42);
         }
 
         /* ===== 深色模式全局样式 ===== */
@@ -1510,6 +1517,8 @@ body.admin-page .admin-panel.active {
             box-shadow: 10px 0 28px rgba(111, 82, 52, .09);
             height: 100vh;
             max-height: 100vh;
+            height: 100dvh;
+            max-height: 100dvh;
             overflow-y: auto;
             overflow-x: hidden;
             scroll-behavior: smooth;
@@ -1923,7 +1932,7 @@ body.admin-page .admin-panel.active {
             overflow: hidden;
         }
         [data-theme="dark"] #adminLogin {
-            background: linear-gradient(135deg, #1a1423 0%, #2a1f33 30%, #1e1a30 70%, #141a2a 100%);
+            background: linear-gradient(135deg, #0F1218 0%, #161B26 35%, #182030 70%, #111722 100%);
         }
 
         /* 可爱星星装饰 */
@@ -3016,6 +3025,18 @@ body.admin-page .admin-panel.active {
             vertical-align: middle;
             margin-right: 4px;
         }
+        .title-remove-btn {
+            margin-left: 4px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            font: inherit;
+            line-height: 1;
+            opacity: 0.7;
+        }
+        .title-remove-btn:hover { opacity: 1; }
         .user-title-badge {
             display: inline-flex;
             align-items: center;
@@ -10916,4 +10937,281 @@ body.admin-page .user-dropdown .dropdown-item-danger:focus-visible {
 [data-theme="dark"] body.admin-page .user-dropdown .dropdown-item:hover,
 [data-theme="dark"] body.admin-page .user-dropdown .dropdown-item:focus-visible {
     background: rgba(255, 255, 255, .12);
+}
+
+/* 浏览记录移动端最终收口：每条记录拥有独立高度，分页始终位于列表之后。 */
+@media (max-width: 768px) {
+    html:has(body.admin-page),
+    body.admin-page {
+        min-height: 100dvh;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.admin-page #adminApp,
+    body.admin-page .admin-layout,
+    body.admin-page .admin-main {
+        height: auto !important;
+        min-height: 100dvh;
+        overflow: visible !important;
+    }
+
+    body.admin-page #panel-postviews,
+    body.admin-page #panel-postviews .admin-table-wrapper {
+        overflow: visible !important;
+        contain: none !important;
+    }
+
+    body.admin-page #panel-postviews .admin-table {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+    }
+
+    body.admin-page #panel-postviews .admin-table thead { display: none !important; }
+
+    body.admin-page #panel-postviews .admin-table tbody {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    body.admin-page #panel-postviews .admin-table tbody tr {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 8px 10px;
+        width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 14px !important;
+        position: relative;
+        overflow: visible !important;
+        isolation: isolate;
+        border: 1px solid var(--border-light, #edf0f7) !important;
+        border-radius: 15px !important;
+        background: var(--bg-card, #fff) !important;
+        box-shadow: 0 5px 16px rgba(71, 84, 125, 0.07);
+    }
+
+    body.admin-page #panel-postviews .admin-table tbody td {
+        display: flex !important;
+        align-items: flex-start;
+        gap: 7px;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        min-height: 22px;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.45;
+    }
+
+    body.admin-page #panel-postviews .admin-table tbody td:not([colspan])::before {
+        flex: 0 0 42px;
+        color: var(--text-light, #94a3b8);
+        font-size: .68rem;
+    }
+
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(1) { display: none !important; }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(2) {
+        grid-column: 1 / -1;
+        padding-bottom: 8px !important;
+        border-bottom: 1px solid var(--border-light, #edf0f7) !important;
+        font-size: .92rem !important;
+        font-weight: 700;
+    }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(2)::before { content: '帖子'; }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(3)::before { content: '浏览者'; }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(4)::before { content: '邮箱'; }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(5)::before { content: 'IP'; }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(6)::before { content: '归属地'; }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(7)::before { content: '时间'; }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(8) {
+        grid-column: 1 / -1;
+        padding-top: 9px !important;
+        border-top: 1px solid var(--border-light, #edf0f7) !important;
+    }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(8)::before { display: none; }
+    body.admin-page #panel-postviews .admin-table tbody td:nth-child(8) .btn {
+        width: 100%;
+        min-height: 40px;
+    }
+
+    body.admin-page #panel-postviews .admin-pagination {
+        position: relative;
+        z-index: 2;
+        min-height: 52px;
+        margin-top: 4px;
+        padding: 12px 0 20px !important;
+        clear: both;
+    }
+}
+
+@media (max-width: 768px) {
+    [data-theme="dark"] body.admin-page {
+        --admin-page-bg: #12141f;
+        --admin-surface: rgba(32, 35, 50, .97);
+        --admin-surface-muted: #191c29;
+        --admin-surface-raised: #292d3d;
+        --admin-text-primary: #f4f2f8;
+        --admin-text-secondary: #c9c6d3;
+        --admin-text-muted: #a5a1b2;
+        --admin-border: rgba(255, 255, 255, .12);
+        --admin-border-strong: rgba(255, 143, 181, .22);
+        --admin-panel-accent: rgba(255, 107, 157, .10);
+        --admin-shadow-soft: 0 14px 32px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .05);
+        background: linear-gradient(160deg, #111522 0%, #171b2a 55%, #151925 100%);
+    }
+
+    [data-theme="dark"] body.admin-page .admin-topbar,
+    [data-theme="dark"] body.admin-page .admin-panel {
+        border-color: rgba(255, 255, 255, .10) !important;
+        background: linear-gradient(145deg, rgba(32, 37, 55, .98), rgba(25, 30, 46, .96)) !important;
+    }
+
+    [data-theme="dark"] body.admin-page .admin-sidebar {
+        background: linear-gradient(160deg, #1b2032 0%, #141827 100%) !important;
+        border-right-color: rgba(255, 255, 255, .08) !important;
+        box-shadow: 12px 0 34px rgba(0, 0, 0, .38) !important;
+    }
+
+    [data-theme="dark"] body.admin-page .admin-sidebar .sidebar-header {
+        border-bottom-color: rgba(255, 255, 255, .08) !important;
+    }
+
+    [data-theme="dark"] body.admin-page .admin-sidebar .sidebar-logo,
+    [data-theme="dark"] body.admin-page .admin-sidebar .sidebar-link {
+        color: rgba(255, 255, 255, .74) !important;
+    }
+
+    [data-theme="dark"] body.admin-page .admin-sidebar .sidebar-link:hover {
+        color: #fff !important;
+        background: rgba(255, 255, 255, .07) !important;
+    }
+
+    [data-theme="dark"] body.admin-page .admin-sidebar .sidebar-link.active {
+        color: #fff !important;
+        background: linear-gradient(90deg, rgba(255, 107, 157, .20), rgba(167, 139, 250, .18)) !important;
+    }
+
+    [data-theme="dark"] body.admin-page .admin-sidebar .sidebar-footer {
+        border-top-color: rgba(255, 255, 255, .08) !important;
+        background: rgba(0, 0, 0, .14) !important;
+    }
+}
+
+/* 微信绑定用户卡片：每个字段独占一行，长 OpenID 不再参与卡片列宽计算。 */
+@media (max-width: 768px) {
+    body.admin-page #panel-wechattest .wechat-user-table tbody tr {
+        grid-template-columns: minmax(0, 1fr) !important;
+        align-items: start;
+        gap: 9px !important;
+        padding: 14px !important;
+    }
+
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(2),
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(3),
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(4),
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(5),
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(6) {
+        display: grid !important;
+        grid-column: 1 / -1 !important;
+        grid-template-columns: 62px minmax(0, 1fr);
+        align-items: start;
+        column-gap: 8px;
+        width: 100% !important;
+        min-width: 0 !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(2) {
+        padding-bottom: 10px !important;
+        border-bottom: 1px solid var(--border-light, #edf0f7) !important;
+    }
+
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:not([colspan])::before {
+        display: block;
+        width: auto;
+        min-width: 0;
+        flex: none;
+        font-size: .72rem;
+        line-height: 1.5;
+        white-space: nowrap;
+    }
+
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(4) .openid-text {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        max-width: none !important;
+        overflow-wrap: anywhere;
+        word-break: break-all;
+        line-height: 1.5;
+    }
+
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(5) {
+        font-variant-numeric: tabular-nums;
+    }
+
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(6) {
+        padding-top: 10px !important;
+        border-top: 1px solid var(--border-light, #edf0f7) !important;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(6)::before {
+        display: none !important;
+    }
+
+    body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(6) .btn-test-msg {
+        grid-column: 1 / -1;
+        width: 100% !important;
+        min-height: 44px;
+        white-space: normal;
+        border-radius: 999px;
+    }
+}
+
+[data-theme="dark"] body.admin-page #panel-wechattest .wechat-test-section {
+    border-color: rgba(255, 255, 255, .10);
+    background: linear-gradient(150deg, rgba(32, 35, 50, .98), rgba(26, 29, 43, .98));
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+[data-theme="dark"] body.admin-page #panel-wechattest .wechat-test-title { color: #f4f2f8; }
+[data-theme="dark"] body.admin-page #panel-wechattest .wechat-test-desc { color: #bbb7c7; }
+
+[data-theme="dark"] body.admin-page #panel-wechattest .wechat-user-table tbody tr {
+    border-color: rgba(255, 255, 255, .10) !important;
+    background: rgba(255, 255, 255, .025) !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .14);
+}
+
+[data-theme="dark"] body.admin-page #panel-wechattest .wechat-user-table tbody td:not([colspan])::before {
+    color: #a9a5b6;
+}
+
+[data-theme="dark"] body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(2) {
+    border-bottom-color: rgba(255, 255, 255, .10) !important;
+}
+
+[data-theme="dark"] body.admin-page #panel-wechattest .wechat-user-table tbody td:nth-child(6) {
+    border-top-color: rgba(255, 255, 255, .10) !important;
+}
+
+[data-theme="dark"] body.admin-page #panel-wechattest .btn-test-msg {
+    min-height: 44px;
+    background: linear-gradient(120deg, #0eb967, #06a953);
+    box-shadow: 0 5px 14px rgba(0, 185, 103, .18);
 }

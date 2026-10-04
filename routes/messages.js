@@ -3,6 +3,7 @@ const { pool } = require('../config/database');
 const { auth } = require('../middleware/auth');
 const { getPagination } = require('../services/pagination');
 const { escapeHtml } = require('../services/html-utils');
+const { runWriteTransaction } = require('../services/write-transaction');
 const router = express.Router();
 
 // ===== 消息通知 & 邮件发送 =====
@@ -56,7 +57,7 @@ async function sendMessageNotification(senderId, recipientId, content, conversat
           <div style="background:#FFF8FA;border:1px solid rgba(255,107,157,0.15);border-radius:12px;padding:16px;margin-bottom:20px;">
             <p style="color:#333;font-size:14px;line-height:1.7;margin:0;">${safeContentPreview}</p>
           </div>
-          <a href="http://localhost:3000/messages.html" style="display:inline-block;background:linear-gradient(135deg,#FF6B9D,#C084FC);color:#fff;padding:12px 28px;border-radius:24px;text-decoration:none;font-weight:600;font-size:14px;">查看私信 →</a>
+          <a href="https://wall.jay23.cn/messages.html" style="display:inline-block;background:linear-gradient(135deg,#FF6B9D,#C084FC);color:#fff;padding:12px 28px;border-radius:24px;text-decoration:none;font-weight:600;font-size:14px;">查看私信 →</a>
         </div>
       </div>
     `;
@@ -478,67 +479,67 @@ router.post('/conversations/:conversationId/messages', auth, async (req, res) =>
       return res.status(400).json({ code: 400, message: '消息内容过长（最多2000字）' });
     }
     
-    // 验证用户是否参与此会话
-    const [conversations] = await pool.execute(
-      'SELECT id, user1_id, user2_id FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)',
-      [conversationId, userId, userId]
-    );
-    
-    if (conversations.length === 0) {
-      return res.status(403).json({ code: 403, message: '无权发送消息到此会话' });
-    }
-    
-    const conversation = conversations[0];
-    const recipientId = conversation.user1_id === userId ? conversation.user2_id : conversation.user1_id;
-
-    // 检查是否被对方拉黑
-    const [blocked] = await pool.execute(
-      'SELECT id FROM blocked_users WHERE user_id = ? AND blocked_user_id = ?',
-      [recipientId, userId]
-    );
-    if (blocked.length > 0) {
-      return res.status(403).json({ code: 403, message: '消息发送失败：你已被对方拉黑' });
-    }
-    
-    // 插入消息
-    const [result] = await pool.execute(
-      'INSERT INTO messages (conversation_id, sender_id, content, created_at) VALUES (?, ?, ?, NOW())',
-      [conversationId, userId, content.trim()]
-    );
-    
-    // 更新会话的最后消息时间
-    await pool.execute(
-      'UPDATE conversations SET last_message_at = NOW(), updated_at = NOW() WHERE id = ?',
-      [conversationId]
-    );
-    
-    // 获取刚刚插入的消息详情
-    const [messages] = await pool.execute(`
-      SELECT 
-        m.id,
-        m.conversation_id,
-        m.sender_id,
-        m.content,
-        m.is_read,
-        m.read_at,
-        m.created_at,
-        u.nickname as sender_nickname,
-        u.avatar as sender_avatar
-      FROM messages m
-      LEFT JOIN users u ON u.id = m.sender_id
-      WHERE m.id = ?
-    `, [result.insertId]);
-    
-    // 发送邮件通知（异步，不阻塞响应）
-    sendMessageNotification(userId, recipientId, content.trim(), conversationId);
-    
-    res.json({ 
-      code: 200, 
-      data: { 
-        message: messages[0],
-        recipient_id: recipientId
+    let recipientId;
+    const writeResult = await runWriteTransaction(pool, req, 'messages.create', async connection => {
+      // 锁定会话行，使消息记录和会话最后活动时间串行更新。
+      const [conversations] = await connection.execute(
+        'SELECT id, user1_id, user2_id FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?) FOR UPDATE',
+        [conversationId, userId, userId]
+      );
+      if (conversations.length === 0) {
+        return { status: 403, body: { code: 403, message: '无权发送消息到此会话' } };
       }
+      const conversation = conversations[0];
+      recipientId = String(conversation.user1_id) === String(userId) ? conversation.user2_id : conversation.user1_id;
+
+      const [blocked] = await connection.execute(
+        'SELECT id FROM blocked_users WHERE user_id = ? AND blocked_user_id = ?',
+        [recipientId, userId]
+      );
+      if (blocked.length > 0) {
+        return { status: 403, body: { code: 403, message: '消息发送失败：你已被对方拉黑' } };
+      }
+
+      const [result] = await connection.execute(
+        'INSERT INTO messages (conversation_id, sender_id, content, created_at) VALUES (?, ?, ?, NOW())',
+        [conversationId, userId, content.trim()]
+      );
+      await connection.execute(
+        'UPDATE conversations SET last_message_at = (SELECT created_at FROM messages WHERE id = ?), updated_at = NOW() WHERE id = ?',
+        [result.insertId, conversationId]
+      );
+
+      const [messages] = await connection.execute(`
+        SELECT
+          m.id,
+          m.conversation_id,
+          m.sender_id,
+          m.content,
+          m.is_read,
+          m.read_at,
+          m.created_at,
+          u.nickname as sender_nickname,
+          u.avatar as sender_avatar
+        FROM messages m
+        LEFT JOIN users u ON u.id = m.sender_id
+        WHERE m.id = ?
+      `, [result.insertId]);
+      if (messages.length === 0) throw new Error('Inserted message could not be read back');
+
+      return {
+        status: 200,
+        body: { code: 200, data: { message: messages[0], recipient_id: recipientId } }
+      };
     });
+    if (writeResult.status >= 400 || Number(writeResult.body.code) >= 400) {
+      return res.status(writeResult.status).json(writeResult.body);
+    }
+
+    if (!writeResult.replayed) {
+      // 发送邮件通知（异步，不阻塞响应）；幂等重放不重复触发通知。
+      sendMessageNotification(userId, recipientId, content.trim(), conversationId);
+    }
+    res.status(writeResult.status).json(writeResult.body);
   } catch (error) {
     console.error('发送消息失败:', error);
     res.status(500).json({ code: 500, message: '服务器错误' });
