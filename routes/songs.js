@@ -33,7 +33,8 @@ router.get('/remaining', auth, async (req, res) => {
     const remaining = Math.max(0, dailyLimit - (userSongCount[0].cnt || 0));
     res.json({ code: 200, data: { remaining, limit: dailyLimit } });
   } catch (err) {
-    res.json({ code: 200, data: { remaining: 3, limit: 3 } });
+    console.error('[Songs] 获取点歌次数失败:', err.code || err.name || 'error');
+    res.status(503).json({ code: 503, message: '点歌次数暂时无法加载，请稍后重试' });
   }
 });
 
@@ -44,7 +45,9 @@ router.get('/slots', optionalAuth, async (req, res) => {
     res.set('Pragma', 'no-cache');
     // 首次打开点歌页时，后台维护任务可能尚未完成；在查询前幂等补齐未来日期，
     // 避免刚配置的周期因 slot_dates 尚未生成而被误报“没有可用时段”。
-    await maintenance.ensureFutureDates();
+    if (!await maintenance.ensureFutureDates()) {
+      return res.status(503).json({ code: 503, message: '播放日期暂时无法加载，请稍后重试' });
+    }
     // 显示从今天开始的14天内日期
     const { today, rangeEnd } = getChinaDayRange();
     const [[slots], [dates], [counts]] = await Promise.all([
@@ -130,8 +133,10 @@ router.post('/', auth, async (req, res) => {
       return res.json({ code: 400, message: '歌曲名和歌手为必填项，请选择播放时段和日期' });
     }
 
-    // 日期补充属于显式写入请求，GET /slots 保持纯查询。
-    await ensureFutureDates(pool);
+    // HTTP 提交和后台任务必须共用同一维护实例；旧独立函数已移入该服务。
+    if (!await maintenance.ensureFutureDates()) {
+      return res.status(503).json({ code: 503, message: '播放日期暂时无法加载，请稍后重试' });
+    }
     
     // 匿名点歌检查
     if (anonymous) {
@@ -221,8 +226,8 @@ router.post('/', auth, async (req, res) => {
       });
     }
   } catch (err) {
-    console.error('点歌错误:', err.message);
-    res.json({ code: 500, message: '服务器错误，请稍后重试' });
+    console.error('[Songs] 点歌提交失败:', err.code || err.name || 'error');
+    res.status(500).json({ code: 500, message: '服务器错误，请稍后重试' });
   }
 });
 
