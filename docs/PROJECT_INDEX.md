@@ -74,6 +74,8 @@
 
 ## 验证入口
 
+- GitHub Pages 演示：`scripts/build-pages-demo.js` 读取 `frontend/`，注入 `demo/runtime.js` 与 `demo/demo.css` 后生成 `.pages-demo/`；发布入口为 `.github/workflows/pages-demo.yml`，说明见 `docs/PAGES_DEMO.md`。构建命令为 `npm run build:demo`，不连接生产后端。
+
 - 服务语法：`node --check server.js`
 - 微信署名：`npm run test:wechat-song-flow`、`npm run test:wechat-output`；推歌跳过使用绑定账号署名，公众号投稿显式写入非匿名。
 - 历史推歌署名修正：`routes/deploy.js` 的 `/api/deploy-maintenance/wechat-author` → `services/wechat-author-repair.js`；专项回归为 `npm run test:wechat-author-repair`。仅私有部署凭据可调用，先核对、再指定记录修改，旧值备份保存在服务器 `logs/`。

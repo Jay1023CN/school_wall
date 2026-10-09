@@ -41,6 +41,7 @@
     "check:routes": "node scripts/test-route-stability.js",
     "cleanup:avatars": "node scripts/cleanup-orphan-avatars.js",
     "build": "npm run sync:frontend && npm run check:mirrors && node scripts/build-static-site.js",
+    "build:demo": "node scripts/build-pages-demo.js",
     "preview": "vite preview",
     "test:mp-weekly-song-schedule": "node scripts/test-mp-draft-layout-static.js",
     "test:runtime": "node scripts/test-runtime-lifecycle.js",
