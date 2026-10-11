@@ -7,7 +7,7 @@
 - `npm test`、主题首屏专项、部署检查、镜像检查、隐私检查、JS/Bash 语法与差异空白检查通过。全量检查发现旧路由断言仍要求正文等待主题，已按已上线行为更新；未回退正文优先显示。
 - 修改前源站 CSS/JS/健康接口首字节约 18～30ms，源站静态响应包含重复的 `no-cache`。修改后源站 CSS/JS 返回 `public, max-age=300, stale-while-revalidate=86400`；Nginx 配置检查和重载通过。
 - 外部客户端连续 GET：CSS 第二、三次均为 `HIT`、`Age: 1`，首字节约 50ms；JS 第二、三次均为 `HIT`，首字节约 49～52ms。首次未命中仍约 1.7～1.9s，缓存命中不代表所有网络路径或动态接口都消除延迟。
-- 缓存配置与源站/CDN 耗时通过 `/api/deploy-status` 的 `staticCache` 单独记录。源站向公网 CDN 的探测遇到 `ECONNREFUSED`，CDN 命中由外部客户端独立确认；部署成功不作为命中证明。
+- 缓存配置与源站/CDN 耗时通过 `/api/deploy-status` 的 `staticCache` 单独记录。早期源站向公网 CDN 的探测曾遇到 `ECONNREFUSED`；最终部署状态为 `success`、`exitCode=0`，`staticCache.state=edge_cache_hit`，CSS/JS 均取得 `HIT`（约 99～124ms）。外部客户端也独立确认命中；健康接口保持 `no-store`，后台 CSS/JS 保持不缓存。
 
 ## 2026-10-11：正文优先显示
 
