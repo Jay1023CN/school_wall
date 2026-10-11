@@ -28,6 +28,7 @@
 | 静态生成与检查 | `scripts/lib/frontend-assets.js`、`scripts/sync-frontend.js`、`scripts/check-frontend-mirror.js`、`scripts/build-static-site.js` | 共用文件规则；生成 `public/` 镜像和带哈希清单的 `dist/`；生产当前仍提供 `public/` |
 | 旧/备用模板 | `views/` | 不要默认视为当前渲染来源，需由调用链确认 |
 | 部署脚本 | `deploy.sh` | 部署和同步流程入口，修改部署时先读它 |
+| Nginx 静态缓存 | `deploy.sh` → `scripts/configure-static-cache.js` | 日常部署只核对源站与 CDN；管理员显式 `--apply` 时匹配本站域名与目录，备份、检查并按需恢复 Nginx 配置 |
 | 部署数据库预检 | `scripts/check-database-startup.js`、`scripts/test-database-startup-check.js` | 重启前初始化/核验 schema，失败报告仅包含结构错误码；关联 `/api/deploy-status` |
 | 本次发布验证 | `docs/RELEASE_VERIFICATION.md` | 实际检查、功能提交、部署核对及未实测范围 |
 

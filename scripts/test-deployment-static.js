@@ -72,3 +72,22 @@ includes(architecture, 'node scripts/test-deployment-static.js', '部署文档�
 includes(architecture, '202 Accepted', '部署文档必须说明 webhook 仅代表异步启动已接受');
 
 console.log('[deployment-static] 通过：webhook 鉴权/异步启动、锁、Gitee 分支拉取、镜像同步、重启、退出码和回滚检查通过');
+
+const { parse, publicReport } = require('./configure-static-cache');
+const nginxSample = '# braces in comments: {}\nhttp { add_header X-Test "value { with } spaces" always;\n'
+  + 'server { listen 443 ssl; server_name example.com; root /srv/frontend;\n'
+  + 'location ~ \\.js$ { set $name ${host}; add_header Cache-Control "no-cache"; } } }';
+const parsedConfig = parse(nginxSample);
+assert.strictEqual(parsedConfig[0].name, 'http');
+assert.deepStrictEqual(parsedConfig[0].children[0].args, ['X-Test', 'value { with } spaces', 'always']);
+const parsedServer = parsedConfig[0].children[1];
+assert.strictEqual(nginxSample[parsedServer.close], '}');
+assert.strictEqual(parsedServer.children[3].children[0].args[1], '${host}');
+assert.throws(() => parse('server { root /srv/frontend;'), /config_block/);
+assert.throws(() => parse('server { root "broken; }'), /config_quote/);
+assert.strictEqual(publicReport({ revision: 'old', state: 'edge_cache_hit' }, 'new'), null);
+assert.deepStrictEqual(publicReport({ revision: 'new', state: 'origin_cache_ready', secret: 'excluded' }, 'new'),
+  { revision: 'new', state: 'origin_cache_ready' });
+includes(script, 'configure-static-cache.js', '部署必须在源站核对实际 Nginx 缓存');
+includes(script, '"staticCache":%s', '应用部署状态与缓存状态必须分开记录');
+console.log('[deployment-static] 通过：Nginx 配置解析、版本绑定和缓存状态隔离');

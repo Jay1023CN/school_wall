@@ -27,6 +27,7 @@ LOG_FILE="${DEPLOY_LOG_FILE:-$DEPLOY_DIR/logs/deploy.log}"
 DEPLOY_LOCK_PATH="${DEPLOY_LOCK_PATH:-$DEPLOY_DIR/.deploy.lock}"
 DEPLOY_STATUS_FILE="${DEPLOY_STATUS_FILE:-$DEPLOY_DIR/logs/deploy-status.json}"
 DATABASE_DIAGNOSTIC_FILE="$DEPLOY_DIR/logs/deploy-database-check.json"
+STATIC_CACHE_REPORT_FILE="$DEPLOY_DIR/logs/deploy-static-cache.json"
 DEPLOY_DATABASE_ATTEMPT_ID="${DEPLOY_DATABASE_ATTEMPT_ID:-$(date -u '+%s')-$$}"
 DEPLOY_STATE="starting"
 # git reset 后重新执行工作树里的新脚本，避免本次部署继续使用旧版本函数。
@@ -97,15 +98,19 @@ write_status() {
   local updated_at
   local temp_file
   local diagnostics="null"
+  local static_cache="null"
   updated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   temp_file="${DEPLOY_STATUS_FILE}.tmp.$$"
   mkdir -p "$(dirname -- "$DEPLOY_STATUS_FILE")" || return 0
   if [ "$state" = "failed" ] && [ -f "$DATABASE_DIAGNOSTIC_FILE" ] && [ -f "$DEPLOY_DIR/scripts/check-database-startup.js" ]; then
     diagnostics="$("$NODE" "$DEPLOY_DIR/scripts/check-database-startup.js" --read-report "$DATABASE_DIAGNOSTIC_FILE" "$revision" "$DEPLOY_DATABASE_ATTEMPT_ID" 2>/dev/null)" || diagnostics="null"
   fi
+  if [ -f "$STATIC_CACHE_REPORT_FILE" ] && [ -f "$DEPLOY_DIR/scripts/configure-static-cache.js" ]; then
+    static_cache="$("$NODE" "$DEPLOY_DIR/scripts/configure-static-cache.js" --read-report "$STATIC_CACHE_REPORT_FILE" "$revision" 2>/dev/null)" || static_cache="null"
+  fi
   if [ -n "$exit_code" ]; then
-    printf '{"state":"%s","revision":"%s","updatedAt":"%s","exitCode":%s,"diagnostics":%s}\n' \
-      "$state" "$revision" "$updated_at" "$exit_code" "$diagnostics" > "$temp_file"
+    printf '{"state":"%s","revision":"%s","updatedAt":"%s","exitCode":%s,"diagnostics":%s,"staticCache":%s}\n' \
+      "$state" "$revision" "$updated_at" "$exit_code" "$diagnostics" "$static_cache" > "$temp_file"
   else
     printf '{"state":"%s","revision":"%s","updatedAt":"%s"}\n' \
       "$state" "$revision" "$updated_at" > "$temp_file"
@@ -443,6 +448,12 @@ if ! run_npm_install || ! check_frontend_mirror || ! check_database_startup || !
     exit 2
   fi
   exit 1
+fi
+
+# 部署进程只核对缓存，不修改 Nginx 或提升权限；管理员初始化需要显式 --apply。
+# 应用部署状态与缓存状态分别记录，不能把前者当成 CDN 命中。
+if ! "$NODE" "$DEPLOY_DIR/scripts/configure-static-cache.js" "$DEPLOY_DIR" "$DEPLOY_FRONTEND_DIR" "$STATIC_CACHE_REPORT_FILE" "$TARGET_REV"; then
+  echo "[deploy] static cache inspection could not complete; application remains healthy"
 fi
 
 DEPLOY_STATE="success"

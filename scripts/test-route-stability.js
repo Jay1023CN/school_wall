@@ -267,7 +267,7 @@ assert(!frontendHome.includes("fetch('/api/release-notes'") && !frontendHome.inc
 assert(!readPage('index.html').includes('id="homeReleaseNotes"'), '首页不得保留更新入口');
 
 const homePage = readPage('index.html');
-assert(homePage.includes('festival-theme-ready'), '首页应等待主题就绪事件后再显示');
+assert(!homePage.includes('festival-theme-ready') && !homePage.includes('app-booting'), '首页正文不得等待主题就绪');
 assert(!homePage.includes('window.addEventListener("load", release'), '首页不得在主题准备前由 window.load 提前放行');
 assert(!homePage.includes('app-booting::after'), '首页不得显示独立的粉色加载圈');
 
@@ -280,7 +280,7 @@ publicPageNames.forEach((pageName) => {
   const page = readPage(pageName);
   assert(page.includes('/js/theme-mode.js'), `${pageName} 应加载统一节日主题脚本`);
   assert(!page.includes('id="theme-520-css"') && !page.includes('href="/css/520.css"'), `${pageName} 不得继续加载旧 520 样式`);
-  assert(page.includes('festival-theme-ready'), `${pageName} 应等待主题就绪后再显示`);
+  assert(!page.includes('festival-theme-ready') && !page.includes('app-booting'), `${pageName} 正文不得等待主题就绪`);
   assert(!page.includes('window.addEventListener("load", release'), `${pageName} 不得在主题准备前提前放行`);
   assert(!page.includes('app-booting::after'), `${pageName} 不得显示旧粉色加载圈`);
 });
