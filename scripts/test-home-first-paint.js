@@ -19,27 +19,31 @@ assert.strictEqual(frontendHome, publicHome, 'frontend/index.html 与 public/ind
 assert.strictEqual(frontendHomeScript, publicHomeScript, 'frontend/js/home.js 与 public/js/home.js 必须保持一致');
 assert.strictEqual(frontendAppScript, publicAppScript, 'frontend/js/app.js 与 public/js/app.js 必须保持一致');
 
-const bootStyleStart = frontendHome.indexOf('<style id="app-boot-style">');
+const bootStyleStart = frontendHome.indexOf('<style id="app-shell-style">');
 const bootStyleEnd = frontendHome.indexOf('</style>', bootStyleStart);
 assert(bootStyleStart >= 0 && bootStyleEnd > bootStyleStart, '首页必须包含前置 boot 样式');
 const bootStyle = frontendHome.slice(bootStyleStart, bootStyleEnd);
 assert(bootStyleStart < frontendHome.indexOf('<link rel="stylesheet"'), '降级样式必须先于外部 CSS');
 
-assert(bootStyle.includes('html.app-booting body { visibility: hidden; }'), '主题就绪前必须隐藏未准备好的首页');
-assert(bootStyle.includes('html.app-booting::before'), 'boot gate 必须提供独立的首屏加载反馈');
+assert(!frontendHome.includes('app-booting'), '主题不得隐藏首页正文或添加整页加载遮罩');
+assert(frontendHome.includes('localStorage.getItem("theme") === "dark"'), '基础深色主题应在首屏同步恢复');
 assert(bootStyle.includes('.pull-refresh-indicator'), '首页内联样式必须覆盖下拉刷新指示器');
 assert(bootStyle.includes('.pull-refresh-indicator.show'), '下拉刷新显示态必须有内联样式');
 assert(bootStyle.includes('.pull-refresh-indicator.refreshing .refresh-icon'), '刷新中必须有内联动画样式');
 assert(bootStyle.includes('.feed-state'), '帖子加载/错误状态必须有内联容器样式');
 assert(bootStyle.includes('.feed-state-retry'), '帖子失败重试按钮必须有内联样式');
 assert(bootStyle.includes('overscroll-behavior-y: auto'), '首页必须保留移动端原生纵向滚动');
-assert(!frontendHome.includes('media="print"') && !frontendHome.includes("onload=\"this.media='all'\""), '关键首页 CSS 不得延迟到页面加载后再二次启用');
+['style', 'campus-ui-polish', 'responsive', 'mobile-fix', 'performance'].forEach((name) => {
+  const link = frontendHome.match(new RegExp('<link[^>]*href="/css/' + name + '\\.css"[^>]*>'));
+  assert(link && !link[0].includes('media="print"'), '关键布局样式不得延迟启用：' + name);
+});
+assert(frontendHome.includes('href="/js/home.js?v=2026101101" as="script" fetchpriority="high"'), '首页正文脚本应提前下载');
 assert(read('frontend/css/style.css').includes('body.post-detail-page .main-content {\n  width: 100%;\n  max-width: 1120px;'), '详情页基础布局必须以桌面宽度为默认结构');
 
 assert(frontendHome.includes('class="teacher-theme-hero" aria-label="教师节主题寄语" hidden') && frontendHome.includes('class="teacher-theme-note"'), '教师节主题节点必须保留且默认隐藏');
-assert(themeMode.includes("festival-theme-ready"), '首页必须等待节日主题就绪事件');
+assert(themeMode.includes("festival-theme-ready"), '活动主题应用完成后仍应通知关联功能');
 assert(themeMode.includes('THEME_HINT_KEY') && themeMode.includes('readThemeHint'), '主题首屏必须支持本地提示缓存');
-assert(frontendHome.includes('hardTimeoutId') && frontendHome.includes('release(true)'), '主题接口异常时 boot gate 必须安全放行');
+assert(!frontendHome.includes('hardTimeoutId') && !frontendHome.includes('release(true)'), '正文不得等待主题事件或七秒超时');
 assert(serverSource.includes('stale-while-revalidate=86400'), '静态 CSS/JS 应使用短缓存并后台刷新');
 assert(serverSource.includes('max-age=2592000, immutable'), '随机视频文件应使用长期不可变缓存');
 assert(read('routes/site.js').includes('SITE_INFO_CACHE_MS'), '站点配置接口应合并并短缓存数据库请求');
@@ -59,4 +63,4 @@ assert(!wheelHandler.includes("addEventListener('wheel'") && !wheelHandler.inclu
 assert(mobileFixCss.includes('body.home-page #postList') && mobileFixCss.includes('touch-action: pan-y'), '移动端首页主内容和帖子必须放行纵向触摸滚动');
 assert(mobileFixCss.includes('body.home-page {\n        overscroll-behavior-y: auto;'), '移动端首页不得用 overscroll contain 阻断根页面滚动');
 
-console.log('[home-first-paint] 通过：boot gate、CSS 缺失降级样式、触摸刷新状态、主题无闪烁和签到恢复静态检查');
+console.log('[home-first-paint] 通过：正文不等待主题、关键资源预加载、布局降级样式和触摸刷新静态检查');

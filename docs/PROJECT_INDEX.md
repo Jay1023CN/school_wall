@@ -38,6 +38,7 @@
 | 功能 | 先看这些文件 | 后端入口 |
 | --- | --- | --- |
 | 首页/帖子流 | `frontend/index.html`、`frontend/js/home.js`、`frontend/js/app.js` | `routes/posts.js`、`routes/auth.js` |
+| 正文首屏与活动主题 | 公开 HTML 的基础样式和资源预加载 → `frontend/js/theme-mode.js`；正文不等待活动主题，样式就绪后启用 | `routes/site.js`；共享站点配置与本地主题提示缓存 |
 | 帖子详情/回复 | `frontend/post-detail.html`、`frontend/js/detail.js`、`frontend/js/detail-replies.js` | `routes/posts.js` |
 | 电台/歌曲 | `frontend/radio.html`、`frontend/js/radio.js`、`frontend/css/radio-polish-enhanced.css` | `routes/songs.js` |
 | 管理后台 | `frontend/admin/index.html`、`public/admin/index.html` | `routes/admin.js` |

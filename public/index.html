@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <style id="app-boot-style">
-    html.app-booting { background: #f7f1e6; }
-    html.app-booting body { visibility: hidden; }
-    html.app-booting::before { content: "✦ 嘉二の墙墙 · 正在加载"; position: fixed; inset: 0; z-index: 2147483646; display: flex; align-items: center; justify-content: center; padding-bottom: 42px; box-sizing: border-box; background: linear-gradient(135deg, #f8f3e9, #eaf3ee); color: #2f6f68; font: 600 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; letter-spacing: .12em; }
+  <style id="app-shell-style">
+    body { margin: 0; background: #FAFBFE; color: #1E293B; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    html[data-theme="dark"] body { background: #0F1218; color: #F1F5F9; }
     .pull-refresh-indicator { position: fixed; top: calc(var(--navbar-height, 64px) + 6px); left: 50%; z-index: 2147483645; display: flex; align-items: center; gap: 10px; box-sizing: border-box; padding: 8px 20px 8px 16px; transform: translateX(-50%) translateY(-120px); border: 1px solid rgba(255, 107, 157, .2); border-radius: 9999px; background: rgba(255, 255, 255, .94); box-shadow: 0 8px 30px rgba(30, 41, 59, .14); color: #1e293b; font: 500 .82rem/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; opacity: 0; visibility: hidden; pointer-events: none; transition: transform .25s ease, opacity .25s ease, visibility .25s ease; }
     .pull-refresh-indicator.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
     .pull-refresh-indicator .refresh-icon { display: block; width: 20px; height: 20px; flex: 0 0 auto; color: #ff6b9d; }
@@ -20,21 +19,9 @@
   </style>
   <script>
     (function () {
-      var root = document.documentElement;
-      root.classList.add("app-booting");
-      var released = false;
-      var themeReady = false;
-      var hardTimeoutId = window.setTimeout(function () { release(true); }, 7000);
-      function release(force) {
-        if (released || (!themeReady && !force)) return;
-        released = true;
-        window.clearTimeout(hardTimeoutId);
-        root.classList.remove("app-booting");
-      }
-      window.addEventListener("festival-theme-ready", function () {
-        themeReady = true;
-        release(false);
-      }, { once: true });
+      try {
+        if (localStorage.getItem("theme") === "dark") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (_) {}
     })();
   </script>
   <meta name="baidu-site-verification" content="codeva-VcErbIbRz0" />
@@ -137,14 +124,18 @@
     }
   </style>
 
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preload" href="/js/app.js?v=2026100401" as="script" fetchpriority="high">
+  <link rel="preload" href="/js/home.js?v=2026101101" as="script" fetchpriority="high">
+  <link rel="stylesheet" href="/css/style.css" fetchpriority="high">
 <link rel="stylesheet" href="/css/campus-ui-polish.css">
-  <link rel="stylesheet" href="/css/animations.css">
+  <link rel="stylesheet" href="/css/animations.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="/css/animations.css"></noscript>
   <link rel="stylesheet" href="/css/responsive.css">
   <link rel="stylesheet" href="/css/mobile-fix.css">
   <link rel="stylesheet" href="/css/performance.css">
-  <link rel="stylesheet" href="/css/user-card.css">
-  <script src="/js/theme-mode.js" defer></script>
+  <link rel="stylesheet" href="/css/user-card.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="/css/user-card.css"></noscript>
+  <script src="/js/theme-mode.js?v=2026101101" async fetchpriority="low"></script>
 <script>(function(){var bp=document.createElement('script');var curProtocol=window.location.protocol.split(':')[0];if(curProtocol==='https'){bp.src='https://zz.bdstatic.com/linksubmit/push.js'}else{bp.src='http://push.zhanzhang.baidu.com/push.js'}var s=document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bp,s)})();</script>
 </head>
 <body class="home-page">
@@ -533,9 +524,9 @@
   </div>
 
   <script defer src="/js/app.js?v=2026100401"></script>
-  <script defer src="/js/user-card.js"></script>
-  <script defer src="/js/index-theme.js"></script>
-  <script defer src="/js/home.js"></script>
+  <script async src="/js/user-card.js" fetchpriority="low"></script>
+  <script async src="/js/index-theme.js"></script>
+  <script defer src="/js/home.js?v=2026101101" fetchpriority="high"></script>
   <script>
     // P0-12: localStorage PII 过滤 - 只保留展示所需字段
     (function() {

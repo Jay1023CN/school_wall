@@ -1,27 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <style id="app-boot-style">
-    html.app-booting { background: #f7f1e6; }
-    html.app-booting body { visibility: hidden; }
+  <style id="app-shell-style">
+    body { margin: 0; background: #FAFBFE; color: #1E293B; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    html[data-theme="dark"] body { background: #0F1218; color: #F1F5F9; }
   </style>
   <script>
     (function () {
-      var root = document.documentElement;
-      root.classList.add("app-booting");
-      var released = false;
-      var themeReady = false;
-      var hardTimeoutId = window.setTimeout(function () { release(true); }, 7000);
-      function release(force) {
-        if (released || (!themeReady && !force)) return;
-        released = true;
-        window.clearTimeout(hardTimeoutId);
-        root.classList.remove("app-booting");
-      }
-      window.addEventListener("festival-theme-ready", function () {
-        themeReady = true;
-        release(false);
-      }, { once: true });
+      try {
+        if (localStorage.getItem("theme") === "dark") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (_) {}
     })();
   </script>
   <meta charset="UTF-8">
@@ -49,7 +37,7 @@
   <link rel="stylesheet" href="/css/responsive.css">
   <link rel="stylesheet" href="/css/mobile-fix.css">
   <link rel="stylesheet" href="/css/reservation.css">
-  <script src="/js/theme-mode.js" defer></script>
+  <script src="/js/theme-mode.js?v=2026101101" async fetchpriority="low"></script>
   <style>
     .feedback-page {
       min-height: 100vh;
@@ -416,6 +404,7 @@
     }
   </style>
 <script>(function(){var bp=document.createElement('script');var curProtocol=window.location.protocol.split(':')[0];if(curProtocol==='https'){bp.src='https://zz.bdstatic.com/linksubmit/push.js'}else{bp.src='http://push.zhanzhang.baidu.com/push.js'}var s=document.getElementsByTagName('script')[0];s.parentNode.insertBefore(bp,s)})();</script>
+  <link rel="preload" href="/js/app.js?v=2026100401" as="script" fetchpriority="high">
 </head>
 <body class="feedback-screen">
   <!-- 光晕效果背景 -->

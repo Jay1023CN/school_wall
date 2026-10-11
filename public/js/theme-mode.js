@@ -50,7 +50,7 @@
     }
     link.addEventListener('load', function () { finish(true); }, { once: true });
     link.addEventListener('error', function () { finish(false); }, { once: true });
-    // 页面 boot gate 最长等待 7 秒；慢网下不能 2.5 秒就放行默认主题导致闪烁。
+    // 只等待活动主题自己的样式；正文始终可见，不参与此等待。
     timeoutId = window.setTimeout(function () { finish(false); }, 6500);
   }
 
@@ -64,6 +64,9 @@
       link.id = definition.id;
       link.rel = 'stylesheet';
       link.href = definition.href;
+      // 先下载，准备好后再启用，避免主题样式阻塞正文或出现半套布局。
+      link.media = 'print';
+      link.setAttribute('fetchpriority', 'low');
       link.__campusThemeLoad = new Promise(function (resolve) {
         var completed = false;
         function finish(loaded) {
@@ -279,6 +282,12 @@
   }
 
   function finishTheme(state, teacherElements, stylesheets, loaded) {
+    if (stylesheets.teacher) stylesheets.teacher.media = state.teacher && loaded ? 'all' : 'print';
+    if (stylesheets.fiveTwenty) stylesheets.fiveTwenty.media = state.fiveTwenty && loaded ? 'all' : 'print';
+    if (loaded || (!state.teacher && !state.fiveTwenty)) {
+      setThemeClasses(state);
+      updateThemeColorMeta(state);
+    }
     if (state.teacher && loaded) {
       revealTeacherThemeElements(teacherElements);
       clear520Effects();
@@ -304,8 +313,7 @@
     if (state.teacher) waitForStylesheet(ensureStylesheet(THEME_STYLES.teacher, stylesheets, 'teacher'), complete);
     else if (state.fiveTwenty) waitForStylesheet(ensureStylesheet(THEME_STYLES.fiveTwenty, stylesheets, 'fiveTwenty'), complete);
     else {
-      clear520Effects();
-      signalThemeReady();
+      complete(true);
     }
   }
 
@@ -313,11 +321,9 @@
     var state = getThemeState(settings);
     if (persistHint !== false) writeThemeHint(settings);
     var teacherElements = document.querySelectorAll('.teacher-theme-hero, .teacher-theme-note');
-    setThemeClasses(state);
     hideTeacherThemeElements(teacherElements);
     setThemeStylesheets(state, stylesheets);
     waitForActiveTheme(state, stylesheets, teacherElements);
-    updateThemeColorMeta(state);
   }
 
   function loadThemeSettings() {
@@ -326,8 +332,7 @@
       var sharedTimeout = new Promise(function (resolve) {
         sharedTimeoutId = window.setTimeout(function () { resolve(null); }, THEME_SETTINGS_TIMEOUT_MS);
       });
-      // 首页会在 defer 主题脚本之前创建共享 Promise；这里也必须有超时，
-      // 否则共享请求卡住时主题首屏会失去确定性的回退路径。
+      // 主题在后台读取共享配置，请求卡住时仍按时回退，不影响正文。
       return Promise.race([Promise.resolve(window.CampusWallSiteInfoPromise), sharedTimeout])
         .then(function (json) {
           if (sharedTimeoutId) window.clearTimeout(sharedTimeoutId);
@@ -375,13 +380,12 @@
     getThemeSettings().then(function (settings) {
       if (settings) applyTheme(settings, stylesheets);
       else {
-        // 接口失败时仍沿用最近一次已确认的主题，但必须重新走 CSS readiness，
-        // 不能直接放行 boot gate 让默认主题先闪出来。
+        // 接口失败时沿用最近一次已确认的主题，样式就绪后再应用。
         var cachedHint = readThemeHint();
         applyTheme(cachedHint || { festival_mode: false }, stylesheets, false);
       }
     }).catch(function () {
-      // 主题是非核心配置；接口或应用异常时必须放行页面。
+      // 主题是非核心配置；接口或应用异常时使用缓存或基础主题。
       var cachedHint = readThemeHint();
       applyTheme(cachedHint || { festival_mode: false }, stylesheets, false);
     });
@@ -390,13 +394,11 @@
   window.CampusWallThemeSettings = getThemeSettings;
 
   var themeStylesheets = createThemeStylesheets();
-  // defer 脚本执行时 DOM 已经解析完成；先用上一次服务端配置预选主题，避免慢网下先出现默认主题。
+  // 可以提前下载缓存主题的样式，但就绪前不改变正文的布局和可见性。
   var cachedThemeHint = readThemeHint();
   if (cachedThemeHint && document.body) {
     var cachedState = getThemeState(cachedThemeHint);
-    setThemeClasses(cachedState);
     setThemeStylesheets(cachedState, themeStylesheets);
-    updateThemeColorMeta(cachedState);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { loadTheme(themeStylesheets); });

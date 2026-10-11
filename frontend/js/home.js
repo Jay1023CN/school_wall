@@ -385,7 +385,7 @@ function renderPostCard(post) {
     imageHtml = '<div class="post-images ' + gridClass + '">';
     displayImages.forEach(function(img) {
       imageHtml += '<div class="post-image-wrapper" onclick="event.stopPropagation();previewImage(\'' + escapeHtml(img).replace(/'/g, "\\'") + '\', ' + post._cachedImagesJson + ', 0)">' +
-        '<img class="post-image" src="' + escapeHtml(img) + '" >' +
+        '<img class="post-image" src="' + escapeHtml(img) + '" loading="lazy" decoding="async" fetchpriority="low">' +
       '</div>';
     });
     if (images.length > 3) {
@@ -439,7 +439,7 @@ function renderPostCard(post) {
 
   return '<article class="post-card" data-id="' + safePostId + '" onclick="openPostDetail(' + safePostId + ')">' +
     '<div class="post-user">' +
-      '<img class="user-avatar' + authorCardClass + '" src="' + escapeHtml(authorAvatar) + '"  decoding="async"' + authorCardAttr + '>' +
+      '<img class="user-avatar' + authorCardClass + '" src="' + escapeHtml(authorAvatar) + '" loading="lazy" decoding="async"' + authorCardAttr + '>' +
       '<div class="user-info">' +
         '<div class="user-name' + authorCardClass + '"' + authorCardAttr + '>' + escapeHtml(authorName) + roleBadge + titleBadges + '</div>' +
         '<div class="post-time">' + (post.time_ago || '') + (post.ip_region ? ' · 📍' + escapeHtml(post.ip_region) : '') + '</div>' +
