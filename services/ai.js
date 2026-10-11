@@ -781,8 +781,27 @@ async function generateChapterStream(prompt, onToken) {
   }
 }
 
+// 轮换写法，并把本进程最近生成的文案作为避重参考。
+var songIntroAngles = [
+  '直接说推荐它的理由，开门见山，不先铺场景。',
+  '从已提供歌词中的一个具体意思切入，聊它让人想到什么，不抄写歌词。',
+  '像给朋友安利一首歌，用自然的聊天口吻开头。',
+  '从一个贴合这首歌的小问题切入，不用固定的“你是否也曾”。',
+  '抓住歌曲材料里最鲜明的情绪，写出它的变化，不一律写成治愈。',
+  '从人与人的关系切入，例如朋友、家人、告别或重逢，只选与歌曲相符的一种。',
+  '从歌名带出的联想切入，明确是听者的联想，不编造创作背景。',
+  '从听歌时的一个小动作切入，例如按下循环、分享给朋友，不固定地点和时间。',
+  '从一次普通的生活感受切入，校园只是读者背景，不必把故事放在学校。',
+  '聊听完之后想留下的一个念头，结尾可以轻一点，不强行励志。',
+  '用简短的对话感开头，把推荐说得具体，避免华丽的风景描写。',
+  '从歌曲材料里与常见感受不同的一点切入，写得有个性，不套万能推荐语。'
+];
+var songIntroAngleCursor = Math.floor(Math.random() * songIntroAngles.length);
+var recentSongIntros = [];
+
 // 生成歌曲介绍
 async function generateSongIntro(songName, artist) {
+  var angle = songIntroAngles[songIntroAngleCursor++ % songIntroAngles.length];
   // 先抓真实歌词
   var realLyrics = '';
   try {
@@ -797,10 +816,13 @@ async function generateSongIntro(songName, artist) {
     lyricSnippet = lines.slice(0, 20).join('\n');
   }
 
-  var prompt = '请为歌曲《' + songName + '》' + (artist ? '（' + artist + '）' : '') + '写一段适合校园公众号的推荐语。要求：\n1）80—120字，开头有画面或情绪钩子，但不夸张、不标题党；\n2）语气自然、有校园共鸣，明确写出适合什么场景聆听；\n3）只能使用已提供的歌名、歌手和歌词片段，不补写歌词，不杜撰发行年份、故事、榜单或歌手经历；\n4）不使用Markdown、标题、编号、引号或“作为AI”等说明，只输出可直接发布的正文。\n\n已确认的歌词片段（仅供理解情绪，不能改写或续写）：\n' + (lyricSnippet || '（未获取到歌词；只根据歌名和歌手写，不要声称了解歌词内容）');
+  var prompt = '请为歌曲《' + songName + '》' + (artist ? '（' + artist + '）' : '') + '写一段适合校园公众号的推荐语。\n本次尝试的写法：' + angle + '\n要求：\n1）80—120字，像一个真的喜欢听歌的人向同学推荐，句子自然，不用每篇都描写风景。\n2）先看歌曲材料再选情绪和切入点；上面的写法不合适就换，不要为了变化把轻快的歌写成失恋、把悲伤的歌写成励志。\n3）校园公众号不等于校园场景。不要默认傍晚下课、夕阳操场、晚自习后戴耳机，也不要每篇都落到青春、治愈和加油。可以写关系、想法、日常小事，也可以直接推荐；时间地点不是必填项，只有歌曲材料确实相关时才写。\n4）只使用已提供的歌名、歌手和歌词片段，不补写歌词，不杜撰发行年份、故事、榜单、编曲或歌手经历。\n5）不使用Markdown、标题、编号或“作为AI”等说明，只输出可直接发布的正文。\n\n已确认的歌词片段（仅供理解情绪，不能改写或续写）：\n' + (lyricSnippet || '（未获取到歌词；只根据歌名和歌手写，不要声称了解歌词内容）');
+  if (recentSongIntros.length) {
+    prompt += '\n\n最近已写的推荐语（只用来避免重复开头、场景、比喻和结尾，不是本曲的事实来源，不要模仿或搬用）：\n' + recentSongIntros.map(function(text, i) { return (i + 1) + '）' + text; }).join('\n');
+  }
 
   var messages = [{ role: 'user', content: [{ type: 'text', text: prompt }] }];
-  var systemMsg = '你是校园公众号的资深音乐编辑。先核对输入事实，再写一段可直接发布的中文推荐语；文案具体、有节奏、有校园场景，但不过度煽情。严禁编造歌词、发行信息、榜单、歌手经历或输入中没有的事实；只输出正文，不输出分析、标题、编号和歌词列表。';
+  var systemMsg = '你是给同学们推荐音乐的公众号编辑。每首歌都有自己的表达，不必套同一种场景和句式。写得像向朋友分享：具体、自然，允许轻快、幽默、克制或惆怅，按歌曲材料选择。场景可以省略，不默认放学、傍晚、操场和晚自习；避免每篇都用风景开头、励志收尾。严禁编造歌词、发行信息、榜单、编曲、歌手经历或输入中没有的事实；只输出正文，不输出分析、标题、编号和歌词列表。';
 
   try {
     if (!getHunyuanProvider() && !GLM_API_KEY && !getQwenFallbackProvider()) return { intro: '', lyrics: '', prompt: prompt, error: 'AI_API_KEY 未配置' };
@@ -826,6 +848,10 @@ async function generateSongIntro(songName, artist) {
         } else {
           intro = reply.replace(/【介绍】/g, '').replace(/【歌词】/g, '').trim();
         }
+      }
+      if (intro) {
+        recentSongIntros.push(intro.slice(0, 300));
+        if (recentSongIntros.length > 6) recentSongIntros.shift();
       }
       return { intro: intro, lyrics: lyrics || realLyrics || '', prompt: null, provider: generation.provider };
     }
