@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园墙 - 管理后台</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/admin/css/admin.css?v=2026101701">
+    <link rel="preload" href="/admin/js/admin-request-cache.js?v=2026101501" as="script">
+    <link rel="preload" href="/admin/js/admin.js?v=2026102001" as="script">
+
+
+
+
+<meta name="robots" content="noindex, nofollow">
+</head>
+<body class="admin-page">
+
+    <div id="adminLogin">
+        <div class="kawaii-star">⭐</div>
+        <div class="kawaii-star">🌸</div>
+        <div class="kawaii-star">✨</div>
+        <div class="kawaii-star">💖</div>
+        <div class="kawaii-star">🌟</div>
+        <div class="kawaii-star">🦋</div>
+        <div class="kawaii-star">🎀</div>
+        <div class="admin-login-orb"></div>
+        <div class="admin-login-orb"></div>
+        <div class="admin-login-orb"></div>
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-avatar">
+                    <img src="/uploads/avatars/default.png" alt="" id="adminLoginAvatar">
+                    <span class="badge">👑</span>
+                </div>
+                <h2 class="login-title">管理后台</h2>
+                <p class="login-subtitle">欢迎回来，请登录你的账号 💕</p>
+            </div>
+            <form id="adminLoginForm" data-admin-no-submit>
+            <div class="login-form-group">
+                <div class="login-input-wrap">
+                    <span class="input-icon">👤</span>
+                    <input type="text" id="adminUsername" placeholder="用户名" class="login-input" autocomplete="username">
+                </div>
+            </div>
+            <div class="login-form-group">
+                <div class="login-input-wrap">
+                    <span class="input-icon">🔑</span>
+                    <input type="password" id="adminPassword" placeholder="密码" class="login-input" autocomplete="current-password">
+                </div>
+            </div>
+
+            <div class="login-captcha-group" id="adminLoginCaptchaGroup">
+                <input type="text" id="adminCaptchaCode" class="login-input login-captcha-input" placeholder="验证码">
+                <img id="adminCaptchaImg" class="login-captcha-img" src="" alt="验证码" title="刷新" data-action="reload-admin-captcha">
+            </div>
+            <div class="login-error" id="adminLoginError"></div>
+            <label class="login-remember">
+                <input type="checkbox" id="adminRemember">
+                <span>记住我 💫</span>
+            </label>
+            <button id="adminLoginBtn" class="login-btn" type="button">
+                <span class="btn-text">🔓 登 录</span>
+                <span class="spinner"></span>
+            </button>
+            </form>
+            <div class="login-footer">
+                <a href="/" class="login-back-link">← 返回首页</a>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="admin-layout" id="adminApp" style="display:none">
+
+
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+
+        <aside class="admin-sidebar" id="admin-sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="sidebar-logo" id="sidebar-logo" title="返回首页">
+                    <svg class="logo-icon-svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span class="logo-text">校园墙管理 <span style="font-size:0.75em;opacity:0.5;">by EDITOR</span></span>
+                </a>
+                <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" title="收起菜单">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav" id="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">主要功能</div>
+                    <a href="#" class="sidebar-link active" data-panel="overview" data-permission="stats:view" data-title="数据概览">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        </span>
+                        <span class="link-text">数据概览</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="posts" data-permission="posts:review" data-title="帖子管理">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </span>
+                        <span class="link-text">帖子管理</span>
+                        <span class="link-badge" id="badge-pending-posts" style="display:none;">0</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="users" data-permission="users:view" data-title="用户管理">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </span>
+                        <span class="link-text">用户管理</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="songs" data-permission="songs:review" data-title="点歌管理">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                        </span>
+                        <span class="link-text">点歌管理</span>
+                        <span class="link-badge" id="badge-pending-songs" style="display:none;">0</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="daily-songs" data-permission="songs:review" data-super-admin-only="true" style="display:none" data-title="推歌候选">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path d="M2 12h2M6 12h2M10 12h2"/></svg>
+                        </span>
+                        <span class="link-text">推歌候选</span>
+                        <span class="link-badge" id="badge-daily-songs" style="display:none;">0</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="slots" data-permission="slots:manage" data-title="时段设置">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </span>
+                        <span class="link-text">时段设置</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">系统管理</div>
+                    <a href="#" class="sidebar-link" data-panel="logs" data-permission="logs:view" data-title="操作日志">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        </span>
+                        <span class="link-text">操作日志</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="notices" data-permission="notices:manage" data-title="公告管理">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        </span>
+                        <span class="link-text">公告管理</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="feedbacks" data-permission="feedbacks:manage" data-title="反馈管理">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="9" y1="10" x2="15" y2="10"></line></svg>
+                        </span>
+                        <span class="link-text">反馈管理</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="email" data-permission="notices:manage" data-title="邮件群发">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        </span>
+                        <span class="link-text">邮件群发</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="postviews" data-permission="post-views:view" data-title="浏览记录">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </span>
+                        <span class="link-text">浏览记录</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="trash" data-permission="posts:delete" data-title="回收站">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </span>
+                        <span class="link-text">回收站</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="settings" data-permission="settings:view" data-title="系统设置">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        </span>
+                        <span class="link-text">系统设置</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="wechattest" data-permission="wechat:review" data-title="微信测试">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/><path d="M9 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5l-2 2z"/></svg>
+                        </span>
+                        <span class="link-text">微信测试</span>
+                    </a>
+                    <a href="#" class="sidebar-link" data-panel="messages" data-super-admin-only="true" style="display:none" data-title="私信管理">
+                        <span class="link-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="12" cy="10" r="1"/><circle cx="16" cy="10" r="1"/><circle cx="8" cy="10" r="1"/></svg>
+                        </span>
+                        <span class="link-text">私信管理</span>
+                    </a>
+                    <div class="nav-section">
+                        <div class="nav-section-title">运营工具</div>
+                        <a href="/admin/mp-draft" class="sidebar-link" target="_self" data-super-admin-only="true" style="display:none" data-title="公众号推送">
+                            <span class="link-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+                            </span>
+                            <span class="link-text">公众号推送</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-panel="stories" data-permission="stories:review" data-title="连载小说">
+                            <span class="link-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="8" y1="15" x2="12" y2="15"/></svg>
+                            </span>
+                            <span class="link-text">连载小说</span>
+                        </a>
+                        <a href="/admin/gamification.html" class="sidebar-link" data-super-admin-only="true" style="display:none">
+                            <span class="link-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+                            </span>
+                            <span class="link-text">积分运营</span>
+                        </a>
+                    </div>
+
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <img class="footer-avatar" id="sidebar-avatar" src="" alt="头像">
+                <div class="footer-info">
+                    <div class="footer-name" id="sidebar-nickname">管理员</div>
+                    <div class="footer-role" id="sidebar-role">管理员</div>
+                </div>
+                <button class="btn-logout" id="btn-logout" title="退出登录">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </button>
+            </div>
+        </aside>
+
+
+        <main class="admin-main">
+
+
+            <div class="admin-topbar">
+                <div class="topbar-left">
+                    <button class="admin-mobile-toggle" id="admin-mobile-toggle" type="button" aria-label="打开管理菜单" aria-controls="admin-sidebar" aria-expanded="false">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                    </button>
+                    <h1 id="panel-title">数据概览</h1>
+                </div>
+                <div class="topbar-right">
+                    <div class="topbar-search">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" placeholder="搜索功能..." id="topbar-search-input">
+                    </div>
+                    <button class="theme-toggle" id="themeToggle" title="切换深色/浅色模式">🌙</button>
+                    <button class="topbar-bell" id="topbar-bell" title="通知">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span class="bell-badge" id="bell-badge" style="display:none;">0</span>
+                    </button>
+
+                    <button class="topbar-logout-btn" id="topbar-logout-btn" title="退出登录">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    </button>
+                    <div class="topbar-user" id="topbar-user">
+                        <img class="topbar-avatar" id="topbar-avatar" src="" alt="头像">
+                        <span class="topbar-username" id="topbar-username">管理员</span>
+                        <svg class="topbar-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        <div class="user-dropdown" id="user-dropdown">
+                            <div class="dropdown-header">
+                                <img id="dropdown-avatar" src="" alt="">
+                                <div>
+                                    <div class="dropdown-name" id="dropdown-name">管理员</div>
+                                    <div class="dropdown-role" id="dropdown-role">超级管理员</div>
+                                </div>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <a href="/" class="dropdown-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                <span>返回首页</span>
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item dropdown-item-danger" id="dropdown-logout">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                                <span>退出登录</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="admin-panel active" id="panel-overview">
+
+                <div class="stats-grid">
+                    <div class="stat-card stat-blue" style="--stat-color: #60A5FA;">
+                        <span class="stat-icon">👥</span>
+                        <div class="stat-value" id="stat-total-users">0</div>
+                        <div class="stat-label">总用户数</div>
+                    </div>
+                    <div class="stat-card stat-pink">
+                        <span class="stat-icon">📝</span>
+                        <div class="stat-value" id="stat-total-posts">0</div>
+                        <div class="stat-label">总帖子数</div>
+                    </div>
+                    <div class="stat-card stat-purple">
+                        <span class="stat-icon">✨</span>
+                        <div class="stat-value" id="stat-today-posts">0</div>
+                        <div class="stat-label">今日新帖</div>
+                    </div>
+                    <div class="stat-card stat-yellow">
+                        <span class="stat-icon">🎵</span>
+                        <div class="stat-value" id="stat-pending-songs">0</div>
+                        <div class="stat-label">待审核点歌</div>
+                    </div>
+                    <div class="stat-card stat-green" style="--stat-color: #34D399;">
+                        <span class="stat-icon">👁️</span>
+                        <div class="stat-value" id="stat-today-views">0</div>
+                        <div class="stat-label">今日浏览量</div>
+                    </div>
+                </div>
+
+                <div class="overview-grid">
+
+                    <div class="overview-section">
+                        <div class="section-title">📋 待审核帖子</div>
+                        <div class="overview-list" id="overview-pending-posts">
+                            <div class="admin-empty">
+                                <span class="empty-emoji">🎉</span>
+                                <span>暂无待审核帖子</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="overview-section">
+                        <div class="section-title">🎵 待审核点歌</div>
+                        <div class="overview-list" id="overview-pending-songs">
+                            <div class="admin-empty">
+                                <span class="empty-emoji">🎉</span>
+                                <span>暂无待审核点歌</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-posts">
+
+                <div class="filter-bar-admin">
+                    <button class="filter-btn active" data-status="all">全部</button>
+                    <button class="filter-btn" data-status="pending">待审核</button>
+                    <button class="filter-btn" data-status="approved">已发布</button>
+                    <button class="filter-btn" data-status="rejected">已拒绝</button>
+                    <span style="flex:1;"></span>
+                    <button class="filter-btn" id="post-batch-approve-btn" style="color:#059669;display:none;" data-admin-action="batch-post" data-status="approved">✓ 批量通过</button>
+                    <button class="filter-btn" id="post-batch-reject-btn" style="color:#DC2626;display:none;" data-admin-action="batch-post" data-status="rejected">✕ 批量拒绝</button>
+                    <span id="post-batch-count" style="font-size:0.78rem;color:var(--text-light);display:none;"></span>
+                </div>
+
+                <div class="admin-post-search">
+                    <label for="posts-search-input">查找帖子</label>
+                    <div class="admin-post-search-controls">
+                        <input id="posts-search-input" type="search" maxlength="100" placeholder="标题、作者或帖子 ID" data-admin-action="search-posts">
+                        <button type="button" class="btn btn-primary" data-admin-action="search-posts">搜索</button>
+                        <button type="button" class="btn btn-ghost" data-admin-action="clear-posts-search">清空</button>
+                    </div>
+                </div>
+
+
+                <div class="admin-table-wrapper">
+                    <div class="admin-table-header">
+                        <h3>📝 帖子列表</h3>
+                        <span style="font-size: 0.85rem; color: var(--text-light);" id="posts-count">共 0 条</span>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:32px;"><input type="checkbox" id="posts-select-all" data-admin-action="toggle-all-posts" style="accent-color:#FF6B9D;cursor:pointer;"></th>
+                                    <th>ID</th>
+                                    <th>标题</th>
+                                    <th>作者</th>
+                                    <th>分类</th>
+                                    <th>状态</th>
+                                    <th>时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="posts-tbody">
+                                <tr>
+                                    <td colspan="8">
+                                        <div class="admin-empty">
+                                            <span class="empty-emoji">📭</span>
+                                            <span>暂无数据</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+                <div class="admin-pagination" id="posts-pagination"></div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-users">
+
+                <div class="admin-table-wrapper">
+                    <div class="admin-table-header">
+                        <h3>👥 用户列表</h3>
+                        <span style="font-size: 0.85rem; color: var(--text-light);" id="users-count">共 0 人</span>
+                    </div>
+
+
+                    <div class="users-toolbar">
+                        <div class="users-search-box">
+                            <input type="text" class="users-search-input" id="users-search-input" placeholder="搜索用户名、昵称、邮箱..." data-admin-action="search-users">
+                            <button class="users-search-btn" data-admin-action="search-users">🔍 搜索</button>
+                        </div>
+                        <div class="users-role-filter">
+                            <label class="role-filter-label" for="users-role-filter">身份</label>
+                            <select class="page-size-select" id="users-role-filter" data-admin-action="users-role-filter" aria-label="按身份筛选用户">
+                                <option value="all">全部身份</option>
+                                <option value="user">普通用户</option>
+                                <option value="reviewer">审核员</option>
+                                <option value="radio_admin">广播管理员</option>
+                                <option value="admin">管理员</option>
+                                <option value="super_admin">最高管理员</option>
+                            </select>
+                        </div>
+                        <div class="users-page-size">
+                            <span class="page-size-label">每页</span>
+                            <select class="page-size-select" id="users-page-size" data-admin-action="users-page-size">
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50" selected>50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span class="page-size-label">条</span>
+                        </div>
+                    </div>
+
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>昵称</th>
+                    <th>邮箱</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th>注册时间 / IP</th>
+                    <th>上次登录</th>
+                    <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            <tr>
+                                <td colspan="9">
+                                    <div class="admin-empty">
+                                        <span class="empty-emoji">📭</span>
+                                        <span>暂无数据</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+
+                <div class="admin-pagination" id="users-pagination"></div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-songs">
+
+
+                <div class="hot-edit-modal" id="hotEditModal" style="display:none;">
+                    <div class="hot-edit-overlay" data-admin-action="close-hot-edit-overlay"></div>
+                    <div class="hot-edit-card">
+                        <div class="hot-edit-header">
+                            <span>🔥 修改热度</span>
+                            <button class="hot-edit-close" data-admin-action="close-hot-edit">✕</button>
+                        </div>
+                        <div class="hot-edit-body">
+                            <div class="hot-edit-label">当前热度</div>
+                            <div class="hot-edit-current" id="hotEditCurrent">0</div>
+                            <div class="hot-edit-label">新热度值</div>
+                            <input type="text" class="hot-edit-input" id="hotEditInput" placeholder="请输入0-99999的数字" inputmode="numeric" maxlength="5">
+                            <div class="hot-edit-hint">只允许输入数字，范围 0-99999</div>
+                        </div>
+                        <div class="hot-edit-footer">
+                            <button class="hot-edit-cancel-btn" data-admin-action="close-hot-edit">取消</button>
+                            <button class="hot-edit-confirm-btn" data-admin-action="confirm-hot-edit">确认修改</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-table-wrapper">
+                    <div class="admin-table-header">
+                        <h3>🎵 点歌列表</h3>
+                        <span style="font-size: 0.85rem; color: var(--text-light);" id="songs-count">共 0 条</span>
+                    </div>
+
+
+                    <div class="users-toolbar">
+                        <div class="users-search-box">
+                            <input type="text" class="users-search-input" id="songs-search-input" placeholder="搜索歌曲名、歌手、点歌人..." data-admin-action="search-songs">
+                            <button class="users-search-btn" data-admin-action="search-songs">🔍 搜索</button>
+                        </div>
+                        <div class="users-page-size">
+                            <span class="page-size-label">每页</span>
+                            <select class="page-size-select" id="songs-page-size" data-admin-action="songs-page-size">
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50" selected>50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span class="page-size-label">条</span>
+                        </div>
+                    </div>
+
+
+                    <div class="filter-bar-admin">
+                        <button class="filter-btn active" data-status="all" data-admin-action="filter-songs">全部</button>
+                        <button class="filter-btn" data-status="pending" data-admin-action="filter-songs">待审核</button>
+                        <button class="filter-btn" data-status="approved" data-admin-action="filter-songs">已通过</button>
+                        <button class="filter-btn" data-status="rejected" data-admin-action="filter-songs">已拒绝</button>
+                        <button class="filter-btn" data-status="played" data-admin-action="filter-songs">已播放</button>
+                        <button class="filter-btn" data-status="trash" data-admin-action="filter-songs" style="margin-left:auto;color:#DC2626;">🗑️ 回收站</button>
+                        <span style="flex:1;"></span>
+                        <button class="filter-btn" id="song-batch-approve-btn" style="color:#059669;display:none;" data-admin-action="batch-song" data-status="approved">✓ 批量通过</button>
+                        <button class="filter-btn" id="song-batch-reject-btn" style="color:#DC2626;display:none;" data-admin-action="batch-song" data-status="rejected">✕ 批量拒绝</button>
+                        <span id="song-batch-count" style="font-size:0.78rem;color:var(--text-light);display:none;"></span>
+                    </div>
+
+                    <details class="song-reject-library" id="song-reject-library">
+                        <summary>
+                            <span class="song-reject-library-title">
+                                <strong>打回理由预设</strong>
+                                <span>审核时一键带入，也可在这里随时修改</span>
+                            </span>
+                        </summary>
+                        <div class="song-reject-library-body">
+                            <p class="song-reject-library-hint">每条理由会在“拒绝点歌”时直接可选。修改后请保存当前预设；删除前请确认它不再需要。</p>
+                            <div class="song-reject-reason-list" id="song-reject-reason-list" aria-live="polite"></div>
+                            <div class="song-reject-add-card">
+                                <div class="song-reject-add-heading">
+                                    <strong>新增一条预设</strong>
+                                    <span>最多保存 20 条</span>
+                                </div>
+                                <div class="song-reject-add-row">
+                                    <input class="song-reject-add-input" id="song-reject-reason-new" maxlength="500" placeholder="例如：播放内容不符合广播规范">
+                                    <button type="button" class="song-reject-reason-action" data-admin-action="add-song-reject-reason">添加预设</button>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div style="overflow-x: auto;">
+                        <table class="admin-table songs-table">
+                            <thead>
+                                <tr>
+                                    <th class="song-th-check"></th>
+                                    <th class="song-th-id">#</th>
+                                    <th class="song-th-name">歌曲</th>
+                                    <th class="song-th-msg">祝福语</th>
+                                    <th class="song-th-hot">热度</th>
+                                    <th class="song-th-status">状态</th>
+                                    <th class="song-th-actions">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="songs-tbody">
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="admin-empty">
+                                            <span class="empty-emoji">📭</span>
+                                            <span>暂无数据</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+                <div class="admin-pagination" id="songs-pagination"></div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-daily-songs">
+                <div class="admin-panel-header">
+                    <h2 class="admin-panel-title">推歌候选曲库</h2>
+                    <span class="daily-song-panel-note">多首歌曲在这里整理；推送请到公众号推送页统一完成</span>
+                </div>
+
+
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                    <button class="song-main-btn song-main-btn-pink" data-admin-action="open-add-daily-song">添加候选歌曲</button>
+                    <button class="song-main-btn song-main-btn-blue" id="daily-song-batch-ai-btn" data-admin-action="batch-ai-intros">一键AI填充</button>
+                    <button class="song-main-btn song-main-btn-gray" data-admin-action="load-daily-songs">刷新</button>
+                </div>
+
+
+                <div id="dailySongBatchBar" style="display:none;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:#FFF5F5;border-radius:10px;margin-bottom:12px;border:1px solid #FEE2E2;">
+                    <span id="daily-song-batch-count" style="font-size:0.8rem;color:#666;margin-right:4px;"></span>
+                    <button class="song-batch-btn song-batch-clear" data-admin-action="batch-clear-daily-songs">清空AI数据</button>
+                    <button class="song-batch-btn song-batch-unpublish" id="daily-song-candidate-toggle" data-admin-action="batch-toggle-daily-candidate">移出候选</button>
+                    <button class="song-batch-btn song-batch-delete" data-admin-action="batch-delete-daily-songs">批量删除</button>
+                </div>
+
+
+                <div class="admin-filter-bar">
+                    <button class="filter-btn active" data-status="" data-candidate-state="active" data-admin-action="filter-daily-songs">候选中</button>
+                    <button class="filter-btn" data-status="pending" data-admin-action="filter-daily-songs">未发布</button>
+                    <button class="filter-btn" data-status="published" data-admin-action="filter-daily-songs">已发布</button>
+                    <button class="filter-btn" data-status="" data-candidate-state="hidden" data-admin-action="filter-daily-songs">已移出</button>
+                    <label class="daily-song-page-size" for="dailySongsPageSize">每页
+                        <select id="dailySongsPageSize" data-admin-action="daily-songs-page-size">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        首
+                    </label>
+                    <div class="filter-search">
+                        <input type="text" class="admin-search-input" id="dailySongsKeyword" placeholder="搜索歌曲名/歌手/提交者..." data-admin-action="load-daily-songs">
+                        <button class="admin-btn admin-btn-small" data-admin-action="load-daily-songs">搜索</button>
+                    </div>
+                </div>
+                <div id="daily-song-list-summary" class="daily-song-list-summary" aria-live="polite"></div>
+
+
+                <div class="admin-table-wrapper">
+                    <table class="admin-table daily-songs-table">
+                        <thead>
+                            <tr>
+                                <th style="width:40px;"><label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.8rem;"><input type="checkbox" id="dailySongSelectAll" data-admin-action="toggle-all-daily-songs" style="accent-color:#FF6B9D;">全选</label></th>
+                                <th>歌曲信息</th>
+                                <th style="width:180px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daily-songs-tbody">
+                            <tr>
+                                    <td colspan="3" class="admin-empty">
+                                    <div class="admin-empty">
+                                        <span class="empty-emoji">🎵</span>
+                                        <span>暂无数据</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+
+                <div class="admin-pagination" id="daily-songs-pagination"></div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-slots">
+                <div class="panel-header-actions">
+                    <h3 class="panel-title">⏰ 时段列表</h3>
+                    <button class="btn btn-primary btn-sm" id="btn-add-slot">+ 添加时段</button>
+                </div>
+
+                <div class="slots-grid" id="slots-grid">
+                    <div class="admin-empty" style="grid-column: 1 / -1;">
+                        <span class="empty-emoji">📭</span>
+                        <span>暂无时段，点击上方按钮添加</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-logs">
+
+
+
+                <div class="log-tabs">
+                    <div class="log-tab active" data-logtab="logs" data-admin-action="switch-log-tab">📋 操作日志</div>
+                    <div class="log-tab" data-logtab="autopub" data-admin-action="switch-log-tab">📰 公众号推送</div>
+                    <div class="log-tab" data-logtab="email" data-admin-action="switch-log-tab">📧 邮件记录</div>
+                </div>
+
+
+                <div class="log-tab-content active" id="logtab-logs">
+                    <div class="admin-table-wrapper">
+                        <div class="admin-table-header">
+                            <h3>📋 操作日志</h3>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 0.85rem; color: var(--text-light);" id="logs-count">共 0 条</span>
+                                <div class="log-clean-buttons" style="display: flex; gap: 6px; margin-left: 12px;">
+                                    <select id="log-clean-days" style="padding: 4px 8px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.8rem;">
+                                        <option value="7">7天前</option>
+                                        <option value="15">15天前</option>
+                                        <option value="30" selected>30天前</option>
+                                        <option value="60">60天前</option>
+                                        <option value="90">90天前</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-ghost" data-admin-action="clean-old-logs" title="清空N天前的日志">🧹 清空旧日志</button>
+                                    <button class="btn btn-sm btn-danger" data-admin-action="clean-all-logs" title="清空所有日志">🗑 清空全部</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>操作人</th>
+                                        <th>操作类型</th>
+                                        <th>操作详情</th>
+                                        <th>级别</th>
+                                        <th>时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-tbody">
+                                    <tr>
+                                        <td colspan="7">
+                                            <div class="admin-empty">
+                                                <span class="empty-emoji">📭</span>
+                                                <span>暂无日志记录</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="admin-pagination" id="logs-pagination"></div>
+                </div>
+
+
+                <div class="log-tab-content" id="logtab-autopub">
+                    <div class="pub-section">
+                        <div class="pub-title">📰 公众号图文与草稿箱</div>
+                        <div class="pub-row">
+                            <div>
+                                <div class="pub-label">使用完整推送工作台</div>
+                                <div class="pub-desc">个人订阅号不能通过接口自动发表文章；请在推送页选择帖子、版式和歌曲，预览确认后同步到公众号草稿箱。</div>
+                            </div>
+                            <a class="btn btn-primary btn-sm" href="/admin/mp-draft">打开公众号推送 →</a>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="log-tab-content" id="logtab-email">
+                    <div class="pub-section">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                            <div>
+                                <div class="pub-title" style="margin-bottom:4px;"> 邮件发送记录</div>
+                                <div class="pub-desc" style="font-size:13px;color:var(--text-light);">最近发送的邮件列表，包括成功和失败的记录</div>
+                            </div>
+                            <div class="email-log-toolbar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                                <button class="btn btn-outline btn-sm" data-admin-action="load-email-logs">🔄 刷新记录</button>
+                                <select id="email-log-clean-days" style="padding:4px 8px;border-radius:var(--radius-md);border:1px solid var(--border-color);font-size:0.8rem;">
+                                    <option value="7">7天前</option>
+                                    <option value="15">15天前</option>
+                                    <option value="30" selected>30天前</option>
+                                    <option value="60">60天前</option>
+                                    <option value="90">90天前</option>
+                                </select>
+                                <button class="btn btn-sm btn-ghost" data-admin-action="clear-old-email-logs" title="清空N天前的邮件记录">🧹 清空旧记录</button>
+                                <button class="btn btn-sm btn-danger" data-admin-action="clear-all-email-logs" title="清空所有邮件记录">🗑 清空全部</button>
+                            </div>
+                        </div>
+                        <div class="email-logs-wrap" id="emailLogsContainer">
+                            <div style="text-align:center;padding:20px;color:var(--text-light);">点击下方按钮加载</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-notices">
+                <div class="panel-header-actions">
+                    <h3 class="panel-title">📢 公告列表</h3>
+                    <button class="btn btn-primary btn-sm" id="btn-add-notice">+ 发布公告</button>
+                </div>
+                <div class="admin-table-wrapper">
+                    <div style="overflow-x: auto;">
+                        <div id="notices-list">
+                            <div class="admin-empty">
+                                <span class="empty-emoji">📭</span>
+                                <span>暂无公告</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-feedbacks">
+                <div class="admin-table-wrapper">
+                    <div class="admin-table-header" style="flex-wrap: wrap; gap: 10px;">
+                        <h3 style="font-size: 1.1rem;">💬 反馈管理</h3>
+                        <div class="feedback-header-right" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <span class="feedbacks-count" id="feedbacks-count">共 0 条</span>
+                            <div class="feedback-filter-wrap">
+                                <select class="admin-filter-select feedback-status-select" id="feedback-status-filter" data-admin-action="load-feedbacks">
+                                    <option value="all">全部状态</option>
+                                    <option value="pending">待处理</option>
+                                    <option value="processing">处理中</option>
+                                    <option value="resolved">已解决</option>
+                                    <option value="accepted">已采纳（已奖励积分）</option>
+                                    <option value="closed">已关闭</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>类型</th>
+                                    <th>标题</th>
+                                    <th>提交者</th>
+                                    <th>状态</th>
+                                    <th>时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="feedbacks-tbody">
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="admin-empty">
+                                            <span class="empty-emoji">📭</span>
+                                            <span>暂无反馈</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="admin-pagination" id="feedbacks-pagination"></div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-email">
+                <div class="email-panel-wrapper">
+                    <div class="email-panel-header">
+                        <h3>💌 邮件群发</h3>
+                        <p class="email-panel-desc">向所有已绑定邮箱的用户发送通知邮件</p>
+                    </div>
+
+                    <div class="email-form-section">
+                        <div class="email-form-group">
+                            <label class="email-form-label">📧 收件人范围</label>
+                            <div class="email-recipient-options">
+                                <label class="email-radio">
+                                    <input type="radio" name="emailRecipient" value="all" checked>
+                                    <span> 全部用户</span>
+                                </label>
+                                <label class="email-radio">
+                                    <input type="radio" name="emailRecipient" value="active">
+                                    <span>✅ 活跃用户（30天内登录过）</span>
+                                </label>
+                                <label class="email-radio">
+                                    <input type="radio" name="emailRecipient" value="role_user">
+                                    <span> 普通用户</span>
+                                </label>
+                                <label class="email-radio">
+                                    <input type="radio" name="emailRecipient" value="role_reviewer">
+                                    <span>️ 审核员</span>
+                                </label>
+                                <label class="email-radio">
+                                    <input type="radio" name="emailRecipient" value="role_radio_admin">
+                                    <span> 广播管理员</span>
+                                </label>
+                                <label class="email-radio">
+                                    <input type="radio" name="emailRecipient" value="role_admin">
+                                    <span>👑 管理员</span>
+                                </label>
+                                <label class="email-radio">
+                                    <input type="radio" name="emailRecipient" value="role_super_admin">
+                                    <span> 超级管理员</span>
+                                </label>
+                            </div>
+                            <div class="email-recipient-count" id="emailRecipientCount">
+                                预计发送：<span class="count-number">--</span> 人
+                            </div>
+                        </div>
+
+                        <div class="email-form-group">
+                            <label class="email-form-label">📝 邮件标题</label>
+                            <input type="text" class="email-input" id="emailSubject" placeholder="请输入邮件标题（如：系统维护通知）" maxlength="100">
+                        </div>
+
+                        <div class="email-form-group">
+                            <label class="email-form-label">✏️ 邮件内容</label>
+                            <textarea class="email-textarea" id="emailContent" placeholder="请输入邮件正文内容，支持HTML标签（如 &lt;b&gt;加粗&lt;/b&gt;、&lt;br&gt;换行）" rows="8"></textarea>
+                            <div class="email-hint">💡 提示：内容将自动套用卡哇伊风格邮件模板，无需手动编写HTML</div>
+                        </div>
+
+                        <div class="email-form-group">
+                            <label class="email-form-label"> 跳转链接（可选）</label>
+                            <input type="url" class="email-input" id="emailLink" placeholder="https://campus.example.com（邮件底部按钮的跳转地址）">
+                        </div>
+
+                        <div class="email-actions">
+                            <button class="email-btn email-btn-preview" data-admin-action="preview-email">👁 预览邮件</button>
+                            <button class="email-btn email-btn-send" data-admin-action="send-batch-email"> 发送邮件</button>
+                        </div>
+                    </div>
+
+
+                    <div class="email-progress-section" id="emailProgressSection" style="display:none;">
+                        <div class="email-progress-header">
+                            <span class="email-progress-title">📤 发送进度</span>
+                            <span class="email-progress-status" id="emailProgressStatus">准备中...</span>
+                        </div>
+                        <div class="email-progress-bar">
+                            <div class="email-progress-fill" id="emailProgressFill" style="width:0%"></div>
+                        </div>
+                        <div class="email-progress-detail" id="emailProgressDetail">
+                            已发送 0 / 0
+                        </div>
+                        <div class="email-progress-log" id="emailProgressLog"></div>
+                    </div>
+
+
+                    <div class="email-history-section">
+                        <h4>📋 发送历史</h4>
+                        <div class="email-history-list" id="emailHistoryList">
+                            <div class="admin-empty">
+                                <span class="empty-emoji">📭</span>
+                                <span>暂无发送记录</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+
+            <div class="admin-panel" id="panel-wechattest">
+
+                <div class="wechat-test-section">
+                    <div class="wechat-test-title">📱 已绑定微信的用户</div>
+                    <div class="wechat-test-desc">查看绑定了微信的用户，可以测试消息推送</div>
+                    <div id="wechatUserList"><div class="loading-text"><span class="loading-spinner"></span>加载中...</div></div>
+                </div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-stories">
+
+                <div class="admin-table-wrapper" style="border: none;">
+                    <div class="admin-table-header">
+                        <h3>📖 连载小说管理</h3>
+                        <span style="font-size: 0.85rem; color: var(--text-light);" id="stories-status">已加载</span>
+                    </div>
+
+                    <div class="stories-toolbar">
+                        <label class="stories-current-novel" for="novel-selector">📖 当前小说</label>
+                        <select id="novel-selector" data-admin-action="switch-novel"></select>
+                        <div class="stories-toolbar-actions">
+                            <button class="story-btn story-btn-primary story-btn-compact" data-admin-action="create-novel">＋ 新建小说</button>
+                            <button class="story-btn story-btn-danger story-btn-compact" data-admin-action="delete-current-novel">删除</button>
+                        </div>
+                    </div>
+                    <div id="stories-loading" style="display:none; text-align:center; padding:20px; color:var(--text-light);">
+                        <div class="spinner"></div> 加载章节中…
+                    </div>
+                    <div class="stories-layout">
+
+                        <div class="stories-sidebar">
+                            <div class="stories-sidebar-header">
+                                <span>📚 章节列表</span>
+                                <button class="story-btn story-btn-primary story-btn-compact" data-admin-action="story-add-chapter">＋ 新建章节</button>
+                            </div>
+                            <div id="stories-chapter-list" style="max-height: 500px; overflow-y: auto;">
+                                <div class="stories-empty">
+                                    <div class="empty-icon">📭</div>
+                                    <div>暂无章节，点击"+ 新建"开始</div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="stories-main">
+                            <div class="stories-main-header">
+                                <h3 id="stories-editor-title">📝 请选择一个章节</h3>
+                                <div class="story-nav-buttons">
+                                    <button data-admin-action="story-navigate" data-step="-1" id="story-btn-prev" disabled>◀ 上一篇</button>
+                                    <button data-admin-action="story-navigate" data-step="1" id="story-btn-next" disabled>下一篇 ▶</button>
+                                </div>
+                            </div>
+                            <div class="stories-main-body" id="stories-editor-body">
+                                <div class="stories-empty">
+                                    <div class="empty-icon">👈</div>
+                                    <div>点击左侧章节进行编辑</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="stories-prompt-config" style="margin-top:16px;">
+                        <div data-admin-action="toggle-prompt-config" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:12px 16px;background:var(--bg-section,#f1f5f9);border-radius:12px;user-select:none;margin-bottom:12px;">
+                            <span id="prompt-config-arrow" style="transition:transform 0.3s;">▶</span>
+                            <strong style="font-size:0.85rem;color:var(--text-primary,#1a1a2e);">⚙️ AI 写作设置</strong>
+                            <span style="font-size:0.75rem;color:var(--text-light,#94a3b8);">自定义续写模板参数</span>
+                        </div>
+                        <div id="prompt-config-body" style="display:none;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                                <div class="story-form-group">
+                                    <label>小说标题</label>
+                                    <input type="text" id="pc-novelTitle" value="致那个夏天的你">
+                                </div>
+                                <div class="story-form-group">
+                                    <label>字数要求</label>
+                                    <input type="text" id="pc-wordCount" value="800-1200字">
+                                </div>
+                                <div class="story-form-group" style="grid-column:1/-1;">
+                                    <label>风格设定</label>
+                                    <input type="text" id="pc-authorRole" value="你是一位校园青春小说作家，擅长描写青春期细腻的情感变化，文字清新自然，有画面感。">
+                                </div>
+                                <div class="story-form-group" style="grid-column:1/-1;">
+                                    <label>风格要求</label>
+                                    <input type="text" id="pc-style" value="温暖治愈，校园青春">
+                                </div>
+                                <div class="story-form-group">
+                                    <label>场景要求</label>
+                                    <input type="text" id="pc-sceneRequirement" value="需要出现1-2个新的校园场景">
+                                </div>
+                                <div class="story-form-group">
+                                    <label>结尾要求</label>
+                                    <input type="text" id="pc-endingRequirement" value="在章节末尾留下悬念或期待">
+                                </div>
+                                <div class="story-form-group">
+                                    <label>标题格式</label>
+                                    <input type="text" id="pc-titleFormat" value='标题自拟（格式如"第X章 标题"）'>
+                                </div>
+                                <div class="story-form-group">
+                                    <label>对话格式</label>
+                                    <input type="text" id="pc-dialogueFormat" value='注意：章节内容使用中文引号「」或""表示对话'>
+                                </div>
+                                <div class="story-form-group" style="grid-column:1/-1;">
+                                    <label>额外要求（可选）</label>
+                                    <input type="text" id="pc-extraRequirements" placeholder="如：每章添加一句金句、加入某个固定角色等">
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:10px;">
+                                <button class="story-btn story-btn-primary" style="padding:8px 24px;font-size:0.85rem;" data-admin-action="save-prompt-config">💾 保存设置</button>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="stories-prompt-area">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                            <div>
+                                <strong style="color:var(--text-primary,#1a1a2e);font-size:0.9rem;">🤖 AI 自动生成下一章</strong>
+                                <span style="font-size:0.75rem;color:var(--text-light,#94a3b8);margin-left:8px;">基于已有章节，AI 续写新章节</span>
+                            </div>
+                            <button class="story-btn story-btn-primary story-btn-compact" data-admin-action="story-generate-ai" id="storyGenBtn">
+                                ✨ AI 生成章节
+                            </button>
+                        </div>
+                        <div style="margin-bottom:8px;font-size:0.75rem;color:var(--text-light,#94a3b8);">
+                            生成后可直接编辑，然后点击"保存章节"
+                        </div>
+                        <div id="storyGenLoading" style="display:none;text-align:center;padding:30px;color:var(--text-light,#94a3b8);">
+                            <div style="font-size:1.2rem;margin-bottom:8px;">⏳</div>
+                            <div>AI 正在构思下一章内容，请稍候...</div>
+                            <div style="font-size:0.75rem;margin-top:6px;">可能需要 10-30 秒</div>
+                        </div>
+                        <textarea id="stories-prompt-text" placeholder="AI 生成的内容会出现在这里，你也可以手动输入或粘贴内容，然后点击上方的"AI 生成章节"按钮使用 AI 续写..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-messages">
+
+                <div class="msg-panel-header">
+                    <div class="msg-panel-heading">
+                        <span class="msg-panel-icon" aria-hidden="true">💬</span>
+                        <div>
+                            <h3>私信管理</h3>
+                            <p>查看用户会话、清理记录和永久删除单条消息</p>
+                        </div>
+                    </div>
+                    <div class="msg-panel-stats" aria-live="polite">
+                        <span class="msg-stat"><strong id="msg-count">0</strong><small>个会话</small></span>
+                        <span class="msg-stat"><strong id="msg-message-count">0</strong><small>条消息</small></span>
+                    </div>
+                </div>
+                <div id="msg-conversation-list">
+                    <div class="msg-list-toolbar">
+                        <div>
+                            <strong>会话列表</strong>
+                            <span>按最近消息快速查看</span>
+                        </div>
+                        <span id="msg-list-summary">共 0 个会话</span>
+                    </div>
+                    <div class="admin-table-wrapper msg-table-wrapper">
+                        <table class="msg-table">
+                            <thead><tr>
+                                <th>ID</th><th>用户A</th><th>用户B</th><th>最后消息</th><th>总消息</th><th>已删</th><th>清空状态</th><th>操作</th>
+                            </tr></thead>
+                            <tbody id="msg-conv-tbody">
+                                <tr><td colspan="8"><div class="loading-text"><span class="loading-spinner"></span>加载中...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="msg-detail-view" style="display:none;">
+                    <div class="msg-detail-toolbar">
+                        <button type="button" class="msg-back" data-admin-action="back-to-message-list">← 返回会话列表</button>
+                        <span>会话详情</span>
+                    </div>
+                    <div class="msg-detail" id="msg-detail-content"></div>
+                </div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-trash">
+                <div class="admin-table-wrapper">
+                    <div class="admin-table-header">
+                        <h3>🗑️ 回收站</h3>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.85rem; color: var(--text-light);" id="trash-count">共 0 条</span>
+                            <button class="btn btn-sm btn-danger" data-admin-action="empty-trash" title="清空回收站（不可恢复）">🗑 清空回收站</button>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>标题</th>
+                                    <th>作者</th>
+                                    <th>删除时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trash-tbody">
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="admin-empty">
+                                            <span class="empty-emoji">📭</span>
+                                            <span>回收站为空</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="admin-pagination" id="trash-pagination"></div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-postviews">
+                <div class="admin-table-header" style="flex-wrap: wrap; gap: 12px;">
+                    <h3>👁️ 浏览记录</h3>
+                    <div style="margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <div class="table-size-selector">
+                            <label>每页</label>
+                            <select id="postviews-limit" data-admin-action="postviews-limit">
+                                <option value="20">20条</option>
+                                <option value="50">50条</option>
+                                <option value="100">100条</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-sm btn-ghost" data-admin-action="clear-old-postviews">🗑️ 清空旧记录</button>
+                        <button class="btn btn-sm btn-danger" data-admin-action="clear-all-postviews">🗑️ 清空全部</button>
+                    </div>
+                </div>
+                <div class="admin-search-bar">
+                    <input type="text" class="admin-search-input" id="postviews-search" placeholder="搜索帖子标题或内容...">
+                    <button class="btn btn-primary" data-admin-action="load-postviews">搜索</button>
+                </div>
+                <div class="admin-table-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table class="admin-table" style="min-width: 850px;">
+                        <thead>
+                            <tr>
+                                <th>帖子ID</th>
+                                <th>帖子标题</th>
+                                <th>浏览者</th>
+                                <th>邮箱</th>
+                                <th>IP地址</th>
+                                <th>IP归属地</th>
+                                <th>浏览时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="postviews-list">
+                            <tr><td colspan="8"><div class="loading-text"><span class="loading-spinner"></span>加载中...</div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="admin-pagination" id="postviews-pagination"></div>
+            </div>
+
+
+            <div class="admin-panel" id="panel-settings">
+                <div class="settings-section">
+                    <div class="section-title">🚀 线上版本与部署状态</div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">当前线上版本</div>
+                            <div class="settings-desc" id="deployment-version-detail">正在读取最近一次部署记录...</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+                            <span id="deployment-state" class="tag tag-default">读取中</span>
+                            <code id="deployment-revision" style="font-size:0.82rem;color:var(--text-secondary);">--</code>
+                            <button type="button" class="btn btn-ghost" id="deployment-refresh-btn" data-admin-action="refresh-deployment">刷新状态</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section" id="admin-release-notes-section">
+                    <div class="section-title">📝 更新记录</div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">最近功能更新</div>
+                            <div class="settings-desc">仅供管理员查看。每次发布时由维护 Agent 自动写入，不需要手动编辑。</div>
+                        </div>
+                        <button type="button" class="btn btn-ghost" id="admin-release-notes-refresh-btn" data-admin-action="refresh-release-notes">刷新记录</button>
+                    </div>
+                    <div class="admin-release-notes" id="admin-release-notes" aria-live="polite">
+                        <div class="admin-release-notes-empty">正在读取更新记录...</div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <div class="section-title">⚙️ 基本设置</div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">站点名称</div>
+                            <div class="settings-desc">显示在页面标题和导航栏</div>
+                        </div>
+                        <input type="text" class="settings-input" id="setting-site-name" placeholder="校园墙" data-admin-action="auto-save-settings">
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <div class="section-title">🔧 功能开关</div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">开放注册</div>
+                            <div class="settings-desc">关闭后新用户无法注册</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-register-switch"></div>
+                            <span class="switch-label" id="setting-register-label">已关闭</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">帖子审核</div>
+                            <div class="settings-desc">开启后用户发帖需要管理员审核</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-review-switch"></div>
+                            <span class="switch-label" id="setting-review-label">已关闭</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">点歌功能</div>
+                            <div class="settings-desc">关闭后用户无法提交点歌</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-song-switch"></div>
+                            <span class="switch-label" id="setting-song-label">已关闭</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">每人每日点歌上限</div>
+                            <div class="settings-desc">每个用户每天最多可以点多少首歌</div>
+                        </div>
+                        <input type="number" class="settings-input" id="setting-daily-song-limit" min="1" max="20" value="3" style="width: 80px; text-align: center;" data-admin-action="auto-save-settings">
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">匿名发帖</div>
+                            <div class="settings-desc">关闭后用户发帖必须显示真实身份</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-anon-post-switch"></div>
+                            <span class="switch-label" id="setting-anon-post-label">已关闭</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">匿名评论</div>
+                            <div class="settings-desc">关闭后用户评论必须显示真实身份</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-anon-comment-switch"></div>
+                            <span class="switch-label" id="setting-anon-comment-label">已关闭</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">匿名点歌</div>
+                            <div class="settings-desc">关闭后用户点歌必须显示真实身份</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-anon-song-switch"></div>
+                            <span class="switch-label" id="setting-anon-song-label">已关闭</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">🎉 节日主题</div>
+                            <div class="settings-desc">开启后前台使用所选节日主题</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-festival-switch"></div>
+                            <span class="switch-label" id="setting-festival-label">已关闭</span>
+                        </div>
+                    </div>
+                    <div class="festival-theme-panel" id="festival-theme-panel">
+                        <button type="button" class="festival-theme-toggle" id="festival-theme-toggle" aria-expanded="false" aria-controls="festival-theme-options">
+                            <span class="festival-theme-toggle-label">选择节日主题</span>
+                            <span class="festival-theme-current" id="festival-theme-current">教师节 / 黑板主题</span>
+                            <span class="festival-theme-chevron" aria-hidden="true">⌄</span>
+                        </button>
+                        <div class="festival-theme-options" id="festival-theme-options" hidden>
+                            <label class="festival-theme-option">
+                                <input type="radio" name="festival_theme" value="teachers_day">
+                                <span><strong>教师节 / 黑板主题</strong><small>合并开学季氛围，向老师致敬并迎接新学期</small></span>
+                            </label>
+                            <label class="festival-theme-option">
+                                <input type="radio" name="festival_theme" value="520">
+                                <span><strong>520 告白季</strong><small>保留爱心、飘落与告白装饰</small></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="settings-section">
+                    <div class="section-title">📧 邮件通知配置</div>
+                    <form data-admin-no-submit>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">邮件通知开关</div>
+                            <div class="settings-desc">关闭后所有邮件通知将不再发送</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-email-switch"></div>
+                            <span class="switch-label" id="setting-email-label">已关闭</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">🎵 新点歌审核邮件</div>
+                            <div class="settings-desc">开启后，用户提交点歌时邮件通知广播管理员和最高管理员；测试时可暂时关闭</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-song-pending-admin-switch"></div>
+                            <span class="switch-label" id="setting-song-pending-admin-label">已开启</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">注册邮箱验证码</div>
+                            <div class="settings-desc">开启后，注册时需验证邮箱验证码；请先配置并开启邮件通知</div>
+                        </div>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="setting-register-email-switch"></div>
+                            <span class="switch-label" id="setting-register-email-label">已关闭</span>
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">SMTP 服务器</div>
+                            <div class="settings-desc">例如：smtp.qq.com、smtp.gmail.com</div>
+                        </div>
+                        <input type="text" class="settings-input" id="setting-smtp-host" placeholder="smtp.example.com" style="max-width:300px;" data-admin-action="auto-save-settings">
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">SMTP 端口</div>
+                            <div class="settings-desc">SSL: 465 / TLS: 587</div>
+                        </div>
+                        <input type="text" class="settings-input" id="setting-smtp-port" placeholder="587" style="max-width:120px;" data-admin-action="auto-save-settings">
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">SMTP 账号</div>
+                            <div class="settings-desc">发送邮箱的完整地址</div>
+                        </div>
+                        <input type="text" class="settings-input" id="setting-smtp-user" placeholder="support@campus.example.com" style="max-width:300px;" data-admin-action="auto-save-settings">
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">SMTP 密码/授权码</div>
+                            <div class="settings-desc">QQ邮箱等需使用授权码，非登录密码</div>
+                        </div>
+                        <input type="password" class="settings-input" id="setting-smtp-pass" placeholder="输入密码或授权码" style="max-width:300px;" data-admin-action="auto-save-settings">
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">发件人名称</div>
+                            <div class="settings-desc">格式：名称 &lt;邮箱地址&gt;</div>
+                        </div>
+                        <input type="text" class="settings-input" id="setting-smtp-from" placeholder="校园墙 &lt;noreply@campus.example.com&gt;" style="max-width:350px;" data-admin-action="auto-save-settings">
+                    </div>
+                    <div class="settings-row" style="border:none;padding-bottom:0;">
+                        <div></div>
+                        <button class="btn btn-primary" id="setting-save-email-btn" data-admin-action="save-email-config" style="padding:8px 28px;border-radius:12px;font-size:14px;">💾 保存邮件配置</button>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <div class="settings-label">测试邮件发送</div>
+                            <div class="settings-desc">保存配置后，输入邮箱测试是否可用</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <input type="email" class="settings-input" id="setting-test-email" placeholder="输入测试邮箱" style="max-width:220px;">
+                            <button class="btn btn-sm btn-primary" id="setting-test-btn" data-admin-action="test-email-send">✈️ 发送测试</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="settings-save-hint">
+                    <span id="settings-save-hint">✅ 设置已自动保存</span>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+
+    <div class="modal-overlay" id="slot-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="slot-modal-title">添加时段</h3>
+                <button class="modal-close" id="slot-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="slot-form">
+                    <input type="hidden" id="slot-edit-id" value="">
+
+                    <div class="form-group">
+                        <label for="slot-name">时段名称</label>
+                        <input type="text" class="form-input" id="slot-name" placeholder="例如：午间音乐时光" required>
+                    </div>
+
+                    <div class="time-picker-grid">
+                        <div class="form-group">
+                            <label for="slot-start">🎵 播放开始时间</label>
+                            <div class="time-picker-row">
+                                <select id="slot-start-hour" class="form-input time-select"></select>
+                                <span class="time-separator">:</span>
+                                <select id="slot-start-min" class="form-input time-select"></select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="slot-end">🎵 播放结束时间</label>
+                            <div class="time-picker-row">
+                                <select id="slot-end-hour" class="form-input time-select"></select>
+                                <span class="time-separator">:</span>
+                                <select id="slot-end-min" class="form-input time-select"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>播放星期</label>
+                        <div class="weekday-selector" id="weekday-selector">
+                            <button type="button" class="weekday-btn" data-day="1">周一</button>
+                            <button type="button" class="weekday-btn" data-day="2">周二</button>
+                            <button type="button" class="weekday-btn" data-day="3">周三</button>
+                            <button type="button" class="weekday-btn" data-day="4">周四</button>
+                            <button type="button" class="weekday-btn" data-day="5">周五</button>
+                            <button type="button" class="weekday-btn" data-day="6">周六</button>
+                            <button type="button" class="weekday-btn" data-day="0">周日</button>
+                        </div>
+                        <div class="weekday-hint">点击选择生效的星期，全不选=每天生效</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>未来播放安排</label>
+                        <input type="hidden" id="slot-effective-start-date">
+                        <div id="slot-start-date-calendar" class="slot-start-date-calendar" aria-label="编辑未来播放安排"></div>
+                        <div class="settings-desc" style="margin-top:6px;">选星期后，紫色日期默认播放。点紫色日期可设为不播放；点灰色日期可临时加播。日期修改会暂存在这里，点击底部“保存”后统一生效。</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>是否启用</label>
+                        <div class="switch-wrapper">
+                            <div class="switch active" id="slot-active-switch"></div>
+                            <span class="switch-label" id="slot-active-label">已启用</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>每日点歌上限</label>
+                        <input type="number" class="form-input" id="slot-max-songs" min="1" max="100" value="10" placeholder="该时段每天最多接受多少首点歌">
+                        <div class="settings-desc" style="margin-top: 4px;">自动创建日期时使用此上限值</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" type="button" id="slot-modal-cancel">取消</button>
+                <button class="btn btn-primary" type="button" id="slot-modal-submit" data-admin-action="save-slot-form">保存</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="notice-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="notice-modal-title">发布公告</h3>
+                <button class="modal-close" id="notice-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="notice-form">
+                    <input type="hidden" id="notice-edit-id" value="">
+                    <div class="form-group">
+                        <label for="notice-title-input">公告标题</label>
+                        <input type="text" class="form-input" id="notice-title-input" placeholder="请输入公告标题" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="notice-content-input">公告内容</label>
+                        <textarea class="form-input" id="notice-content-input" placeholder="请输入公告内容" rows="5" style="resize: vertical; min-height: 100px;" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>是否置顶</label>
+                        <div class="switch-wrapper">
+                            <div class="switch" id="notice-top-switch"></div>
+                            <span class="switch-label" id="notice-top-label">不置顶</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="notice-modal-cancel">取消</button>
+                <button type="button" class="btn btn-primary" id="notice-modal-submit">发布</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="viewer-profile-modal" style="display:none;" data-admin-action="close-viewer-profile-overlay">
+        <div class="modal" style="max-width:480px;">
+            <div class="modal-header">
+                <h3>👤 用户资料</h3>
+                <button class="modal-close" data-admin-action="close-viewer-profile">✕</button>
+            </div>
+            <div class="modal-body" id="viewer-profile-content">
+                <div style="text-align:center;padding:40px;color:#999;">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="ban-modal">
+        <div class="modal" style="max-width:480px;">
+            <div class="modal-header">
+                <h3>🔒 封禁用户</h3>
+                <button class="modal-close" data-admin-action="close-ban-modal">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ban-user-id" value="">
+                <div style="margin-bottom:16px;font-size:0.9rem;color:var(--text-secondary);">封禁：<strong id="ban-username" style="color:var(--text-primary);"></strong></div>
+                <div style="margin-bottom:12px;font-size:0.85rem;font-weight:600;color:var(--text-primary);">选择封禁理由</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;" id="ban-reason-templates">
+                </div>
+                <div>
+                    <div style="font-size:0.85rem;font-weight:600;margin-bottom:6px;color:var(--text-primary);">或自定义理由</div>
+                    <input type="text" id="ban-custom-reason" placeholder="输入封禁理由..." style="width:100%;padding:10px 12px;border:1px solid var(--border-color);border-radius:8px;font-size:0.85rem;background:var(--bg-secondary);color:var(--text-primary);box-sizing:border-box;">
+                </div>
+            </div>
+            <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-ghost" data-admin-action="close-ban-modal">取消</button>
+                <button class="btn btn-danger" data-admin-action="confirm-ban">确认封禁</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="toast-container" id="toast-container"></div>
+
+
+    <div class="modal-overlay" id="user-title-modal">
+        <div class="modal" style="max-width: 560px;">
+            <div class="modal-header">
+                <h3 id="user-title-modal-title">🎖️ 设置用户头衔</h3>
+                <button class="modal-close" id="user-title-modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="user-title-user-id" value="">
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 8px;">当前用户：<strong id="user-title-username" style="color: var(--text-primary);"></strong></div>
+                </div>
+
+
+                <div style="margin-bottom: 16px; padding: 14px; background: var(--bg-section); border-radius: 10px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 10px;">✨ 新建头衔</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <input type="text" id="new-title-name" placeholder="头衔名称" style="flex:1;min-width:120px;padding:8px 12px;border:1px solid var(--border-color);border-radius:8px;font-size:0.85rem;background:var(--bg-secondary);color:var(--text-primary);">
+                        <input type="text" id="new-title-icon" placeholder="图标" value="⭐" style="width:56px;padding:8px;border:1px solid var(--border-color);border-radius:8px;font-size:0.85rem;text-align:center;background:var(--bg-secondary);color:var(--text-primary);">
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-size: 0.75rem; color: var(--text-light); margin-bottom: 6px;">选择颜色</div>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="title-color-presets">
+                            <div class="title-color-option active" data-color="#FF6B9D" data-bg="rgba(255,107,157,0.12)" style="width:28px;height:28px;border-radius:50%;background:#FF6B9D;cursor:pointer;border:2px solid #FF6B9D;box-shadow:0 0 0 2px #FFF;"></div>
+                            <div class="title-color-option" data-color="#A78BFA" data-bg="rgba(167,139,250,0.12)" style="width:28px;height:28px;border-radius:50%;background:#A78BFA;cursor:pointer;"></div>
+                            <div class="title-color-option" data-color="#3B82F6" data-bg="rgba(59,130,246,0.12)" style="width:28px;height:28px;border-radius:50%;background:#3B82F6;cursor:pointer;"></div>
+                            <div class="title-color-option" data-color="#10B981" data-bg="rgba(16,185,129,0.12)" style="width:28px;height:28px;border-radius:50%;background:#10B981;cursor:pointer;"></div>
+                            <div class="title-color-option" data-color="#F59E0B" data-bg="rgba(245,158,11,0.12)" style="width:28px;height:28px;border-radius:50%;background:#F59E0B;cursor:pointer;"></div>
+                            <div class="title-color-option" data-color="#EF4444" data-bg="rgba(239,68,68,0.12)" style="width:28px;height:28px;border-radius:50%;background:#EF4444;cursor:pointer;"></div>
+                            <div class="title-color-option" data-color="#8B5CF6" data-bg="rgba(139,92,246,0.12)" style="width:28px;height:28px;border-radius:50%;background:#8B5CF6;cursor:pointer;"></div>
+                            <div class="title-color-option" data-color="#EC4899" data-bg="rgba(236,72,153,0.12)" style="width:28px;height:28px;border-radius:50%;background:#EC4899;cursor:pointer;"></div>
+                            <div class="title-color-option" data-color="#14B8A6" data-bg="rgba(20,184,166,0.12)" style="width:28px;height:28px;border-radius:50%;background:#14B8A6;cursor:pointer;"></div>
+                            <div class="title-color-option" data-color="#F97316" data-bg="rgba(249,115,22,0.12)" style="width:28px;height:28px;border-radius:50%;background:#F97316;cursor:pointer;"></div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+                            <label style="font-size:0.75rem;color:var(--text-light);cursor:pointer;">🎨 自定义</label>
+                            <input type="color" id="new-title-color-picker" value="#FF6B9D" style="width:36px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0;background:none;">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" data-admin-action="create-new-title">➕ 创建并添加</button>
+                    <span id="new-title-preview" style="margin-left:10px;font-size:0.85rem;"></span>
+                </div>
+
+
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 8px;">已拥有的头衔（点击 ✕ 移除）：</div>
+                    <div id="user-current-titles" style="min-height: 36px; padding: 10px 12px; background: var(--bg-section); border-radius: 8px;">
+                        <span style="color: var(--text-light); font-size: 0.85rem;">加载中...</span>
+                    </div>
+                </div>
+
+
+                <div>
+                    <div style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 8px;">点击添加头衔：</div>
+                    <div id="user-available-titles" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" type="button" id="user-title-modal-cancel">关闭</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="addDailySongModal" style="display:none;">
+        <div class="modal-content" style="max-width:400px;margin:auto;margin-top:100px;">
+            <div class="modal-header">
+                <h3>🎵 添加推歌</h3>
+                <button class="modal-close" data-admin-action="close-add-daily-song">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>歌曲名 *</label>
+                    <input type="text" id="addSongName" class="form-input" placeholder="请输入歌曲名">
+                </div>
+                <div class="form-group">
+                    <label>歌手 *</label>
+                    <input type="text" id="addSongArtist" class="form-input" placeholder="请输入歌手名">
+                </div>
+                <div class="form-group">
+                    <label>送给谁</label>
+                    <input type="text" id="addSongToWhom" class="form-input" placeholder="可选">
+                </div>
+                <div class="form-group">
+                    <label>祝福语</label>
+                    <textarea id="addSongMessage" class="form-input" rows="3" placeholder="可选"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-admin-action="close-add-daily-song">取消</button>
+                <button class="btn btn-primary" data-admin-action="save-daily-song">保存</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="songIntroEditorModal" style="display:none;">
+        <div class="modal-content daily-song-editor-modal">
+            <div class="modal-header">
+                <h3 id="introEditorTitle">🎵 编辑歌曲介绍</h3>
+                <button class="modal-close" data-admin-action="close-song-intro-editor">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="daily-song-editor-intro">这里的内容会同时用于后台候选卡、公众号预览和最终推送。歌曲名与歌手为必填项，先改信息再生成 AI 文案更准确。</p>
+                <div class="daily-song-editor-grid">
+                    <div class="daily-song-editor-field">
+                        <label for="editorSongName">歌曲名 <em>*</em></label>
+                        <input id="editorSongName" type="text" maxlength="200" placeholder="例如：晴天">
+                    </div>
+                    <div class="daily-song-editor-field">
+                        <label for="editorArtist">歌手 <em>*</em></label>
+                        <input id="editorArtist" type="text" maxlength="200" placeholder="例如：周杰伦">
+                    </div>
+                    <div class="daily-song-editor-field">
+                        <label for="editorToWhom">送给谁</label>
+                        <input id="editorToWhom" type="text" maxlength="100" placeholder="可选：某位同学/班级">
+                    </div>
+                    <div class="daily-song-editor-field">
+                        <label for="editorMessage">祝福语</label>
+                        <input id="editorMessage" type="text" maxlength="5000" placeholder="可选：想对 TA 说的话">
+                    </div>
+                </div>
+
+                <div class="daily-song-editor-section">
+                    <div class="daily-song-editor-section-head">
+                        <span class="daily-song-editor-section-title">🎶 歌曲信息</span>
+                        <button id="searchSongInfoBtn" class="daily-song-editor-action" style="background:linear-gradient(135deg,#B5956B,#D4B896);" data-admin-action="search-song-info">🔍 搜索资料</button>
+                    </div>
+                    <div class="daily-song-editor-info-grid">
+                        <div class="daily-song-editor-field"><label for="editorInfoAlbum">专辑</label><input id="editorInfoAlbum" type="text" maxlength="200" placeholder="未知时留空"></div>
+                        <div class="daily-song-editor-field"><label for="editorInfoYear">发行年份</label><input id="editorInfoYear" type="text" maxlength="20" placeholder="例如：2003"></div>
+                        <div class="daily-song-editor-field"><label for="editorInfoDuration">时长</label><input id="editorInfoDuration" type="text" maxlength="20" placeholder="例如：04:26"></div>
+                    </div>
+                    <div class="daily-song-editor-help">搜索结果只作为参考；如果接口没有可靠资料，可以手动修正，保存后公众号使用这里的最终内容。</div>
+                </div>
+                <div class="daily-song-editor-field full" style="margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <label for="editorIntroText" style="margin:0;">公众号推荐语</label>
+                        <button id="introAiBtn" class="daily-song-editor-action" style="background:linear-gradient(135deg,#FF6B9D,#FF8FB1);" data-admin-action="ai-generate-intro">🤖 AI生成</button>
+                    </div>
+                    <textarea id="editorIntroText" maxlength="5000" placeholder="写给校园读者的自然推荐语，也可以交给 AI 起稿后再手动调整"></textarea>
+                </div>
+                <div class="daily-song-editor-field full">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                        <label for="editorLyricsText" style="margin:0;">歌词摘录</label>
+                        <button id="searchLyricsBtn" class="daily-song-editor-action" style="background:linear-gradient(135deg,#64B5F6,#42A5F5);" data-admin-action="search-lyrics">🔍 搜索歌词</button>
+                    </div>
+                    <textarea id="editorLyricsText" maxlength="30000" style="font-family:serif;line-height:1.8;" placeholder="只放已确认的歌词摘录，接口未找到时请不要让 AI 猜歌词"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-admin-action="close-song-intro-editor">取消</button>
+                <button class="btn btn-primary" data-admin-action="save-song-intro-editor">保存</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="/admin/js/admin-request-cache.js?v=2026101501"></script>
+    <script src="/admin/js/admin.js?v=2026102001"></script>
+    <script src="/admin/js/admin-stories.js?v=20260917"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

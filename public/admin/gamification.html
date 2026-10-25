@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>积分运营 - 管理后台</title>
+    <link rel="stylesheet" href="/admin/css/gamification.css?v=20260917">
+<meta name="robots" content="noindex, nofollow">
+    <script src="/js/baidu-push.js?v=20260917" defer></script>
+</head>
+<body class="admin-page admin-gamification-page">
+    <div class="top-bar">
+        <h1>⭐ 积分运营</h1>
+        <div class="top-right">
+            <button class="btn btn-primary" id="award-open-btn" data-action="open-award" type="button">🏆 颁发称号</button>
+            <a href="/admin/" class="back-link">← 返回后台</a>
+        </div>
+    </div>
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value" id="g-today">-</div><div class="stat-label">今日签到</div></div>
+            <div class="stat-card"><div class="stat-value" id="g-total">-</div><div class="stat-label">总签到次数</div></div>
+            <div class="stat-card"><div class="stat-value" id="g-active">-</div><div class="stat-label">7日活跃用户</div></div>
+            <div class="stat-card"><div class="stat-value" id="g-weekly-star" style="font-size:1.1rem;"></div><div class="stat-label">本周之星</div></div>
+        </div>
+
+        <div class="tab-bar">
+            <button type="button" class="tab-btn active" data-action="switch-tab" data-tab="points">🏆 积分排行</button>
+            <button type="button" class="tab-btn" data-action="switch-tab" data-tab="streak">🔥 签到排行</button>
+            <button type="button" class="tab-btn" data-action="switch-tab" data-tab="grant">💰 积分发放</button>
+            <button type="button" class="tab-btn" data-action="switch-tab" data-tab="log">📋 积分日志</button>
+        </div>
+
+        <div class="tab-content active" id="tab-points">
+            <div class="card">
+                <div class="table-wrap"><table>
+                    <thead><tr><th>排名</th><th>用户</th><th>积分</th><th>最高连续签到</th></tr></thead>
+                    <tbody id="points-body"><tr class="loading-row"><td colspan="4"><span class="loading-spinner"></span>加载中...</td></tr></tbody>
+                </table></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-streak">
+            <div class="card">
+                <div class="table-wrap"><table>
+                    <thead><tr><th>排名</th><th>用户</th><th>最高连续签到</th><th>称号</th></tr></thead>
+                    <tbody id="streak-body"><tr class="loading-row"><td colspan="4"><span class="loading-spinner"></span>加载中...</td></tr></tbody>
+                </table></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-grant">
+            <div class="form-card">
+                <h3>💰 发放/扣除积分</h3>
+                <div class="form-group">
+                    <label>选择用户</label>
+                    <div class="user-search-wrap">
+                        <input type="text" class="form-input" id="user-search-input" placeholder="输入用户名或昵称搜索..." autocomplete="off">
+                        <div class="user-search-results" id="user-search-results"></div>
+                    </div>
+                    <div id="selected-user-display"></div>
+                </div>
+                <div class="form-group">
+                    <label>积分数量</label>
+                    <div class="quick-amounts">
+                        <button type="button" class="qa-btn" data-action="set-amount" data-amount="10">+10</button>
+                        <button type="button" class="qa-btn" data-action="set-amount" data-amount="50">+50</button>
+                        <button type="button" class="qa-btn" data-action="set-amount" data-amount="100">+100</button>
+                        <button type="button" class="qa-btn" data-action="set-amount" data-amount="500">+500</button>
+                        <button type="button" class="qa-btn deduct" data-action="set-amount" data-amount="-10">-10</button>
+                        <button type="button" class="qa-btn deduct" data-action="set-amount" data-amount="-50">-50</button>
+                        <button type="button" class="qa-btn deduct" data-action="set-amount" data-amount="-100">-100</button>
+                    </div>
+                    <input type="number" class="form-input" id="points-amount" placeholder="输入积分数量（正数发放，负数扣除）" value="">
+                </div>
+                <div class="form-group">
+                    <label>原因</label>
+                    <select class="form-select" id="points-reason">
+                        <option value="bonus">🎁 活动奖励</option>
+                        <option value="admin_bonus">✋ 手动发放</option>
+                        <option value="penalty">⚠️ 违规扣除</option>
+                        <option value="adjustment">🔄 手动调整</option>
+                        <option value="other">📝 其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>备注（可选）</label>
+                    <input type="text" class="form-input" id="points-remark" placeholder="备注说明">
+                </div>
+                <button class="form-submit" id="grant-btn" data-action="grant-points" type="button">确认发放</button>
+            </div>
+            <div class="form-card" id="grant-result" style="display:none;"></div>
+        </div>
+
+        <div class="tab-content" id="tab-log">
+            <div class="log-filter-bar" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                <input type="text" class="form-input" id="log-user-search" placeholder="按用户ID筛选..." style="max-width:250px;">
+                <button class="form-submit" id="log-query-btn" data-action="query-log" type="button" style="padding:8px 20px;">查询</button>
+            </div>
+            <div class="card">
+                <div class="table-wrap"><table>
+                    <thead><tr><th>时间</th><th>用户</th><th>变动</th><th>余额</th><th>原因</th></tr></thead>
+                    <tbody id="log-body"><tr class="loading-row"><td colspan="5"><span class="loading-spinner"></span>加载中...</td></tr></tbody>
+                </table></div>
+            </div>
+            <div id="log-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px;"></div>
+            <div class="log-cleanup" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border,#e8ecf4);">
+                <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🧹 清理旧日志</div>
+                <div class="log-cleanup-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="cleanup-btn cleanup-btn-default" data-action="cleanup-log" data-days="7" type="button" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:6px;padding:6px 16px;cursor:pointer;">删除 7 天前</button>
+                    <button class="cleanup-btn cleanup-btn-warn" data-action="cleanup-log" data-days="14" type="button" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:6px;padding:6px 16px;cursor:pointer;">删除 14 天前</button>
+                    <button class="cleanup-btn cleanup-btn-danger" data-action="cleanup-log" data-days="30" type="button" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:6px;padding:6px 16px;cursor:pointer;">删除 30 天前</button>
+                    <button class="cleanup-btn cleanup-btn-purple" data-action="cleanup-log" data-days="90" type="button" style="background:#f3f0ff;color:#6d28d9;border:1px solid #ddd6fe;border-radius:6px;padding:6px 16px;cursor:pointer;">删除 90 天前</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/admin/js/gamification.js?v=20260917"></script>
+</body>
+</html>

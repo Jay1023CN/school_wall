@@ -1,0 +1,125 @@
+# 校墙项目源码索引
+
+> 目的：让 Codex 和开发者先命中入口文件，再按调用链展开，减少无效的全仓库搜索。索引只记录稳定的导航信息，不替代源码事实。
+
+## 使用方法
+
+1. 先按下面的功能表选择页面入口或后端路由。
+2. 先读入口文件及其直接依赖，再根据实际调用关系扩展搜索。
+3. 如果索引与源码不一致，以当前源码和实际运行结果为准，并在任务完成后更新本文件。
+
+## 运行与目录关系
+
+| 作用 | 位置 | 说明 |
+| --- | --- | --- |
+| 公开标识检查 | `scripts/check-sensitive-files.js`、`scripts/test-public-privacy.js` | 校名、私有仓库链接和原站点图片回归；`npm run check:privacy` |
+| 通用站点图标 | `frontend/favicon.svg` → `public/favicon.svg` | 公开页面、搜索元数据和演示构建共用 |
+| 天气位置 | `routes/site.js`、`services/mp-draft.js`；`config/env.example` | 使用 `WEATHER_CITY`、`WEATHER_LATITUDE`、`WEATHER_LONGITUDE`，未配置时不请求天气 |
+| 服务入口 | `server.js`、`config/environment.js` | 环境配置与进程启动、退出 |
+| IP 与归属地 | `http/middleware.js` → `services/ip-lookup.js`；关联发帖、评论、登录和后台 IP 查询，专项 `scripts/test-ip-lookup.js` | 信任配置来自 `TRUST_PROXY`；离线库支持 IPv4/IPv6，失败不返回原始 IP |
+| HTTP 应用组装 | `app.js` → `http/middleware.js`、`http/static-pages.js`、`http/routes.js` | 中间件、静态页面与 API 挂载；构建应用不初始化数据库、不监听、不启动任务 |
+| 运行生命周期 | `services/runtime.js` | 数据库初始化、监听、任务启动、有界退出 |
+| 数据库初始化与迁移 | `config/database.js`、`config/schema-migrations.js` | 历史表仍由启动 DDL/字段索引检查兼容；新表由 `schema_migrations` 记录版本化迁移 |
+| 写入事务与幂等 | `services/write-transaction.js` | 业务写入与 `api_write_requests` 收据同事务；键和 payload 冲突返回 409 |
+| 数据库事务退出 | `services/database-transaction.js` | 回滚失败销毁连接，避免未知事务状态回池 |
+| 通知 outbox | `services/notification-outbox.js`、`jobs/index.js` | 反馈管理员通知在业务事务中登记，后台按租约、claim token 和退避重试；SMTP 至少一次，不证明收件箱到达 |
+| 公众号持久同步 | `services/mp-sync-jobs.js`、`routes/mp-draft.js` | `mp_sync_jobs` 队列、owner 锁、租约恢复与 `needs_review` 人工核对；未知微信结果不自动重发 |
+| 点歌状态转换 | `services/song-state-transitions.js`、`services/song-scheduling.js` | 在行锁和旧状态条件下完成审核状态转换，冲突统一返回 409 |
+| 后台任务入口 | `jobs/index.js`、`services/task-lifecycle.js`、`services/cleanup.js`、`services/mp-sync-jobs.js`、`services/notification-outbox.js` | 显式启停验证码、点赞、点歌、公众号同步、通知 outbox 和清理任务；数据库租约支持进程重启恢复；路由加载不创建维护定时器 |
+| 点歌维护分层 | `modules/songs/index.js` → `services/song-maintenance.js` → `repositories/song-maintenance.js` | HTTP 与后台任务共享服务实例；服务编排日期与归档规则，repository 执行 SQL |
+| 实际静态目录 | `public/` | `express.static` 当前提供的页面、CSS、JS |
+| 前端源码 | `frontend/` | 唯一静态源码；通过 `npm run sync:frontend` 生成 `public/` 镜像 |
+| 静态生成与检查 | `scripts/lib/frontend-assets.js`、`scripts/sync-frontend.js`、`scripts/check-frontend-mirror.js`、`scripts/build-static-site.js` | 共用文件规则；生成 `public/` 镜像和带哈希清单的 `dist/`；生产当前仍提供 `public/` |
+| 项目文档 | `docs/README.md`、`docs/PUBLIC_RELEASE.md` | 文档导航、目录整理与 GitHub 公开范围 |
+| 配置样例 | `config/env.example` → 根目录 `.env` | 不含真实凭据；实际环境加载见 `config/environment.js` |
+| 部署脚本 | `deploy.sh` | 部署和同步流程入口，修改部署时先读它 |
+| Nginx 静态缓存 | `deploy.sh` → `scripts/configure-static-cache.js` | 日常部署只核对源站与 CDN；管理员显式 `--apply` 时匹配本站域名与目录，备份、检查并按需恢复 Nginx 配置 |
+| 部署数据库预检 | `scripts/check-database-startup.js`、`scripts/test-database-startup-check.js` | 重启前初始化/核验 schema，失败报告仅包含结构错误码；关联 `/api/deploy-status` |
+| 本次发布验证 | `docs/PUBLIC_RELEASE.md` | 实际检查、功能提交、部署核对及未实测范围 |
+
+## GitHub 公开仓库入口
+
+| 功能 | 入口 |
+| --- | --- |
+| 静态演示 | `demo/` → `scripts/build-pages-demo.js` → `.github/workflows/pages-demo.yml`；说明 `docs/PAGES_DEMO.md`，回归 `scripts/test-pages-demo-browser.py` |
+| 初始管理员 | `scripts/create-initial-admin.js`；使用私有 `INITIAL_ADMIN_*` 环境变量，不覆盖已有账号 |
+| 自动检查 | `.github/workflows/ci.yml`；安装依赖、镜像、隐私、部署检查与全量测试 |
+
+## 功能入口地图
+
+### 前端页面
+
+| 功能 | 先看这些文件 | 后端入口 |
+| --- | --- | --- |
+| 首页/帖子流 | `frontend/index.html`、`frontend/js/home.js`、`frontend/js/app.js` | `routes/posts.js` 组装用户资料 `routes/posts/profiles.js`、帖子流 `routes/posts/feed.js`、发帖编辑 `routes/posts/write.js`、评论回复 `routes/posts/comments.js`、点赞投票与浏览 `routes/posts/interactions.js`；认证关联 `routes/auth.js` |
+| 首页自绘图标 | `frontend/css/home-icons.css`（图标及通知/退出无框样式）、`frontend/images/home-icons.svg`（自绘图标） | 保持原首页结构、侧栏及配色，仅通知/退出改为无图标方框的导航形式 |
+| 首页公告 | `frontend/index.html` → `frontend/js/home-notices.js`、`frontend/css/home-notices.css`；专项浏览器验证 `scripts/test-home-notices-browser.py` | `routes/notices.js`；公开读取置顶优先的最新 10 条公告，原生展开全文 |
+| 首页签到卡 | `frontend/js/home.js`、`frontend/css/campus-ui-polish.css`（签到卡视觉规则） | `routes/checkin.js`；关联 `desktopCheckinSlot`、`mobileCheckinSlot` 和宽屏侧栏 |
+| 正文首屏与活动主题 | 公开 HTML 的基础样式和资源预加载 → `frontend/js/theme-mode.js`；正文不等待活动主题，样式就绪后启用 | `routes/site.js`；共享站点配置与本地主题提示缓存 |
+| 帖子详情/回复 | `frontend/post-detail.html`、`frontend/js/detail.js`、`frontend/js/detail-replies.js` | `routes/posts/feed.js`、`routes/posts/comments.js`、`routes/posts/interactions.js` |
+| 电台/歌曲 | `frontend/radio.html`、`frontend/js/radio.js`、`frontend/css/radio-polish-enhanced.css` | `routes/songs.js` |
+| 管理后台 | `frontend/admin/index.html` → `frontend/admin/js/admin-request-cache.js`、`frontend/admin/js/admin.js` | `routes/admin.js` 组装后台模块：系统与概览 `routes/admin/system.js`、帖子 `routes/admin/posts.js`、账号 `routes/admin/users.js`、歌曲 `routes/admin/songs.js`、公告 `routes/admin/notices.js`、设置 `routes/admin/settings.js`、反馈 `routes/admin/feedbacks.js`、通知 `routes/admin/notifications.js`、日志 `routes/admin/logs.js`、浏览统计 `routes/admin/post-views.js`、积分称号 `routes/admin/gamification.js`、通信 `routes/admin/communications.js`、私信 `routes/admin/messages.js`；小说连载由 `routes/admin-stories.js` 处理 |
+| 点歌审核与结果通知 | `frontend/admin/index.html`、`routes/admin/songs.js`、`services/email.js` | `config/database.js`、`settings.song_reject_reasons`、`song_requests.reject_reason`、`song_requests.approved_at`（本周审核歌单依据） |
+| 公众号整篇版式 | `frontend/admin/mp-draft.html` → `frontend/admin/js/mp-draft.js`、`frontend/admin/js/mp-draft-theme-visuals.js`（13 套版式展示配置与共用刊头）、`frontend/admin/css/mp-draft.css`（版式选择器）；镜像位于 `public/admin/` | 预览与同步共用文章 HTML；`routes/mp-draft.js`、`services/mp-draft.js` |
+| 每日歌曲独立页 | `frontend/admin/mp-draft.html`、`public/admin/mp-draft.html` | `routes/mp-draft.js`、`services/mp-draft.js` |
+| 微信公众号回调与绑定 | `frontend/profile.html`、`frontend/register.html` | `routes/wechat.js`、`services/wechat*.js`；回调为 `/api/wechat/callback` |
+| 意见反馈 | `frontend/feedback.html` | `routes/feedback.js` |
+| 消息 | `frontend/messages.html`、`frontend/js/messages.js`、`frontend/css/messages-polish-enhanced.css` | `routes/messages.js` |
+| 个人主页 | `frontend/profile.html`、`frontend/css/profile-polish-enhanced.css` | `routes/auth.js` |
+| 登录与账号 | `frontend/js/auth.js` | `routes/auth.js` |
+
+公共样式主要在 `frontend/css/`，常用入口为 `style.css`、`base.css`、`responsive.css`、`mobile-fix.css`；页面级美化补丁放在 `*-polish-enhanced.css`，并同步到 `public/`。
+
+### 后端路由与服务
+
+常规路由集中在 `routes/`：
+
+`auth.js`、`posts.js`、`songs.js`、`admin.js`、`feedback.js`、`notices.js`、`messages.js`、`wechat.js`、`checkin.js`、`reservations.js`、`notifications.js`、`leaderboard.js`、`upload.js`、`follows.js`、`mp-draft.js`、`hitokoto.js`、`site.js`、`health.js`、`deploy.js`。
+
+匿名发布权限由 `routes/posts/write.js`、`routes/posts/comments.js`、`routes/songs.js` 按 `settings` 实时校验；对应回归入口为 `scripts/test-anonymous-policy.js`。反馈邮件由 `routes/feedback.js` 通过 `services/notification-outbox.js` 登记，再由 `services/email.js` 发送，回归入口为 `scripts/test-feedback-notices.js`、`scripts/test-email-service.js`。
+
+可复用业务逻辑集中在 `services/`，包括 `ai.js`、`email.js`、`captcha-image.js`、`wechat.js`、`wechat-flows.js`、`wechat-reply.js`、`wechat-token.js`、`mp-draft.js`、`mp-sync-jobs.js`、`notification-outbox.js`、`song-state-transitions.js`、`write-transaction.js` 等。遇到接口问题，按“页面调用 → `routes/` → `services/` → 数据访问/外部服务”顺序追踪。
+
+帖子 API 入口 `routes/posts.js` 只组装子路由；共用匿名策略、时间和媒体地址处理在 `routes/posts/shared.js`。管理 API 入口为 `routes/admin.js`；后台子路由、`routes/admin/daily-songs.js`、`routes/admin/slots.js` 和小说连载 `routes/admin-stories.js` 均挂载到原 `/api/admin` 前缀并继承后台登录与员工身份校验。点歌拒绝理由由 `services/song-reject-reasons.js` 统一规范化；小说章节及发布配置的文件读写集中在 `services/stories-storage.js`，公众号文章排版与图片上传集中在 `services/story-publication.js`。公众号推送入口单独挂载为 `/api/mp`，但仍由 `routes/mp-draft.js` 统一执行员工与权限校验。`POST /api/mp/sync-review` 仅允许最高管理员且具备 `songs:review` 权限的任务所有者处理 `needs_review` 或补标记失败的 `mark_failed`：`created` 需 `media_id`，`not_created` 需 `confirm_no_draft=true`，系统不会自动重发未知结果。
+
+## 常见边界
+
+- 管理后台主页面与每日歌曲页面是两个功能边界；修后台布局、权限或管理接口时不要顺手修改 `mp-draft`。
+- `frontend/` 与 `public/` 不是任意复制关系；先确认对应文件，再做最小同步。
+- 旧 `views/` 副本已移除；页面只修改 `frontend/`，再同步 `public/`。
+- `dist/` 是本地构建产物和哈希清单，不是当前 Express 静态目录；部署静态目录由私有运维配置决定。
+- 不在索引中记录密钥、Cookie、服务器密码或完整线上配置。
+- 多个 Git 远程并存；发布前必须由任务明确指定目标远程。
+
+## 验证入口
+
+- 静态回归的函数/路由源码定位：`scripts/lib/source-sections.js`；按语法节点提取代码片段，不依赖运行源码中的注释标记。
+
+- 点歌审核与本周歌单：`npm run test:song-approval`；公告文本为 `config/song-approval-notice.json`。
+
+- 服务语法：`node --check server.js`
+- 微信署名：`npm run test:wechat-song-flow`、`npm run test:wechat-output`；推歌跳过使用绑定账号署名，公众号投稿显式写入非匿名。
+- 历史推歌署名修正：`routes/deploy.js` 的 `/api/deploy-maintenance/wechat-author` → `services/wechat-author-repair.js`；专项回归为 `npm run test:wechat-author-repair`。仅私有部署凭据可调用，先核对、再指定记录修改，旧值备份保存在服务器 `logs/`。
+- 运行生命周期：`npm run test:runtime`（离线任务测试及临时端口真实监听，不连接业务数据库）
+- HTTP 兼容：`npm run test:http`（模拟数据库、临时端口，验证页面与权限响应）
+- 点歌维护：`npm run test:song-maintenance`（注入时钟与数据访问，验证周期、生效日期、容量及禁止按预约自动归档）
+- 静态流水线：`npm run test:frontend-assets`、`npm run build`（临时目录回归；同步镜像并生成静态产物）
+- 用户反馈回归：`npm run test:feedback-clarity`（评论计数、发布身份说明、点歌名额提示和分类筛选）
+- 后台请求复用：`npm run test:admin-request-cache`、`npm run test:http`（缓存到期、并发合并、写后失效、账号隔离和角色待办权限）
+- 认证与上传安全：`npm run test:auth-upload`、`npm run test:http`（头像/图片上传校验、验证码使用栅格 PNG 且不回传答案、登录按账号/IP触发验证码但不锁号、上传按 IP 和账号限流、微信注册码频率限制及管理代登录角色边界）
+- 依赖安全：`npm run test:dependency-safety`（CloudBase 的 Axios 覆盖、Lodash 安全兼容层和原型污染防护）
+- 公众号推送回归：`npm run test:mp-draft-modules`、`npm run test:mp-draft-flow`、`npm run test:mp-weekly-song-schedule`（模块镜像、同步终态、推送页面和排期）
+- 持久任务与事务回归：`node scripts/test-schema-migrations.js`、`node scripts/test-write-transaction.js`、`node scripts/test-notification-outbox.js`、`node scripts/test-mp-sync-jobs.js`、`node scripts/test-content-transactions.js`
+- 改期重复请求：`npm run test:reschedule-idempotency`（同目标不重复写入，收据回放跳过通知）
+- 点歌提交路由：`npm run test:song-submit-http`（临时 HTTP 服务覆盖真实 POST handler、成功与重复提交、容量/次数、匿名校验和故障恢复；不写生产数据）
+- 后台加载浏览器：`python scripts/test-admin-loading-browser.py`（本地页面与模拟接口，覆盖短缓存、用户角色筛选、乱序响应、失败重试、刷新保留内容和键盘焦点；390/768/769/1440px）
+- 后台分页浏览器：`python scripts/test-admin-pagination-browser.py`（需 Python Playwright 与已安装浏览器；默认 Chromium，可用 `WALL_BROWSER_CHANNEL=msedge` 指定 Edge；本地页面和模拟接口，覆盖移动/桌面边界、横屏、深色及九类列表）
+- 架构可靠性回归：`node scripts/test-architecture-reliability.js`（代理信任、点歌状态转换和前端幂等收据）
+- 管理与邮件链路语法：`node --check routes/admin.js`、`node --check services/email.js`、`node --check config/database.js`
+- 补丁空白：`git diff --check`
+- 前端静态改动：检查 `frontend/` 与 `public/` 对应文件内容是否同步。
+- 页面改动：在实际运行页面和目标视口验证，不只看源码或构建输出。
+
+## 更新规则
+
+只有在入口、运行副本、目录边界或验证命令发生变化时更新本索引；保持它短小、可执行，避免变成第二份 README。

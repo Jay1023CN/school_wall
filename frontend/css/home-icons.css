@@ -1,0 +1,48 @@
+/* 首页自绘图标；通知和退出使用与导航一致的图标加文字形式。 */
+body.home-page .home-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  vertical-align: -.12em;
+}
+body.home-page .nav-logo .home-icon { margin-right: 7px; color: var(--primary); }
+body.home-page .nav-link .home-icon { width: 20px; height: 20px; }
+body.home-page .post-card .action-icon .home-icon { width: 19px; height: 19px; }
+body.home-page .post-card .action-btn.liked .home-icon { fill: currentColor; }
+body.home-page .weather-detail .home-icon { width: 14px; height: 14px; }
+body.home-page .theme-sun { display: none; }
+[data-theme="dark"] body.home-page .theme-moon { display: none; }
+[data-theme="dark"] body.home-page .theme-sun { display: inline-block; }
+
+/* 通知与退出：圆角笔触配轻填色，图形放大但不改变按钮尺寸。 */
+body.home-page .navbar .nav-control-icon .notification-icon,
+body.home-page .navbar .nav-control-icon .nav-action-icon {
+  width: 22px;
+  height: 22px;
+  flex-basis: 22px;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 去掉图标独立的圆角方框，包括悬停与键盘焦点时的旧框线。 */
+body.home-page .navbar .nav-notification,
+body.home-page .navbar .nav-logout {
+  width: auto;
+  min-width: 40px;
+  margin-left: 0;
+  padding: 8px 10px !important;
+}
+body.home-page .navbar .nav-notification::before,
+body.home-page .navbar .nav-logout::before { display: none; }
+body.home-page .navbar .nav-control-content { gap: 7px; }
+body.home-page .navbar .nav-control-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}

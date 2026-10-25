@@ -1,0 +1,310 @@
+
+var SITE = 'https://campus.example.com';
+
+module.exports = {
+  about: function() {
+    return '我是校园助手，校园墙的学姐助手～🌸\n\n' +
+      '我可以陪你聊天，也能帮你投稿、推荐歌曲、查看点歌说明和绑定账号。\n' +
+      '想看功能菜单就回复「帮助」吧~';
+  },
+
+  greet: function(name) {
+    name = name || '同学';
+    return '嗨 ' + name + '～我是校园助手，校园墙的学姐助手！有什么可以帮你的吗？🌸\n\n回复「帮助」看看我能做什么吧~';
+  },
+
+  help: function() {
+    return '🌸 学姐小助手 · 功能菜单\n\n' +
+      '📝 **投稿** —— 跟我说「投稿」就能在微信里直接发帖~\n' +
+      '📻 **点歌** —— 申请让校园广播播放歌曲，提交后等待审核，具体播放时间不另行通知 👉 ' + SITE + '/radio\n' +
+      '🎶 **推歌** —— 推荐歌曲给公众号「每日歌曲推荐」，审核入选后会发布在公众号文章里~\n' +
+      '🔗 **绑定微信** —— 回复「绑定」把账号和微信连起来\n' +
+      '🔑 **找回密码** —— 回复「找回密码」重置\n' +
+      '🌤️ **天气** —— 回复「天气」看看今天冷不冷\n\n' +
+      '💬 或者直接跟我聊天也行~ 有什么事尽管说！';
+  },
+
+  noActiveFlow: function() {
+    return '诶？现在没有进行中的操作哦😅\n\n📝 想发帖就说「投稿」\n🎶 想投递「每日歌曲推荐」就说「推歌」\n📖 回复「帮助」看全部功能~';
+  },
+
+  tooLong: function() {
+    return '哇，好长呀😅 我有点看不过来~\n\n要不简化一下跟我说？或者直接说「投稿」来发帖哦！\n\n🌐 ' + SITE;
+  },
+
+  aiFallback: function() {
+    return '不好意思呀，我现在有点卡卡的😅\n\n📝 发「投稿」可以发帖\n🎶 发「推歌」投递公众号「每日歌曲推荐」\n📖 发「帮助」查看所有功能\n🌐 ' + SITE;
+  },
+
+  submitNeedBind: function() {
+    return '🔗 发帖前需要先绑定账号哦~\n\n1️⃣ 打开 ' + SITE + '\n2️⃣ 登录你的账号\n3️⃣ 进入「个人中心」→「绑定微信」\n4️⃣ 完成绑定后对我说「投稿」就可以啦！';
+  },
+
+  submitAskTitle: function() {
+    return '📝 好的！请告诉我你想要发布的**标题**是什么？\n\n（标题不要太长哦~ 回复「取消」可以随时终止）';
+  },
+
+  submitAskContent: function(title) {
+    return '📝 标题：「' + title + '」\n\n好的！现在请告诉我**内容**是什么？✏️\n\n（回复「取消」可以随时终止投稿）';
+  },
+
+  submitAskPolish: function() {
+    return '✏️ 内容已收到！要不要让 AI 润色一下？\n\n✅ 回复「要」让学姐帮忙润色\n❌ 回复「不要」直接使用原文';
+  },
+
+  submitPolishing: function() {
+    return '⏳ 学姐正在帮你润色，请稍等...';
+  },
+
+  submitPolishDone: function(original, polished, title) {
+    return '✨ AI润色完成！请选择：\n\n📝 原文：\n' + original.substring(0, 150) + '\n\n✨ 润色版：\n' + polished.substring(0, 150) + '\n\n✅ 回复「确认」使用润色版\n📄 回复「原文」使用原版\n🔄 回复「重写」重新填\n❌ 回复「取消」放弃';
+  },
+
+  submitPolishFailed: function(title, content) {
+    return '✏️ AI暂时忙不过来，咱们直接发布：\n\n📌 标题：' + title + '\n💬 内容：' + content.substring(0, 100) + (content.length > 100 ? '...' : '') + '\n\n✅ 回复「确认」提交\n🔄 回复「重写」重新来\n❌ 回复「取消」放弃';
+  },
+
+  submitSkipPolish: function(title, content) {
+    return '📄 好的，直接用原文发布：\n\n📌 标题：' + title + '\n💬 内容：' + content.substring(0, 100) + (content.length > 100 ? '...' : '') + '\n\n✅ 回复「确认」提交\n🔄 回复「重写」重新来\n❌ 回复「取消」放弃';
+  },
+
+  submitUsePolished: function(title, content) {
+    return '✅ 已使用润色版！\n\n📌 标题：' + title + '\n💬 润色后：' + content.substring(0, 100) + '\n\n✅ 回复「确认」提交\n🔄 回复「重写」重来\n❌ 回复「取消」放弃';
+  },
+
+  submitUseOriginal: function(title, content) {
+    return '📄 已使用原文！\n\n📌 标题：' + title + '\n💬 内容：' + content.substring(0, 100) + '\n\n✅ 回复「确认」提交\n🔄 回复「重写」重来\n❌ 回复「取消」放弃';
+  },
+
+  submitAskReTitle: function() {
+    return '好的，重新开始！请告诉我**标题**是什么？📝';
+  },
+
+  submitAskImage: function(title) {
+    return '📸 最后一步！可以发图片过来一起发布（可选，可发多张）；或者直接回复「确认」完成投稿~\n📌 标题：' + title;
+  },
+
+  submitSessionExpired: function() {
+    return '诶，投稿会话好像过期了😅 重新发「投稿」开始吧~';
+  },
+
+  submitSuccess: function(needReview, displayName) {
+    var byline = displayName ? '\n\n署名：' + displayName : '';
+    return needReview
+      ? '🎉 投稿成功！已提交审核~' + byline + '\n\n审核通过后就能在墙上看到你的帖子啦！去 ' + SITE + ' 看看吧~'
+      : '🎉 投稿成功！帖子已直接发布~' + byline + '\n去 ' + SITE + ' 看看吧！';
+  },
+
+  submitFail: function() {
+    return '😅 投稿时出了点问题，稍后再试试？\n或者去 ' + SITE + ' 直接发帖~';
+  },
+
+  songStartPush: function() {
+    return '🎶 推歌｜每日歌曲推荐\n\n推歌是推荐歌曲到公众号「每日歌曲推荐」，审核入选后会发布在公众号文章里；它和申请校园广播播放的「点歌」是两件事。\n\n先告诉我想推荐的**歌曲名**吧 🎵\n\n（回复「取消」可以随时终止）';
+  },
+
+  songAskArtist: function(name) {
+    return '🎵 收到！《' + name + '》\n\n请告诉学姐这首歌的**歌手姓名**，这一项必填哦~';
+  },
+
+  songArtistRequired: function() {
+    return '还需要填写歌手姓名才能继续哦~ 请直接回复这首歌的演唱者；如果不确定，可以先核对一下再发。';
+  },
+
+  songNotFound: function(name, artist) {
+    return '🔎 暂时没有搜到《' + name + '》—' + artist + '。\n\n请核对歌曲名和歌手后重新填写，我们找到对应歌曲后再继续推歌。';
+  },
+
+  songAskIntro: function() {
+    return '✍️ 留一句听歌理由吧~\n\n它适合谁、适合哪个时刻，或让你想到了什么？越具体越容易被选中。\n\n（回复「跳过」跳过，学姐帮你写~）';
+  },
+
+  songAskNickname: function() {
+    return '😊 最后一步！你希望显示的名字是什么？\n\n（如「小明」、「高三学姐」等；已绑定账号可以回复「跳过」使用账号署名）';
+  },
+
+  songNicknameRequired: function() {
+    return '还没有找到可用的账号署名哦~\n\n请直接填写想显示的名字，或先绑定账号后再回复「跳过」。';
+  },
+
+  songConfirm: function(name, artist, displayName) {
+    var info = '🎵 ' + name + (artist ? ' - ' + artist : '');
+    var byline = displayName ? '\n署名：' + displayName + '\n' : '\n';
+    return '━━━━━━━━━━━━━━\n' + info + byline + '━━━━━━━━━━━━━━\n\n确认投递到「每日歌曲推荐」吗？\n✅ 回复「确认」提交\n❌ 回复「取消」重填';
+  },
+
+  songConfirmRetry: function(name, artist) {
+    var info = '🎵 ' + name + (artist ? ' - ' + artist : '');
+    return '😅 请回复「确认」发布，或「取消」重填\n\n' + info;
+  },
+
+  songNameTooLong: function() {
+    return '😅 歌曲名太长了，请简化一下~';
+  },
+
+  songPushSuccess: function(name, artist, displayName) {
+    var info = '🎵 ' + name + (artist ? ' - ' + artist : '');
+    var byline = displayName ? '\n署名：' + displayName : '';
+    return '🎉 已收到这首歌！\n\n' + info + byline + '\n\n它已进入「每日歌曲推荐」候选，审核入选后会随公众号图文和大家见面。🎶\n\n🌐 ' + SITE;
+  },
+
+  songPushFail: function() {
+    return '😅 提交失败了，稍后再试试？';
+  },
+
+  radioSongGuide: function() {
+    return '📻 点歌和推歌是两件事哦~\n\n「点歌」是申请让歌曲在校园广播播放，需要到网站提交并等待审核，具体播放时间不另行通知。\n「推歌」是向公众号推荐歌曲，审核入选后会发布在公众号「每日歌曲推荐」文章里。\n\n想申请校园广播播放，请打开点歌页面：\n🌐 ' + SITE + '/radio\n\n想推荐到公众号，回复「推歌」即可~';
+  },
+
+  bindGuide: function() {
+    return '🔗 微信绑定教程\n\n' +
+      '1️⃣ 打开 ' + SITE + '\n' +
+      '2️⃣ 登录你的账号\n' +
+      '3️⃣ 进入「个人中心」→「绑定微信」\n' +
+      '4️⃣ 扫码即可完成绑定\n\n' +
+      '绑定后可以接收评论、点赞通知哦~';
+  },
+
+  bindSuccess: function() {
+    return '✅ 绑定成功！🎉\n\n现在你可以直接对学姐说「投稿」发帖啦~\n或者去 ' + SITE + ' 逛逛吧~';
+  },
+
+  bindCodeInvalid: function() {
+    return '❌ 验证码无效或已过期，请登录网站重新获取绑定验证码~\n🌐 ' + SITE;
+  },
+
+  bindAlreadyBound: function() {
+    return '❌ 这个微信已被其他账号绑定了，请先解绑再试~';
+  },
+
+  bindError: function() {
+    return '😅 绑定出了点问题，请重新获取验证码试试~';
+  },
+
+  regGuide: function() {
+    return '📝 注册 / 微信绑定\n\n' +
+      '1️⃣ 打开 ' + SITE + '/register 完成注册\n' +
+      '2️⃣ 注册完成后，页面会生成一串以 REG 开头的验证码\n' +
+      '3️⃣ 把完整验证码直接发给我，我会为你确认微信\n\n' +
+      '验证码 10 分钟内有效；如果你已经有账号，请回复「绑定」进行绑定~';
+  },
+
+  regCodeInvalid: function() {
+    return '❌ 注册验证码无效或已过期，请登录网站重新获取~\n🌐 ' + SITE;
+  },
+
+  regAlreadyBound: function() {
+    return '✅ 这个微信已经完成账号注册或绑定，无需再发送 REG 验证码。\n\n请直接去 ' + SITE + '/login 登录吧~';
+  },
+
+  regCodeConfirm: function(code) {
+    return '✅ 微信验证已完成！🎉\n\n还差最后一步：回到刚才的注册页，点击「验证并注册」才会真正创建账号。\n请不要再发送新的 REG 验证码。\n\n如果注册页被刷新了，在网页里点「已有验证码？继续注册」，填回：' + code + '\n🌐 ' + SITE + '/register';
+  },
+
+  regCodePending: function(code) {
+    return '⏳ 你已经完成微信验证，账号还在等待网页端最后提交。\n\n无需再发送新的 REG 验证码；回到注册页点击「验证并注册」即可。\n如果页面刷新了，点「已有验证码？继续注册」并填写：' + code + '\n🌐 ' + SITE + '/register';
+  },
+
+  regError: function() {
+    return '😅 验证码处理出了点问题，请重新获取试试~';
+  },
+
+  resetPasswordNotBound: function() {
+    return '❌ 你的微信未绑定任何账号哦~\n\n请先在网站上登录后，在「个人中心」→「绑定微信」完成绑定~\n🌐 ' + SITE;
+  },
+
+  resetPasswordCode: function(nickname, code) {
+    return '🔑 密码重置验证\n\n' +
+      '你好 ' + nickname + '！\n' +
+      '你的重置验证码是：\n\n' +
+      '📌 ' + code + '\n\n' +
+      '⚠️ 请在10分钟内使用\n\n' +
+      '👇 打开下方链接，输入验证码重置密码：\n' +
+      '🌐 ' + SITE + '/reset-password?code=' + code;
+  },
+
+  resetPasswordError: function() {
+    return '😅 操作出了点问题，请稍后再试~';
+  },
+
+  weather: function(city, temperature, weather, wind, humidity) {
+    return '🌤️ ' + city + ' 今日天气\n\n' +
+      '🌡️ 气温：' + temperature + '\n' +
+      '☁️ 天气：' + weather + '\n' +
+      '💨 风力：' + wind + '\n' +
+      '💧 湿度：' + humidity;
+  },
+
+  weatherUnavailable: function() {
+    return '🌤️ 当前天气暂时获取不到，去 ' + SITE + ' 看看吧~';
+  },
+
+  weatherError: function() {
+    return '🌤️ 天气服务暂时不可用~';
+  },
+
+  imageReply: function() {
+    var tips = [
+      '这张图看起来好有意思呀！🖼️',
+      '哇塞！这是谁拍的/画的？太强了！🌟',
+      '这图我存了！嘿嘿~ 📸',
+      '好康好康！多发点（疯狂暗示）👀',
+    ];
+    return '🖼️ ' + tips[Math.floor(Math.random() * tips.length)] +
+      '\n\n这次没能看清图片内容😅 你可以再发一张清晰图片，或发文字跟我聊天~\n\n' +
+      '🔹 回复「帮助」查看所有功能\n📤 或者去 ' + SITE + ' 发帖';
+  },
+
+  voiceReply: function() {
+    var tips = [
+      '哎呀我这耳朵不太好使😅',
+      '好像听到了什么有趣的东西~👂',
+      '抱歉我还没学会听语音呢🙉',
+    ];
+    return '🎤 ' + tips[Math.floor(Math.random() * tips.length)] +
+      '\n\n暂时听不懂语音消息啦，发文字跟我聊天吧！\n\n' +
+      '🔹 回复「帮助」查看所有功能';
+  },
+
+  locationReply: function() {
+    var tips = [
+      '就知道你在那儿！🧐',
+      '收到定位！我闻到了校园的气息~🏫',
+      '原来你在这里呀！🗺️',
+    ];
+    return '📍 ' + tips[Math.floor(Math.random() * tips.length)] +
+      '\n\n不过我不会追踪你的位置啦，放心~😄\n回复关键词跟我聊天吧！\n\n' +
+      '🌐 ' + SITE;
+  },
+
+  linkReply: function() {
+    var tips = [
+      '这个链接看起来不错！🔗',
+      '让我康康！emmm打不开😅',
+      '收到一个神秘链接~ 👀',
+    ];
+    return '🔗 ' + tips[Math.floor(Math.random() * tips.length)] +
+      '\n\n我暂时不能自动打开链接啦😅\n你可以自己去看看哦~\n\n' +
+      '🔹 回复「帮助」查看所有功能\n🌐 或者来 ' + SITE + ' 逛逛';
+  },
+
+  welcome: function() {
+    return '👋 欢迎关注校园墙！我是校园助手，你的学姐助手~🌸\n\n可以直接跟我聊天，或者去 ' + SITE + ' 逛逛哦~\n投稿、吃瓜、点歌都行~ 有什么想问的尽管说！';
+  },
+
+  cancel: function() {
+    return '好的，已取消~ 想找学姐的时候随时来呀！😊\n\n🌐 ' + SITE;
+  },
+
+  imageSaved: function(count) {
+    return '✅ 图片已保存！已收到 ' + count + ' 张图片~\n可以继续发图，或回复「确认」完成投稿 📤';
+  },
+
+  imageSaveFailed: function() {
+    return '😅 图片上传失败了，再试一次？或者回复「确认」跳过图片直接发布~';
+  },
+
+  systemError: function(ctx) {
+    return '😅 出了点小问题（' + ctx + '），再试一次？或者去 ' + SITE + ' 看看吧~';
+  },
+};

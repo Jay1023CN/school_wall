@@ -1,0 +1,7 @@
+{
+  "name": "lodash.set",
+  "version": "4.18.1",
+  "private": true,
+  "main": "index.js",
+  "description": "Compatibility shim backed by the patched lodash set implementation"
+}

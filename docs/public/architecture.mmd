@@ -1,0 +1,45 @@
+flowchart LR
+  classDef client fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b,stroke-width:1.5px
+  classDef app fill:#ecfdf5,stroke:#0f766e,color:#134e4a,stroke-width:1.5px
+  classDef data fill:#fff7ed,stroke:#ea580c,color:#7c2d12,stroke-width:1.5px
+  classDef external fill:#fdf2f8,stroke:#db2777,color:#831843,stroke-width:1.5px
+
+  subgraph Client[使用者入口]
+    Desktop[桌面端浏览器]:::client
+    Mobile[移动端浏览器]:::client
+    Admin[管理后台]:::client
+  end
+
+  subgraph App[校墙应用]
+    Static[静态页面<br/>frontend / public 镜像]:::app
+    Server[Express 服务]:::app
+    Routes[路由与认证中间件]:::app
+    Services[业务服务<br/>媒体、邮件、通知、草稿]:::app
+    Jobs[定时清理任务]:::app
+  end
+
+  subgraph Data[数据与媒体]
+    DB[(MySQL)]:::data
+    Uploads[(运行时上传文件)]:::data
+  end
+
+  subgraph Integrations[可选集成]
+    Mail[SMTP 邮件]:::external
+    AI[AI 服务]:::external
+    Official[微信公众号接口]:::external
+    Video[ffmpeg / ffprobe]:::external
+  end
+
+  Desktop --> Static
+  Mobile --> Static
+  Admin --> Static
+  Static --> Server --> Routes --> Services
+  Routes --> DB
+  Services --> DB
+  Services --> Uploads
+  Jobs --> Uploads
+  Jobs --> DB
+  Services -. 可选 .-> Mail
+  Services -. 可选 .-> AI
+  Services -. 可选 .-> Official
+  Services -. 可选 .-> Video

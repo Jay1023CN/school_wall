@@ -1,0 +1,40 @@
+name: 发布校园墙演示
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/configure-pages@v5
+      - name: 构建独立静态演示
+        run: node scripts/build-pages-demo.js
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .pages-demo
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: 发布演示
+        id: deployment
+        uses: actions/deploy-pages@v4

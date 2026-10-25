@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>邮件配置 - 校园墙</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/css/email-settings.css?v=20260917">
+<meta name="robots" content="noindex, nofollow">
+  <script src="/js/baidu-push.js?v=20260917" defer></script>
+</head>
+<body class="admin-page admin-email-page">
+  <div class="smtp-card">
+    <div class="smtp-header">
+      <div class="smtp-header-icon" style="margin-bottom:8px;">📧</div>
+      <h1>邮件通知配置</h1>
+      <p>配置SMTP后，用户将收到评论、点赞、关注等邮件通知 ✨</p>
+    </div>
+    <div class="smtp-body">
+      <div id="statusMsg" class="status-msg"></div>
+
+      <div class="form-group">
+        <label>
+          <span>🔔</span>
+          <span>邮件通知开关</span>
+        </label>
+        <div class="toggle-row">
+          <label class="toggle-switch" style="margin:0;">
+            <input type="checkbox" id="emailEnabled">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label" id="toggleLabel" style="font-size:0.9rem;font-weight:600;color:#9CA3AF;">关闭</span>
+        </div>
+        <div class="hint">关闭后所有邮件通知将不再发送</div>
+      </div>
+
+      <div class="form-group">
+        <label><span>🏢</span><span>SMTP 服务器</span></label>
+        <input type="text" id="smtpHost" placeholder="smtp.example.com">
+        <div class="hint">例如：smtp.qq.com、smtp.gmail.com</div>
+      </div>
+
+      <div class="form-group">
+        <label><span>🔌</span><span>SMTP 端口</span></label>
+        <input type="text" id="smtpPort" placeholder="587">
+        <div class="hint">SSL: 465 / TLS: 587</div>
+      </div>
+
+      <div class="form-group">
+        <label><span>👤</span><span>SMTP 账号</span></label>
+        <input type="text" id="smtpUser" placeholder="support@campus.example.com">
+      </div>
+
+      <div class="form-group">
+        <label><span>🔑</span><span>SMTP 密码/授权码</span></label>
+        <input type="password" id="smtpPass" placeholder="输入密码或授权码">
+        <div class="hint">QQ邮箱等需使用授权码，非登录密码</div>
+      </div>
+
+      <div class="form-group">
+        <label><span>📨</span><span>发件人名称</span></label>
+        <input type="text" id="smtpFrom" placeholder="校园墙 <noreply@campus.example.com>">
+        <div class="hint">格式：名称 &lt;邮箱地址&gt;</div>
+      </div>
+
+      <button class="btn-save" id="saveBtn" type="button">💾 保存配置</button>
+
+      <div class="test-section">
+        <h3>🧪 测试邮件发送</h3>
+        <div class="form-group">
+          <label><span>📬</span><span>测试邮箱地址</span></label>
+          <input type="email" id="testEmail" placeholder="输入你的邮箱进行测试">
+        </div>
+        <button class="btn-save" id="testBtn" type="button" style="background:linear-gradient(135deg,#34D399,#10B981);">✈️ 发送测试邮件</button>
+      </div>
+
+      <a href="/admin" class="back-link">← 返回管理后台</a>
+    </div>
+  </div>
+
+  <script src="/admin/js/email-settings.js?v=20260917"></script>
+</body>
+</html>

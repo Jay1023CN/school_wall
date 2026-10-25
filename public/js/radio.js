@@ -1,0 +1,549 @@
+var timeSlots = [];
+var selectedSlotId = null;
+var selectedDateId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+  var radioForm = document.getElementById('radioForm');
+  var playlist = document.getElementById('playlist');
+  var playlistNotice = document.getElementById('playlistNotice');
+  var slotCardsGrid = document.getElementById('slotCardsGrid');
+  var slotSelect = document.getElementById('slotSelect');
+  var dateSelect = document.getElementById('dateSelect');
+  var dateSelectGroup = document.getElementById('dateSelectGroup');
+
+  function renderRadioState(container, message, type, retry) {
+    if (!container) return;
+    container.classList.remove('radio-state-loading', 'radio-state-error', 'radio-state-empty');
+    container.classList.add('radio-state', 'radio-state-' + (type || 'empty'));
+    container.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    container.innerHTML = '<span class="radio-state-icon" aria-hidden="true">' + (type === 'loading' ? '⏳' : type === 'error' ? '⚠️' : '🎵') + '</span>' +
+      '<span class="radio-state-message">' + escapeHtml(message) + '</span>' +
+      (typeof retry === 'function' ? '<button type="button" class="radio-state-retry">重新加载</button>' : '');
+    if (typeof retry === 'function') {
+      var retryBtn = container.querySelector('.radio-state-retry');
+      if (retryBtn) retryBtn.addEventListener('click', retry);
+    }
+  }
+
+  if (dateSelect) dateSelect.removeAttribute('required');
+
+  var msgTextarea = document.getElementById('songMessage');
+  if (msgTextarea) {
+    msgTextarea.addEventListener('input', function() {
+      var len = this.value.length;
+      var msgCount = document.getElementById('msgCount');
+      if (msgCount) {
+        msgCount.textContent = len + '/100';
+        msgCount.style.color = len > 100 ? '#EF4444' : '#9CA3AF';
+        if (len > 100) this.value = this.value.substring(0, 100);
+      }
+    });
+  }
+
+  async function loadRemainingCount() {
+    var token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    if (!token) return;
+    try {
+      var data = await authFetch('/api/songs/remaining');
+      if (data.code === 200 && data.data) {
+        var el = document.getElementById('remainingCount');
+        if (el) {
+          el.textContent = '今日可提交 ' + data.data.remaining + ' / ' + data.data.limit + ' 次';
+          el.style.display = 'inline-flex';
+        }
+      }
+    } catch (err) {}
+  }
+
+  loadTimeSlots();
+  loadPlaylist();
+  loadMySongs();
+  loadHotSongs();
+  loadRemainingCount();
+
+  var hint = document.getElementById('availableDatesHint');
+  if (hint) hint.style.display = 'none';
+
+  function syncSlotSelectionState() {
+    if (!slotCardsGrid) return;
+    var cards = Array.from(slotCardsGrid.querySelectorAll('.slot-card-item'));
+    var selectedCard = cards.find(function(card) {
+      return String(card.getAttribute('data-slot-id')) === String(selectedSlotId);
+    });
+    cards.forEach(function(card, index) {
+      var isSelected = card === selectedCard;
+      card.classList.toggle('selected', isSelected);
+      card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+      card.tabIndex = isSelected || (!selectedCard && index === 0) ? 0 : -1;
+    });
+  }
+
+  window.selectSlot = function(slotId) {
+    selectedSlotId = slotId;
+    slotSelect.value = slotId;
+    syncSlotSelectionState();
+
+    var slot = timeSlots.find(s => s.id == slotId);
+    if (slot && slot.dates && slot.dates.length > 0) {
+      dateSelectGroup.style.display = 'block';
+      var html = '<option value="">请选择希望播放的日期</option>';
+      slot.dates.forEach(function(d) {
+        var remaining = Math.max(0, Number(d.remaining) || 0);
+        html += '<option value="' + d.id + '"' + (remaining === 0 ? ' disabled' : '') + '>' +
+          d.date + '(' + d.week + ') ' + (remaining > 0 ? '可点 · 剩余' + remaining + '首' : '已满 · 暂不支持候补') + '</option>';
+      });
+      dateSelect.innerHTML = html;
+    } else {
+      dateSelectGroup.style.display = 'none';
+    }
+  };
+
+  dateSelect.addEventListener('change', function() {
+    selectedDateId = this.value;
+  });
+
+  if (slotCardsGrid) {
+    slotCardsGrid.addEventListener('click', function(event) {
+      var card = event.target.closest('.slot-card-item');
+      if (!card || !slotCardsGrid.contains(card)) return;
+      window.selectSlot(card.getAttribute('data-slot-id'));
+    });
+
+    slotCardsGrid.addEventListener('keydown', function(event) {
+      var card = event.target.closest('.slot-card-item');
+      if (!card || !slotCardsGrid.contains(card)) return;
+      var cards = Array.from(slotCardsGrid.querySelectorAll('.slot-card-item'));
+      if (!cards.length) return;
+      var currentIndex = cards.indexOf(card);
+      var nextIndex = currentIndex;
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % cards.length;
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + cards.length) % cards.length;
+      if (event.key === 'Home') nextIndex = 0;
+      if (event.key === 'End') nextIndex = cards.length - 1;
+      if (nextIndex === currentIndex) return;
+      event.preventDefault();
+      cards[nextIndex].focus();
+      window.selectSlot(cards[nextIndex].getAttribute('data-slot-id'));
+    });
+  }
+
+  async function loadTimeSlots() {
+    renderRadioState(slotCardsGrid, '加载播放时段...', 'loading');
+    try {
+      var data = await apiFetch('/api/songs/slots');
+      if (data.code === 200) {
+        timeSlots = data.data || [];
+        renderSlotCards();
+
+        var hint = document.getElementById('availableDatesHint');
+        if (hint && timeSlots.length > 0) {
+          var availableDates = [];
+          var fullDates = [];
+          timeSlots.forEach(function(s) {
+            s.dates && s.dates.forEach(function(d) {
+              var label = escapeHtml(d.date + '(' + d.week + ' ' + s.name + ')');
+              var target = Number(d.remaining) > 0 ? availableDates : fullDates;
+              if (!target.includes(label)) target.push(label);
+            });
+          });
+          if (availableDates.length + fullDates.length > 0) {
+            hint.innerHTML = '📅 可点歌：' + (availableDates.length ? availableDates.slice(0, 7).join('、') : '暂无') +
+              '；已满：' + (fullDates.length ? fullDates.slice(0, 7).join('、') + '（不接候补）' : '暂无');
+            hint.style.display = 'block';
+          }
+        }
+      } else {
+        renderRadioState(slotCardsGrid, '播放时段加载失败', 'error', loadTimeSlots);
+      }
+    } catch (err) {
+      console.error('加载时段失败:', err);
+      renderRadioState(slotCardsGrid, '播放时段加载失败', 'error', loadTimeSlots);
+    }
+  }
+
+  function renderSlotCards() {
+    if (!slotCardsGrid) return;
+    if (!timeSlots || timeSlots.length === 0) {
+      renderRadioState(slotCardsGrid, '暂无可用播放时段', 'empty');
+      return;
+    }
+    var html = '';
+    timeSlots.forEach(function(slot, index) {
+      var hasDates = slot.dates && slot.dates.length > 0;
+      var isSelected = selectedSlotId == slot.id;
+      var isInitialTabStop = selectedSlotId == null && index === 0;
+      html += '<button type="button" class="slot-card-item' + (isSelected ? ' selected' : '') + '" role="radio" aria-checked="' + (isSelected ? 'true' : 'false') + '" tabindex="' + (isSelected || isInitialTabStop ? '0' : '-1') + '" data-slot-id="' + escapeHtml(String(slot.id)) + '">';
+      html += '<div class="slot-card-name">' + escapeHtml(slot.name) + '</div>';
+      html += '<div class="slot-card-time">' + escapeHtml(slot.start_time || '') + ' - ' + escapeHtml(slot.end_time || '') + '</div>';
+      if (hasDates) {
+        var availableDateCount = slot.dates.filter(function(date) { return Number(date.remaining) > 0; }).length;
+        var fullDateCount = slot.dates.length - availableDateCount;
+        html += '<div class="slot-card-remaining">' + availableDateCount + '天可点 · ' + fullDateCount + '天已满</div>';
+      } else {
+        html += '<div class="slot-card-remaining">近期暂无开放日期</div>';
+      }
+      html += '</button>';
+    });
+    slotCardsGrid.className = 'slot-cards-grid';
+    slotCardsGrid.setAttribute('role', 'radiogroup');
+    slotCardsGrid.setAttribute('aria-labelledby', 'slotSelectLabel');
+    slotCardsGrid.innerHTML = html;
+    syncSlotSelectionState();
+  }
+
+  async function loadPlaylist() {
+    if (playlistNotice) playlistNotice.textContent = '📢 正在加载播放状态…';
+    if (playlist) playlist.innerHTML = '';
+    try {
+      var data = await apiFetch('/api/songs/list');
+      var songs = Array.isArray(data.data) ? data.data.filter(function(song) {
+        return song && !song.deleted_at;
+      }) : [];
+      if (data.code === 200 && songs.length > 0) {
+        var now = new Date();
+        var chinaNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+        var todayStr = chinaNow.toISOString().slice(0, 10);
+        var currentTime = chinaNow.toISOString().slice(11, 19);
+        var html = '';
+        var visibleCount = 0;
+        songs.forEach(function(s, i) {
+          var authorStr = s.is_anonymous ? '匿名用户' : (s.author_name || '用户');
+
+          if (s.status === 'played') return;
+          visibleCount += 1;
+          var statusClass = 'waiting';
+          var detailParts = [];
+          if (s.to_whom) detailParts.push('送给 ' + escapeHtml(s.to_whom));
+          detailParts.push('审核通过 · 播放时间不另行通知');
+          
+          html += '<div class="playlist-item ' + statusClass + '">' +
+            '<div class="song-main">' +
+              '<div class="song-index">' + String(i+1).padStart(2,'0') + '</div>' +
+              '<div class="song-content">' +
+                '<div class="song-name">' + escapeHtml(s.song_name) + (s.artist ? '<span class="song-artist">' + escapeHtml(s.artist) + '</span>' : '') + '</div>' +
+                '<div class="song-footer">' +
+                  '<span class="song-author">' + escapeHtml(authorStr) + '</span>' +
+                  '<span class="song-details">' + detailParts.join(' · ') + '</span>' +
+                '</div>' +
+                (s.message ? '<div class="song-msg-bubble">' + escapeHtml(s.message) + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="song-status-area">' +
+              '<span class="song-status">' + '审核通过' + '</span>' +
+            '</div>' +
+          '</div>';
+        });
+        playlist.innerHTML = html;
+        if (playlistNotice) playlistNotice.textContent = visibleCount > 0
+          ? '📢 ' + visibleCount + ' 首点歌已通过审核'
+          : '📢 暂无播放记录，快去点一首吧~';
+      } else if (data.code === 200) {
+        playlist.innerHTML = '';
+        if (playlistNotice) playlistNotice.textContent = '📢 暂无播放记录，快去点一首吧~';
+      } else {
+        playlist.innerHTML = '';
+        showPlaylistLoadError();
+      }
+    } catch (err) {
+      playlist.innerHTML = '';
+      showPlaylistLoadError();
+    }
+  }
+
+  function showPlaylistLoadError() {
+    if (!playlistNotice) return;
+    playlistNotice.innerHTML = '📢 播放状态暂时不可用，请稍后重试 ' +
+      '<button type="button" class="radio-state-retry">重新加载</button>';
+    var retryBtn = playlistNotice.querySelector('.radio-state-retry');
+    if (retryBtn) retryBtn.addEventListener('click', loadPlaylist);
+  }
+
+  async function loadMySongs() {
+    var token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    var section = document.getElementById('mySongsSection');
+    var list = document.getElementById('mySongsList');
+    var empty = document.getElementById('mySongsEmpty');
+    if (!token) {
+      section.style.display = 'none';
+      return;
+    }
+    try {
+      var data = await authFetch('/api/songs/my');
+      if (data.code === 200 && data.data && data.data.length > 0) {
+        section.style.display = 'block';
+        var html = '';
+        data.data.forEach(function(s) {
+          var statusMap = { pending: '待审核', approved: '已通过', played: '已播出', rejected: '已拒绝' };
+          var status = statusMap[s.status] || s.status;
+          var statusColor = { pending: '#F59E0B', approved: '#10B981', played: '#6B7280', rejected: '#EF4444' }[s.status] || '#9CA3AF';
+          var statusBg = { pending: 'rgba(245,158,11,0.12)', approved: 'rgba(16,185,129,0.1)', played: 'rgba(107,114,128,0.08)', rejected: 'rgba(239,68,68,0.1)' }[s.status] || 'rgba(156,163,175,0.08)';
+          var can撤回 = s.status === 'pending' || s.status === 'approved';
+          html += '<div class="my-song-item">' +
+            '<div class="my-song-main">' +
+              '<div class="my-song-title">' + escapeHtml(s.song_name) + (s.artist ? '<span style="font-weight:400;font-size:0.88rem;color:#9CA3AF;margin-left:4px;">- ' + escapeHtml(s.artist) + '</span>' : '') + '</div>' +
+              '<div class="my-song-meta">' +
+                '<span class="my-song-date">' + '播放时间不另行通知' + '</span>' +
+                '<span class="my-song-status" style="color:' + statusColor + ';background:' + statusBg + ';padding-left:18px;">' + status + '</span>' +
+              '</div>' +
+              (s.to_whom ? '<div class="my-song-recipient">💝 ' + escapeHtml(s.to_whom) + '</div>' : '') +
+              (s.message ? '<div class="my-song-msg">💌 ' + escapeHtml(s.message) + '</div>' : '') +
+            '</div>' +
+            (can撤回 ? '<button class="my-song-cancel" data-song-id="' + Number(s.id) + '"><span>撤回</span></button>' : '') +
+          '</div>';
+        });
+        list.innerHTML = html;
+
+        list.querySelectorAll('.my-song-cancel').forEach(function(btn, idx) {
+          btn.onclick = function() { 撤回MySong(Number(this.dataset.songId), this); };
+        });
+
+        empty.style.display = 'none';
+      } else if (data.code === 200 || data.code === 401) {
+        section.style.display = 'none';
+      } else {
+        showMySongsLoadError(section, list, empty);
+      }
+    } catch (err) {
+      console.error('加载我的点歌失败:', err);
+      showMySongsLoadError(section, list, empty);
+    }
+  }
+
+  function showMySongsLoadError(section, list, empty) {
+    section.style.display = 'block';
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    empty.innerHTML = '我的点歌暂时加载失败，请稍后重试。 <button type="button" class="radio-state-retry">重新加载</button>';
+    var retryBtn = empty.querySelector('.radio-state-retry');
+    if (retryBtn) retryBtn.addEventListener('click', loadMySongs);
+  }
+
+  window.撤回MySong = async function(id, btn) {
+    if (!confirm('确定撤回这首点歌吗？')) return;
+    btn.textContent = '撤回中...';
+    btn.disabled = true;
+    try {
+      var data = await authFetch('/api/songs/' + id, { method: 'DELETE' });
+      if (data.code === 200) {
+        showToast('撤回成功', 'success');
+        loadMySongs();
+        loadTimeSlots();
+      } else {
+        showToast(data.message || '撤回失败', 'error');
+        btn.textContent = '撤回';
+        btn.disabled = false;
+      }
+    } catch (err) {
+      showToast('网络错误', 'error');
+      btn.textContent = '撤回';
+      btn.disabled = false;
+    }
+  };
+
+  var songSubmitInFlight = false;
+  if (radioForm) {
+    radioForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      if (songSubmitInFlight) return;
+      var songNameInput = document.getElementById('songName');
+      var artistInput = document.getElementById('songArtist');
+      var songName = songNameInput.value.trim();
+      var artist = artistInput.value.trim();
+      var toWhom = document.getElementById('songRecipient').value.trim();
+      var message = document.getElementById('songMessage').value.trim();
+      var slotId = slotSelect.value;
+      var dateId = dateSelect.value;
+      var isAnonymous = document.getElementById('radioAnonymous').checked;
+      var submitBtn = document.getElementById('submitSong');
+
+      if (!songName || !artist || !slotId || !dateId) {
+        if (!songName) {
+          showToast('歌曲名为必填项，请填写歌曲名', 'error');
+          songNameInput.focus();
+        } else if (!artist) {
+          showToast('歌手为必填项，请填写歌手名', 'error');
+          artistInput.focus();
+        } else {
+          showToast('请选择播放时段和日期', 'error');
+        }
+        return;
+      }
+
+      var selectedSlot = timeSlots.find(function(slot) { return String(slot.id) === String(slotId); });
+      var selectedDate = selectedSlot && selectedSlot.dates && selectedSlot.dates.find(function(date) {
+        return String(date.id) === String(dateId);
+      });
+      if (!selectedDate || Number(selectedDate.remaining) <= 0) {
+        showToast('这个播放日期已满或已关闭，目前不接候补，请刷新后选择其他日期', 'error');
+        loadTimeSlots();
+        return;
+      }
+
+      songSubmitInFlight = true;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '提交中...';
+
+      var data;
+      try {
+        data = await authFetch('/api/songs', {
+          method: 'POST',
+          body: JSON.stringify({ song_name: songName, artist: artist, to_whom: toWhom, message: message, slot_id: slotId, slot_date_id: dateId, is_anonymous: isAnonymous })
+        });
+      } catch (err) {
+        data = { code: 500, message: '网络错误，请稍后重试' };
+      }
+
+      try {
+        if (data.code === 200) {
+          showToast('点歌成功！', 'success');
+          radioForm.reset();
+          slotSelect.value = '';
+          selectedSlotId = null;
+          selectedDateId = null;
+          syncSlotSelectionState();
+          dateSelectGroup.style.display = 'none';
+          loadTimeSlots();
+          loadPlaylist();
+          loadMySongs();
+          var info = songName + ' - ' + artist;
+          var selectedDate = dateSelect.querySelector('option[value="' + dateId + '"]');
+          var dateInfo = selectedDate ? selectedDate.textContent : '';
+          showSongSubmitConfirm(info, dateInfo, toWhom, message);
+        } else {
+          var errorMessage = data.message || '提交失败';
+          if (errorMessage.indexOf('点歌已满') !== -1) {
+            errorMessage = '这个播放日期刚刚满额，目前不接候补，请选择其他日期';
+            loadTimeSlots();
+          }
+          showToast(errorMessage, 'error');
+        }
+      } finally {
+        songSubmitInFlight = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = '提交点歌';
+      }
+    });
+  }
+
+  function showSongSubmitConfirm(songInfo, dateInfo, toWhom, message) {
+    var overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+    var content = '<div style="background:#FFF;border-radius:16px;padding:32px 28px;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">' +
+      '<div style="font-size:52px;margin-bottom:16px">🎵</div>' +
+      '<div style="font-size:1.2rem;font-weight:700;color:#1F2937;margin-bottom:20px">点歌提交成功！</div>' +
+      '<div style="background:#F3F4F6;border-radius:12px;padding:16px;text-align:left;margin-bottom:20px">';
+    content += '<div style="font-size:0.85rem;color:#6B7280;margin-bottom:6px">歌曲</div>';
+    content += '<div style="font-size:1rem;font-weight:600;color:#1F2937;margin-bottom:12px">' + escapeHtml(songInfo) + '</div>';
+    if (dateInfo) {
+      content += '<div style="font-size:0.85rem;color:#6B7280;margin-bottom:6px">希望播放的时段</div>';
+      content += '<div style="font-size:0.95rem;color:#374151;margin-bottom:12px">' + escapeHtml(dateInfo) + '</div>';
+    }
+    if (toWhom) {
+      content += '<div style="font-size:0.85rem;color:#6B7280;margin-bottom:6px">送给</div>';
+      content += '<div style="font-size:0.95rem;color:#374151;margin-bottom:12px">💝 ' + escapeHtml(toWhom) + '</div>';
+    }
+    if (message) {
+      content += '<div style="font-size:0.85rem;color:#6B7280;margin-bottom:6px">祝福语</div>';
+      content += '<div style="font-size:0.95rem;color:#374151">💌 ' + escapeHtml(message) + '</div>';
+    }
+    content += '</div><p style="font-size:14px;line-height:1.7;color:#6B7280;margin:0 0 16px;">请等待审核，具体播放日期和时段不另行通知。</p>';
+    content += '<button onclick="this.closest(\'.confirm-overlay\').remove()" style="width:100%;padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,#FF6B9D,#FF8FAB);color:#FFF;font-size:1rem;font-weight:600;cursor:pointer">知道了</button>';
+    content += '</div>';
+    overlay.innerHTML = content;
+    document.body.appendChild(overlay);
+    overlay.onclick = function(e) {
+      if (e.target === overlay) overlay.remove();
+    };
+  }
+
+  async function loadHotSongs() {
+    renderRadioState(document.getElementById('hotSongsEmpty'), '加载热门歌曲...', 'loading');
+    try {
+      var data = await apiFetch('/api/songs/hot');
+      var listEl = document.getElementById('hotSongsList');
+      var emptyEl = document.getElementById('hotSongsEmpty');
+      
+      if (data.code === 200 && data.data && data.data.length > 0) {
+        var html = '';
+        data.data.forEach(function(song, index) {
+          var rank = index + 1;
+          var hotScore = song.hot_score || 0;
+          var hotClass = hotScore > 50 ? 'hot' : hotScore > 20 ? 'warm' : 'normal';
+          var authorStr = song.is_anonymous ? '匿名用户' : (song.author_name || '用户');
+          var hotMetaHtml = '<span class="hot-song-author">' + escapeHtml(authorStr) + '</span>';
+          if (song.to_whom) hotMetaHtml += '<span class="hot-song-recipient">送给 ' + escapeHtml(song.to_whom) + '</span>';
+          var hotMessageHtml = song.message ? '<div class="hot-song-message">“' + escapeHtml(song.message.length > 30 ? song.message.substring(0, 30) + '...' : song.message) + '”</div>' : '';
+          
+          html += '<div class="hot-song-item" data-song-id="' + song.id + '">' +
+            '<div class="hot-song-rank rank-' + (rank <= 3 ? rank : 'other') + '">' + rank + '</div>' +
+            '<div class="hot-song-content">' +
+              '<div class="hot-song-name">' + escapeHtml(song.song_name) + 
+                (song.artist ? '<span class="hot-song-artist"> - ' + escapeHtml(song.artist) + '</span>' : '') +
+              '</div>' +
+              '<div class="hot-song-meta">' + hotMetaHtml + '</div>' +
+              hotMessageHtml +
+            '</div>' +
+            '<div class="hot-song-vote">' +
+              '<button class="vote-btn vote-up" onclick="voteSong(' + song.id + ', \'up\', this)" title="热度+1">' +
+                '<span class="vote-icon">🔥</span>' +
+                '<span class="vote-count">' + hotScore + '</span>' +
+              '</button>' +
+            '</div>' +
+          '</div>';
+        });
+        listEl.innerHTML = html;
+        listEl.style.display = 'block';
+        emptyEl.style.display = 'none';
+      } else if (data.code === 200) {
+        listEl.style.display = 'none';
+        emptyEl.style.display = 'block';
+        renderRadioState(emptyEl, '暂无热门歌曲', 'empty');
+      } else {
+        listEl.style.display = 'none';
+        emptyEl.style.display = 'block';
+        renderRadioState(emptyEl, data.message || '热门歌曲加载失败', 'error', loadHotSongs);
+      }
+    } catch (err) {
+      console.error('加载热门歌曲失败:', err);
+      renderRadioState(document.getElementById('hotSongsEmpty'), '热门歌曲加载失败', 'error', loadHotSongs);
+    }
+  }
+
+  window.voteSong = async function(songId, voteType, btn) {
+    var token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) {
+      showToast('请先登录', 'error');
+      window.location.href = '/login';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+
+    try {
+      var data = await authFetch('/api/songs/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ song_request_id: songId, vote_type: voteType })
+      });
+
+      if (data.code === 200) {
+        showToast(data.message, 'success');
+        var countEl = btn.querySelector('.vote-count');
+        if (countEl) {
+          countEl.textContent = data.data.hot_score;
+        }
+        loadHotSongs();
+      } else {
+        showToast(data.message || '投票失败', 'error');
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    } catch (err) {
+      showToast('网络错误', 'error');
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+  };
+});

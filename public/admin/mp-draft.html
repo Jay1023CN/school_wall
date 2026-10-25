@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>公众号推送 - 管理后台</title>
+    <link rel="stylesheet" href="/admin/css/mp-draft-inline.css?v=2026102501">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Pacifico&family=Sacramento&family=Italianno&display=swap">
+<meta name="robots" content="noindex, nofollow">
+    <script src="/js/baidu-push.js?v=2026100401" defer></script>
+    <link rel="stylesheet" href="/admin/css/mp-draft.css?v=2026102501">
+</head>
+<body class="admin-page admin-mp-page">
+
+    <div class="top-bar">
+        <h1><span class="mp-brand-mark" aria-hidden="true">MP</span><span>公众号推送</span></h1>
+        <a href="/admin" class="back-link">← 返回管理后台</a>
+    </div>
+
+    <div class="container">
+
+        <div class="tabs" role="tablist">
+            <button class="tab-btn active" data-action="switch-tab" data-tab="posts" aria-selected="true">
+                选择帖子 <span class="badge" id="selectedCount">0</span>
+            </button>
+            <button class="tab-btn" data-action="switch-tab" data-tab="preview" aria-selected="false">
+                图文预览
+            </button>
+            <button class="tab-btn" data-action="open-daily" data-tab="daily" data-super-admin-only="true" style="display:none" aria-selected="false">
+                每日推歌 <span class="badge" id="dailySongTabCount" style="display:none;">0</span>
+            </button>
+            <button class="tab-btn" data-action="switch-tab" data-tab="drafts" aria-selected="false">
+                发布指南
+            </button>
+        </div>
+
+
+        <div class="tab-content active" id="tab-posts">
+            <div class="post-selection-complete" id="postSelectionComplete" hidden aria-live="polite">
+                <div class="post-selection-complete-copy">
+                    <div class="post-selection-complete-title">✅ 图文预览已生成</div>
+                    <div class="post-selection-complete-desc" id="postSelectionCompleteDesc">已收起选帖区，避免重复生成。需要调整内容时可重新展开。</div>
+                </div>
+                <button class="btn btn-outline btn-sm" type="button" data-action="reopen-post-selection" aria-label="重新展开选帖区">✏️ 再次编辑选帖</button>
+            </div>
+            <div id="postSelectionWorkspace">
+            <div class="posts-workspace">
+              <section class="card posts-main-card">
+                <div class="card-title">选择热点帖子</div>
+                <div class="card-desc">选择要推送到公众号的帖子，支持多选。按热度（点赞×2 + 评论×3 + 浏览×0.1）排序。</div>
+                <div class="toolbar">
+                    <label>时间范围：</label>
+                    <select id="hoursSelect" data-action="load-hot-posts">
+                        <option value="6">最近 6 小时</option>
+                        <option value="12">最近 12 小时</option>
+                        <option value="24" selected>最近 24 小时</option>
+                        <option value="48">最近 48 小时</option>
+                        <option value="72">最近 72 小时</option>
+                        <option value="0">🌟 全站精华（不限时间）</option>
+                    </select>
+                    <button class="btn btn-primary" data-action="load-hot-posts">刷新帖子</button>
+                    <button class="btn btn-outline btn-sm" id="selectTop5" data-action="select-top" data-count="5" disabled>选前5</button>
+                    <button class="btn btn-outline btn-sm" id="selectTop10" data-action="select-top" data-count="10" disabled>选前10</button>
+                    <span style="flex:1;"></span>
+                    <span style="font-size:12px;color:#999;" id="postStatus">未加载</span>
+                </div>
+                <table class="post-table">
+                    <thead>
+                        <tr>
+                            <th class="checkbox-cell"><input type="checkbox" id="selectAllCheck" data-action="toggle-select-all"></th>
+                            <th style="width:40px;">#</th>
+                            <th>标题</th>
+                            <th style="width:80px;">作者</th>
+                            <th style="width:120px;" class="post-stats">热度</th>
+                        </tr>
+                    </thead>
+                <tbody id="postList">
+                        <tr class="post-empty-row"><td colspan="5" style="text-align:center;color:#bbb;padding:40px;">点击"刷新帖子"加载数据</td></tr>
+                    </tbody>
+                </table>
+              </section>
+
+              <aside class="post-support-column" aria-label="辅助选题">
+
+                <section class="card support-card" id="weeklyStarSection">
+                    <div class="card-title">每周之星</div>
+                    <div class="card-desc">勾选要选入图文推送的同学，然后生成预览。</div>
+                    <div class="weekly-star-toolbar" style="display:flex;gap:12px;margin-bottom:12px;">
+                    <button class="btn btn-outline btn-sm weekly-period-btn" data-action="load-weekly-star" data-period="week">本周</button>
+                    <button class="btn btn-outline btn-sm weekly-period-btn" data-action="load-weekly-star" data-period="month">本月</button>
+                    <span style="font-size:12px;color:#999;margin-left:12px;" id="weeklyStarStatus"></span>
+                    <span id="weeklyStarSelectedCount" style="font-size:12px;color:#667eea;margin-left:8px;display:none;"></span>
+                    </div>
+                    <div id="weeklyStarList">
+                        <div style="text-align:center;padding:20px;color:#999;">点击“本周”或“本月”加载</div>
+                    </div>
+                </section>
+
+
+                <section class="card support-card" id="todayHistorySection">
+                    <div class="card-title">那年今日</div>
+                    <div class="card-desc">过去同月同日的热门帖子，打上 #那年今日 标签重现。</div>
+                    <div class="support-card-actions" style="display:flex;gap:12px;margin-bottom:12px;">
+                        <button class="btn btn-outline btn-sm" data-action="load-today-history">加载那年今日</button>
+                        <span style="font-size:12px;color:#999;margin-left:12px;" id="todayHistoryStatus"></span>
+                    </div>
+                    <div id="todayHistoryList">
+                        <div style="text-align:center;padding:20px;color:#999;">点击加载查看历史同日帖子</div>
+                    </div>
+                </section>
+              </aside>
+            </div>
+            </div>
+        </div>
+
+
+        <div class="tab-content" id="tab-daily">
+            <div class="card daily-song-page-card" data-super-admin-only="true" style="display:none">
+                <div class="daily-song-page-intro">
+                    <div class="daily-song-page-icon">🎵</div>
+                    <div>
+                        <div class="daily-song-page-kicker">DAILY MUSIC</div>
+                        <div class="daily-song-page-title">每日推歌</div>
+                        <div class="daily-song-page-desc">未发布歌曲始终可选；已同步歌曲三天内可复用。只有同步到公众号成功后才会标为已发布。</div>
+                    </div>
+                </div>
+                <div id="dailySongMount" class="daily-song-mount"></div>
+                <div class="daily-song-radio-addon" role="group" aria-labelledby="weeklyRadioSongLabel">
+                    <div class="daily-song-radio-addon-copy">
+                        <div id="weeklyRadioSongLabel"><span aria-hidden="true">📻</span> 同步加入本周审核通过歌单</div>
+                        <small id="weeklyRadioSongSummary">汇总本周审核通过的歌曲，不展示播放日期和时段</small>
+                    </div>
+                    <label class="daily-song-radio-switch">
+                        <input type="checkbox" id="includeWeeklyRadioSongs" checked>
+                        <span>加入推歌稿</span>
+                    </label>
+                </div>
+                <div class="daily-song-page-actions">
+                    <button class="btn btn-primary" data-action="generate-song" data-super-admin-only="true" style="display:none">🎵 生成推歌预览</button>
+                    <button class="btn btn-outline" data-action="generate-weekly" data-week="0" data-super-admin-only="true" style="display:none">📻 本周审核通过歌单</button>
+                    <button class="btn btn-outline" data-action="switch-tab" data-tab="preview">👁 打开完整图文预览</button>
+                </div>
+                <section class="daily-song-inline-preview" id="dailySongInlinePreview" hidden aria-live="polite">
+                    <div class="daily-song-inline-preview-head">
+                        <div>
+                            <div class="daily-song-inline-preview-kicker">LIVE PREVIEW · 同步前核对</div>
+                            <div class="daily-song-inline-preview-title" id="dailySongInlinePreviewTitle">推歌预览</div>
+                            <div class="daily-song-inline-preview-digest" id="dailySongInlinePreviewDigest">生成后会在这里显示与公众号同步相同的正文。</div>
+                        </div>
+                        <div class="daily-song-inline-preview-actions">
+                            <button class="btn btn-outline btn-sm" type="button" data-action="switch-tab" data-tab="preview">打开完整预览页</button>
+                            <button class="btn btn-info btn-sm" type="button" data-action="sync-draft">📱 同步到公众号</button>
+                            <button class="btn btn-outline btn-sm" type="button" id="inlineCoverPromptBtn" data-action="generate-cover-prompt" data-type="daily">🖼 根据正文生成封面提示词</button>
+                        </div>
+                    </div>
+                    <div class="daily-song-inline-preview-body" id="dailySongInlinePreviewArea"></div>
+                    <div class="daily-song-inline-preview-foot">当前内容与“图文预览”页、同步公众号的 <code>article.content</code> 使用同一份数据。</div>
+                    <div class="cover-prompt-panel" id="dailyCoverPromptPanel" hidden>
+                        <div class="cover-prompt-panel-head"><span id="dailyCoverPromptTitle">🖼 推歌正文封面提示词</span><small>依据上方已生成正文，不会自动生成图片</small></div>
+                        <textarea id="dailyCoverPromptText" readonly placeholder="点击上方按钮生成，可复制给图片 AI 使用"></textarea>
+                        <button class="btn btn-outline btn-sm" type="button" data-action="copy-cover-prompt" data-target="dailyCoverPromptText">📋 复制提示词</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+
+        <div class="tab-content" id="tab-preview">
+            <div class="card">
+                <div class="card-title">🎨 图文预览</div>
+                <div class="card-desc">预览生成的公众号图文卡片效果。点击“刷新预览”会重新获取内容并切换本期主题背景；站内标题卡仅供核对，不会写入正文。</div>
+
+
+                <div id="dailySongSelector" class="daily-song-selector" data-super-admin-only="true" style="display:none;margin-bottom:20px;padding:24px;background:linear-gradient(135deg,#FFF5F8,#F8F0FF);border-radius:16px;border:1px solid rgba(255,107,157,0.15);">
+                    <div class="daily-song-selector-head" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                        <div class="daily-song-selector-icon" style="width:48px;height:48px;background:linear-gradient(135deg,#FF6B9D,#FF8FB1);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                            <span style="font-size:24px;">🎵</span>
+                        </div>
+                        <div class="daily-song-selector-copy" style="flex:1;">
+                            <div style="font-weight:700;font-size:18px;color:#FF6B9D;">今日推歌选择</div>
+                            <div style="font-size:13px;color:#999;margin-top:4px;">未发布歌曲始终可见；已发布歌曲保留三天供调整后复用</div>
+                        </div>
+                        <div class="daily-song-selector-tools" style="display:flex;gap:8px;align-items:center;">
+                            <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:#666;cursor:pointer;background:#fff;padding:6px 12px;border-radius:20px;border:1px solid #eee;">
+                                <input type="checkbox" id="selectAllDailySongs" data-action="toggle-select-all-daily" style="accent-color:#FF6B9D;"> 全选
+                            </label>
+                            <button data-action="toggle-daily-section" id="toggleSongBtn" style="padding:6px 12px;background:#fff;border:1px solid #FF6B9D;color:#FF6B9D;border-radius:20px;font-size:12px;cursor:pointer;">收起</button>
+                        </div>
+                    </div>
+                    <div id="dailySongContent">
+
+                    <div id="batchTplBar" style="display:none;margin-bottom:10px;padding:10px 12px;background:linear-gradient(135deg,#FFF5F8,#FFF0F8);border-radius:12px;">
+                        <div style="font-size:12px;color:#FF6B9D;font-weight:600;margin-bottom:8px;">⚡ 批量模板（应用到全部歌曲）</div>
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <button data-action="apply-template" data-template="random" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">🎲 全部随机</button>
+                            <button data-action="apply-template" data-template="magazine" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">📰 杂志长文</button>
+                            <button data-action="apply-template" data-template="quote" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">💬 金句卡</button>
+                            <button data-action="apply-template" data-template="split" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">📊 分栏对比</button>
+                            <button data-action="apply-template" data-template="letter" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">✉️ 信件</button>
+                            <button data-action="apply-template" data-template="minimal" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">🩶 极简列表</button>
+                            <button data-action="apply-template" data-template="vinyl" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">💿 黑胶唱片</button>
+                            <button data-action="apply-template" data-template="player" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">🎧 播放器</button>
+                            <button data-action="apply-template" data-template="postcard" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">🏖️ 明信片</button>
+                            <button data-action="apply-template" data-template="cinema" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">🎬 电影海报</button>
+                            <button data-action="apply-template" data-template="timeline" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">⏳ 时间线</button>
+                            <button data-action="apply-template" data-template="record" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">🏪 唱片店</button>
+                            <button data-action="apply-template" data-template="sticky" style="padding:5px 11px;font-size:11px;background:#fff;border:1px solid #FFD1E0;color:#C44569;border-radius:14px;cursor:pointer;white-space:nowrap;">📝 便签</button>
+                        </div>
+                    </div>
+                    <div id="dailySongList" class="daily-song-list" style="max-height:300px;overflow-y:auto;">
+                        <div style="text-align:center;padding:40px;color:#ccc;">
+                            <div style="font-size:40px;margin-bottom:12px;">🎶</div>
+                            <div style="font-size:14px;">点击下方按钮加载推歌</div>
+                        </div>
+                    </div>
+                    <div class="daily-song-selector-actions">
+                        <button class="btn btn-outline btn-sm" data-action="load-daily-song-selector" style="margin-top:14px;background:linear-gradient(135deg,#FF6B9D,#FF8FB1);color:#fff;border:none;padding:10px 24px;border-radius:20px;font-weight:600;box-shadow:0 4px 15px rgba(255,107,157,0.3);">🔄 加载推歌</button>
+                        <button class="btn btn-outline btn-sm" data-action="toggle-manual-song-form" style="margin-top:14px;background:linear-gradient(135deg,#5B9BD5,#7EB8F0);color:#fff;border:none;padding:10px 24px;border-radius:20px;font-weight:600;box-shadow:0 4px 15px rgba(91,155,213,0.3);">✏️ 手动添加歌曲</button>
+                    </div>
+
+
+                    <div id="manualSongForm" style="display:none;margin-top:16px;padding:20px;background:#fff;border-radius:14px;border:1px dashed #ddd;">
+                        <div style="font-size:15px;font-weight:700;color:#5B9BD5;margin-bottom:14px;">✏️ 手动添加歌曲</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <div style="font-size:12px;color:#666;margin-bottom:4px;">歌名 *</div>
+                                <input id="manual_song_name" placeholder="歌曲名称" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <div style="font-size:12px;color:#666;margin-bottom:4px;">歌手 *</div>
+                                <input id="manual_artist" placeholder="歌手名" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <div style="font-size:12px;color:#666;margin-bottom:4px;">推荐人</div>
+                                <input id="manual_submitter" placeholder="推荐人昵称" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <div style="font-size:12px;color:#666;margin-bottom:4px;">送给谁</div>
+                                <input id="manual_to_whom" placeholder="可选" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;">
+                            </div>
+                        </div>
+                        <div style="margin-top:10px;">
+                            <div style="font-size:12px;color:#666;margin-bottom:4px;">介绍词</div>
+                            <textarea id="manual_intro" rows="2" placeholder="推荐理由或歌曲介绍..." style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+                        </div>
+                        <div style="margin-top:10px;">
+                            <div style="font-size:12px;color:#666;margin-bottom:4px;">歌词</div>
+                            <textarea id="manual_lyrics" rows="2" placeholder="可选，粘贴歌词..." style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+                        </div>
+                        <div style="margin-top:10px;">
+                            <div style="font-size:12px;color:#666;margin-bottom:4px;">留言</div>
+                            <input id="manual_message" placeholder="可选，给读者的一句话" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;">
+                        </div>
+                        <div class="manual-song-form-actions" style="margin-top:14px;display:flex;gap:10px;">
+                            <button data-action="add-manual-song" style="padding:8px 20px;background:#5B9BD5;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">✓ 添加到列表</button>
+                            <button data-action="toggle-manual-song-form" style="padding:8px 16px;background:#f5f5f5;color:#666;border:1px solid #eee;border-radius:10px;font-size:13px;cursor:pointer;">取消</button>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <div class="preview-toolbar">
+                    <div class="toggle-group">
+                        <div class="preview-template-picker" id="previewThemePicker">
+                            <button class="preview-template-trigger" type="button" data-action="toggle-preview-theme-menu" aria-expanded="false" aria-controls="previewThemeMenu">
+                                <span class="preview-template-swatch" id="previewThemeSwatch"></span>
+                                <span class="preview-template-label"><strong id="previewThemeName">选择版式</strong><small>点击切换版式</small></span>
+                                <span class="preview-template-arrow">▾</span>
+                            </button>
+                            <div class="preview-theme-menu" id="previewThemeMenu" hidden></div>
+                        </div>
+                        <label><input type="checkbox" id="cbWeather" checked> 🌤️ 包含天气</label>
+                        <label><input type="checkbox" id="cbHitokoto" checked> 📝 包含一言</label>
+                        <label><input type="checkbox" id="cbWeeklyStar" checked> ⭐ 包含每周之星</label>
+                        <label><input type="checkbox" id="cbGaokao" checked> 📚 包含高考倒计时</label>
+                        <label data-super-admin-only="true" style="display:none"><input type="checkbox" id="cbDailySong" checked> 🎵 合并已选推歌（使用推歌模板）</label>
+                    </div>
+                    <button class="btn btn-outline btn-sm" type="button" data-action="cycle-preview-theme" title="不重新请求内容，只更换本期版式">换一版</button>
+                    <button class="btn btn-outline btn-sm" type="button" id="btnRefreshPreview" data-action="generate-preview" title="重新获取素材并切换本期预览主题">🔄 刷新预览</button>
+                    <button class="btn btn-warning btn-sm" type="button" data-action="generate-song" data-open-preview="true" data-super-admin-only="true" style="display:none" title="只生成每日推歌稿件">🎵 推送歌曲</button>
+                    <button class="btn btn-outline btn-sm" type="button" data-action="generate-weekly" data-week="0" data-open-preview="true" data-super-admin-only="true" style="display:none" title="只汇总本周审核通过的点歌，不影响每日推歌发布状态">📻 本周点歌单</button>
+                    <button class="btn btn-success btn-sm" data-action="copy-content" id="btnCopy">
+                        📋 复制内容
+                    </button>
+                    <button class="btn btn-outline btn-sm" type="button" data-action="generate-cover-prompt" data-type="posts" title="先生成当前图文正文，再据正文生成可复制提示词">
+                        🖼 根据正文生成封面提示词
+                    </button>
+                    <button class="btn btn-primary btn-sm" data-action="download-html" id="btnDownload">
+                        ⬇️ 下载HTML
+                    </button>
+                    <button class="btn btn-info btn-sm" data-action="sync-draft" id="btnSync">
+                        📱 同步到公众号
+                    </button>
+                </div>
+
+                <div class="preview-article-meta" id="previewArticleMeta" hidden aria-live="polite">
+                    <div class="preview-article-meta-label" id="previewArticleMetaLabel">公众号 payload · 图文标题</div>
+                    <strong class="preview-article-meta-title" id="previewArticleTitle"></strong>
+                    <p class="preview-article-meta-desc" id="previewArticleDigest"></p>
+                    <div class="preview-article-meta-helper">管理端核对卡，不随公众号发送；下方正文与本次同步的 <code>article.content</code> 完全一致。</div>
+                </div>
+
+                <div class="preview-area" id="previewArea" role="region" aria-label="公众号图文内容预览" aria-live="polite">
+                    <div class="placeholder">
+                        <div class="icon">📝</div>
+                        <div class="text">先选择帖子，再点击"生成图文预览"</div>
+                    </div>
+                </div>
+                <div class="cover-prompt-panel" id="articleCoverPromptPanel" hidden>
+                    <div class="cover-prompt-panel-head"><span id="articleCoverPromptTitle">🖼 当前正文封面提示词</span><small>依据当前已生成正文，可复制给图片 AI</small></div>
+                    <textarea id="articleCoverPromptText" readonly placeholder="先生成图文预览，再点击“根据正文生成封面提示词”"></textarea>
+                    <button class="btn btn-outline btn-sm" type="button" data-action="copy-cover-prompt" data-target="articleCoverPromptText">📋 复制提示词</button>
+                </div>
+            </div>
+
+            <div class="msg" id="previewMsg"></div>
+        </div>
+
+
+        <div class="tab-content" id="tab-drafts">
+            <div class="card">
+                <div class="card-title">📖 发布指南</div>
+                <div class="card-desc">个人订阅号无法通过API自动发布，请按照以下步骤手动发布到公众号。</div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+
+                    <div style="background:linear-gradient(135deg,#667eea,#764ba2);border-radius:16px;padding:24px;color:#fff;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:50%;"></div>
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">📝</div>
+                            <div>
+                                <div style="font-size:11px;opacity:0.7;letter-spacing:1px;">STEP01</div>
+                                <div style="font-size:16px;font-weight:700;">生成图文预览</div>
+                            </div>
+                        </div>
+                        <div style="font-size:13px;opacity:0.9;line-height:1.7;">在"选择帖子"tab中勾选帖子，点击"生成图文预览"按钮，等待生成完成。</div>
+                       <div style="margin-top:14px;padding:8px 12px;background:rgba(255,255,255,0.15);border-radius:8px;font-size:12px;">💡 支持多选帖子批量生成</div>
+                    </div>
+
+
+                    <div style="background:linear-gradient(135deg,#43e97b,#38f9d7);border-radius:16px;padding:24px;color:#fff;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:50%;"></div>
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">📋</div>
+                            <div>
+                                <div style="font-size:11px;opacity:0.7;letter-spacing:1px;">STEP 02</div>
+                                <div style="font-size:16px;font-weight:700;">复制内容</div>
+                            </div>
+                        </div>
+                        <div style="font-size:13px;opacity:0.9;line-height:1.7;">点击"复制内容"一键复制带格式的内容，或"下载HTML"保存文件备用。</div>
+                        <div style="margin-top:14px;padding:8px 12px;background:rgba(255,255,255,0.15);border-radius:8px;font-size:12px;">💡 推荐使用Chrome浏览器复制</div>
+                    </div>
+
+
+                    <div style="background:linear-gradient(135deg,#FF6B9D,#FF8FB1);border-radius:16px;padding:24px;color:#fff;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:50%;"></div>
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">🌐</div>
+                            <div>
+                                <div style="font-size:11px;opacity:0.7;letter-spacing:1px;">STEP 03</div>
+                                <div style="font-size:16px;font-weight:700;">登录公众号</div>
+                            </div>
+                        </div>
+                        <div style="font-size:13px;opacity:0.9;line-height:1.7;">打开 <a href="https://mp.weixin.qq.com" target="_blank" style="color:#fff;text-decoration:underline;font-weight:600;">mp.weixin.qq.com</a> 进入图文编辑页。</div>
+                        <div style="margin-top:14px;padding:8px 12px;background:rgba(255,255,255,0.15);border-radius:8px;font-size:12px;">💡 建议收藏网址方便下次使用</div>
+                    </div>
+
+
+                    <div style="background:linear-gradient(135deg,#FFB74D,#FF9800);border-radius:16px;padding:24px;color:#fff;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:50%;"></div>
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <div style="width:40px;height:40px;background:rgba(255,255,255,0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">🚀</div>
+                            <div>
+                                <div style="font-size:11px;opacity:0.7;letter-spacing:1px;">STEP 04</div>
+                                <div style="font-size:16px;font-weight:700;">粘贴发布</div>
+                            </div>
+                        </div>
+                        <div style="font-size:13px;opacity:0.9;line-height:1.7;">在编辑器中使用 <strong>Ctrl+V</strong> 粘贴内容，检查排版后点击"发布"。</div>
+                        <div style="margin-top:14px;padding:8px 12px;background:rgba(255,255,255,0.15);border-radius:8px;font-size:12px;">💡 可根据需要调整封面图片</div>
+                    </div>
+                </div>
+
+
+                <div style="margin-top:24px;padding:20px;background:linear-gradient(135deg,#F8F9FF,#F0F5FF);border-radius:16px;border:1px solid #E0E0FF;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                        <span style="font-size:20px;">⚡</span>
+                        <span style="font-size:15px;font-weight:700;color:#667eea;">快捷操作</span>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                        <span style="padding:8px 16px;background:#fff;border-radius:20px;font-size:13px;color:#555;border:1px solid #E0E0FF;">📝 选择帖子 →</span>
+                        <span style="padding:8px 16px;background:#fff;border-radius:20px;font-size:13px;color:#555;border:1px solid #E0E0FF;">🎨 生成预览 →</span>
+                        <span style="padding:8px 16px;background:#fff;border-radius:20px;font-size:13px;color:#555;border:1px solid #E0E0FF;">📋 复制内容 →</span>
+                        <span style="padding:8px 16px;background:#fff;border-radius:20px;font-size:13px;color:#555;border:1px solid #E0E0FF;">🚀粘贴发布</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="selection-action-bar" id="selectionActionBar" hidden aria-live="polite">
+            <div class="selection-action-copy">
+                <span class="selection-action-label">已选帖子</span>
+                <strong id="selectionBarCount">0</strong>
+                <span class="selection-action-suffix">篇，准备生成公众号内容</span>
+            </div>
+            <button class="btn btn-primary" data-action="generate-preview-from-posts" id="btnGenerate" disabled>
+                生成图文预览
+            </button>
+        </div>
+
+
+        <div class="status-bar" id="statusBar">✅ 就绪</div>
+    </div>
+
+    <script src="/admin/js/mp-draft-utils.js?v=2026102501"></script>
+    <script src="/admin/js/mp-draft-ui.js?v=2026102501"></script>
+    <script src="/admin/js/mp-draft-theme-visuals.js?v=2026102501"></script>
+    <script src="/admin/js/mp-draft.js?v=2026102501"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>订阅号配置说明</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: #f5f7fb; color: #243247; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+.container { max-width: 820px; margin: 0 auto; padding: 32px 40px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 8px 30px rgba(15, 23, 42, .06); }
+h1 { margin: 0 0 8px; color: #1e293b; font-size: 28px; }
+h2 { margin: 28px 0 10px; color: #334155; font-size: 20px; }
+h3 { margin: 20px 0 8px; color: #475569; font-size: 17px; }
+p { margin: 10px 0; }
+ul, ol { margin: 8px 0; padding-left: 24px; }
+code, pre { font-family: "SFMono-Regular", Consolas, monospace; }
+code { padding: 1px 5px; border-radius: 4px; background: #f1f5f9; color: #b42318; }
+pre { overflow-x: auto; padding: 14px 16px; border-radius: 8px; background: #0f172a; color: #e2e8f0; }
+.note { padding: 12px 16px; border-left: 4px solid #3b82f6; background: #eff6ff; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+th, td { padding: 8px 10px; border: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+th { background: #f8fafc; }
+@media (max-width: 600px) { body { padding: 12px; } .container { padding: 24px 18px; } }
+</style>
+</head>
+<body>
+<main class="container">
+<h1>订阅号配置说明</h1>
+<p class="note">本文只记录当前源码支持的配置和流程。Token、AES Key、Secret、JWT 密钥等真实值只能放在服务器私有环境变量中，不能写入仓库、日志或截图。</p>
+
+<h2>一、服务器回调</h2>
+<p>微信公众平台的服务器地址使用：</p>
+<pre>https://你的域名/api/wechat/callback</pre>
+<p>回调由 <code>routes/wechat.js</code> 处理 GET 验证和 POST 消息。签名校验默认要求时间戳在最近 5 分钟内；可通过 <code>WECHAT_SIGNATURE_TTL_SECONDS</code> 调整，消息体上限由 <code>WECHAT_BODY_LIMIT_BYTES</code> 控制。</p>
+<p>在服务器私有配置中填写以下变量，值从微信公众平台获取：</p>
+<pre>WECHAT_TOKEN=请填入公众号服务器配置中的Token
+WECHAT_ENCODING_AES_KEY=请填入公众号服务器配置中的EncodingAESKey
+WECHAT_APPID=请填入公众号AppID
+WECHAT_SECRET=请填入公众号AppSecret</pre>
+<p><code>WECHAT_TOKEN</code> 用于签名，启用安全模式或兼容模式时还需要 <code>WECHAT_ENCODING_AES_KEY</code>。<code>WECHAT_SECRET</code> 用于公众号接口调用和 access token 获取；未配置时相关服务不会启动。</p>
+
+<h2>二、当前支持的订阅号能力</h2>
+<ul>
+<li>接收关注、取消关注、文本、图片、语音、位置和链接消息。</li>
+<li>通过固定公众号二维码完成关注，再在对话中发送绑定码；不依赖带参数二维码。</li>
+<li>模板消息发送函数保留兼容接口，但订阅号不支持模板消息，当前不会实际发送。</li>
+</ul>
+
+<h2>三、网站绑定流程</h2>
+<ol>
+<li>用户登录个人中心，点击“绑定微信”。</li>
+<li>网站调用 <code>POST /api/wechat/generate-bind</code>，返回一次性绑定码和固定二维码 <code>/images/gzh.png</code>。</li>
+<li>用户扫码关注公众号后，在对话中发送页面显示的绑定码。</li>
+<li>页面调用 <code>POST /api/wechat/verify-follow</code> 检查绑定状态；已绑定账号可通过 <code>POST /api/wechat/unbind</code> 解除绑定。</li>
+</ol>
+<p>绑定状态查询使用 <code>GET /api/wechat/status</code>。绑定码和关注记录有有效期，页面提示失效后重新生成即可。</p>
+
+<h2>四、上线前检查</h2>
+<ol>
+<li>确认服务器使用 HTTPS，回调路径可从公网访问。</li>
+<li>确认私有环境变量已加载，真实值未出现在 Git 差异、日志和前端资源中。</li>
+<li>在微信公众平台提交服务器配置，检查 GET 验证返回微信提供的 <code>echostr</code>。</li>
+<li>用测试账号验证关注、发送绑定码、状态查询和解除绑定。</li>
+</ol>
+</main>
+</body>
+</html>

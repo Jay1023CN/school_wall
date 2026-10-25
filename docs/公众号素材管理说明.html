@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公众号素材管理说明</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: #f5f7fb; color: #243247; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+.container { max-width: 860px; margin: 0 auto; padding: 32px 40px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 8px 30px rgba(15, 23, 42, .06); }
+h1 { margin: 0 0 8px; color: #1e293b; font-size: 28px; }
+h2 { margin: 28px 0 10px; color: #334155; font-size: 20px; }
+h3 { margin: 20px 0 8px; color: #475569; font-size: 17px; }
+p { margin: 10px 0; }
+ul, ol { margin: 8px 0; padding-left: 24px; }
+code, pre { font-family: "SFMono-Regular", Consolas, monospace; }
+code { padding: 1px 5px; border-radius: 4px; background: #f1f5f9; color: #b42318; }
+pre { overflow-x: auto; padding: 14px 16px; border-radius: 8px; background: #0f172a; color: #e2e8f0; }
+.note { padding: 12px 16px; border-left: 4px solid #3b82f6; background: #eff6ff; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+th, td { padding: 8px 10px; border: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+th { background: #f8fafc; }
+@media (max-width: 600px) { body { padding: 12px; } .container { padding: 24px 18px; } }
+</style>
+</head>
+<body>
+<main class="container">
+<h1>公众号素材管理说明</h1>
+<p class="note">公众号推送工作台属于后台最高管理员能力。草稿生成、媒体处理和同步结果都以接口返回的状态为准；HTTP 202、页面提示或单次请求成功不能单独证明微信草稿已创建。</p>
+
+<h2>一、入口与权限</h2>
+<p>浏览器入口是 <code>/admin/mp-draft</code>，对应静态源码 <code>frontend/admin/mp-draft.html</code>，运行文件由 <code>npm run sync:frontend</code> 生成到 <code>public/admin/mp-draft.html</code>。相关 API 挂载在 <code>/api/mp</code>，由 <code>routes/mp-draft.js</code> 负责，按接口要求登录并检查员工身份与具体权限；同步和人工核对要求 <code>songs:review</code>，任务状态还限制为本人可见。</p>
+<p>公众号推送和校园广播点歌是两个流程：本页面负责生成公众号图文草稿，广播点歌仍由 <code>/radio</code> 和 <code>/api/songs</code> 处理。</p>
+
+<h2>二、工作流</h2>
+<ol>
+<li>打开后台公众号推送工作台，加载热点帖子、历史同日内容、每周之星和辅助信息。</li>
+<li>选择帖子和可选栏目，调用生成接口，在页面核对标题、摘要、正文、图片、视频、点歌和二维码。</li>
+<li>点击同步后，接口先返回 <code>sync_id</code>；页面持续查询数据库任务状态，直到草稿创建成功、带视频警告、草稿已创建但状态回写失败、需要人工核对或明确失败。任务由后台 worker 执行，进程重启后会按租约恢复可安全恢复的任务。</li>
+<li>到微信公众平台草稿箱再次检查排版和素材，完成微信侧审核后手动发布。</li>
+</ol>
+<p>图片会上传到微信素材地址；受控站内视频会按公众号素材限制处理，处理失败时正文保留封面和站内观看入口，并在状态中返回警告原因。不要因为视频警告或网络超时重复提交同一篇草稿。</p>
+<div class="note"><strong><code>needs_review</code> 的处理：</strong>如果外部 <code>draft/add</code> 已开始但没有可靠的 <code>media_id</code>，任务会停在 <code>needs_review</code>。先到微信公众号草稿箱核对，再调用人工核对接口；系统不会因为未知结果自动重发，避免重复创建草稿。</div>
+
+<h2>三、环境变量</h2>
+<p>服务端从私有环境变量读取微信和素材配置：</p>
+<pre>WECHAT_APPID=公众号AppID
+WECHAT_SECRET=公众号AppSecret
+PUBLIC_WALL_ORIGIN=https://你的站点域名
+WEATHER_API_KEY=可选的和风天气Key
+WEATHER_CITY=示例城市
+MP_DEFAULT_THUMB_MEDIA_ID=可选的默认封面media_id
+FFMPEG_PATH=可选，默认ffmpeg
+FFPROBE_PATH=可选，默认ffprobe</pre>
+<p>未设置默认封面 media id 时，服务会尝试使用站内封面资源；真实 Secret、Key、media_id 和部署凭据不能写入文档、源码或前端。</p>
+
+<h2>四、主要接口</h2>
+<table>
+<thead><tr><th>接口</th><th>用途</th></tr></thead>
+<tbody>
+<tr><td><code>GET /api/mp/hot-posts</code></td><td>加载热点帖子，<code>hours</code> 默认 24，<code>limit</code> 上限 50。</td></tr>
+<tr><td><code>GET /api/mp/weekly-star</code></td><td>加载指定周期的活跃用户。</td></tr>
+<tr><td><code>GET /api/mp/today-history-posts</code></td><td>加载历史上的同日帖子。</td></tr>
+<tr><td><code>GET /api/mp/extra-info</code></td><td>加载天气、一言和日期信息。</td></tr>
+<tr><td><code>POST /api/mp/generate-content</code></td><td>根据 <code>postIds</code> 和栏目选项生成可预览文章。</td></tr>
+<tr><td><code>POST /api/mp/upload-cover</code></td><td>上传封面并返回微信 <code>media_id</code>。</td></tr>
+<tr><td><code>POST /api/mp/create-draft</code></td><td>直接创建已准备好的草稿。</td></tr>
+<tr><td><code>POST /api/mp/publish-daily</code></td><td>生成并创建今日精选草稿；每日推歌仅最高管理员可带入。</td></tr>
+<tr><td><code>POST /api/mp/sync-draft</code></td><td>提交图片、视频和草稿同步任务，返回 <code>sync_id</code>。</td></tr>
+<tr><td><code>GET /api/mp/sync-status?sync_id=...</code></td><td>查询本人同步任务的进度和终态。</td></tr>
+<tr><td><code>POST /api/mp/sync-review</code></td><td>仅最高管理员、任务所有者且具备 <code>songs:review</code> 权限时使用。<code>created</code> 可处理 <code>needs_review</code> 或 <code>mark_failed</code>，必须带已核实的 <code>media_id</code>；<code>not_created</code> 仅处理 <code>needs_review</code>，必须带 <code>confirm_no_draft: true</code>。不会自动重发。</td></tr>
+<tr><td><code>GET /api/mp/drafts</code> / <code>DELETE /api/mp/draft/:mediaId</code></td><td>查询或删除微信草稿。</td></tr>
+</tbody>
+</table>
+
+<h2>五、人工核对请求示例</h2>
+<p>只处理属于当前最高管理员的任务。<code>needs_review</code> 须先检查草稿箱；<code>mark_failed</code> 已有远端草稿，只允许补写本地状态，并沿用记录中的 <code>media_id</code>。确认微信草稿已经创建时：</p>
+<pre>POST /api/mp/sync-review
+{
+  "sync_id": "sync_...",
+  "decision": "created",
+  "media_id": "已从微信公众号草稿箱核对的 media_id"
+}</pre>
+<p>确认草稿箱没有创建时，必须明确确认，服务只释放任务占用，不会再次调用微信：</p>
+<pre>POST /api/mp/sync-review
+{
+  "sync_id": "sync_...",
+  "decision": "not_created",
+  "confirm_no_draft": true
+}</pre>
+
+<h2>六、发布前检查</h2>
+<ul>
+<li>检查标题、正文、图片替换、视频状态、文章来源链接和二维码在微信手机端是否可读。</li>
+<li>确认同步终态中的 <code>media_id</code>，再到微信草稿箱核对实际内容。</li>
+<li>页面改动后同步 <code>frontend/</code> 与 <code>public/</code>，运行 <code>npm run check:mirrors</code> 及公众号相关回归脚本。</li>
+<li>公众号实际发布、微信接口投递和移动端展示需要在目标账号与目标设备上单独验证，静态检查不能替代这些验证。</li>
+</ul>
+</main>
+</body>
+</html>
